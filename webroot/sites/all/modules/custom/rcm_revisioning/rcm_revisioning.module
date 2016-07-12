@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the RCM revisioning feature.
+ */
+
+include_once 'rcm_revisioning.features.inc';

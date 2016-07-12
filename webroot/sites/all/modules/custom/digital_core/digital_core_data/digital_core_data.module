@@ -1,0 +1,1093 @@
+<?php
+
+module_load_include('inc', 'digital_core_data', 'digital_core_data_rcm_categories.inc');
+
+/**
+ * Implements hook_simple_solr_search_query_build_alter().
+ *
+ * Digital Core specific filtering to read entity data from SOLR.
+ */
+function digital_core_data_simple_solr_search_query_build_alter($query, &$variables, &$objects) {
+
+  $query = $objects['query'];
+  $query_parameters = &$variables['query_parameters'];
+
+  //in a hierarchy we want the children too, or just many categories in the filter
+  //this will allow either
+  tom_apply_many_multi_filter($query, $query_parameters, "categories", "category");
+  tom_apply_many_multi_filter($query, $query_parameters, "asset_categories", "asset_category");
+
+  //category parameters
+  tom_apply_multi_filter($query, $query_parameters, "category");
+
+  //brand parameters
+  tom_apply_multi_filter($query, $query_parameters, "brand");
+
+  //assets, category
+  tom_apply_multi_filter($query, $query_parameters, "asset_category");
+
+  //assets file extention
+  tom_apply_multi_filter($query, $query_parameters, "file_extension");
+
+  //product dates
+  if(array_key_exists("product_dates", $query_parameters)) {
+
+    //due to the lack of support for this in the module, moved it to the alter below
+    unset($query_parameters['product_dates']);
+  }
+
+   //product dates
+  if(array_key_exists("asset_dates", $query_parameters)) {
+
+    //due to the lack of support for this in the module, moved it to the alter below
+    unset($query_parameters['asset_dates']);
+  }
+
+  if(array_key_exists("available", $query_parameters) && $query_parameters['available'] == true) {
+
+    $filter = $query->createFilter("OR");
+
+    $filter->condition("available_east", "");
+    $filter->condition("available_east", "AVAILABLE");
+
+    $filter->condition("available_west", "");
+    $filter->condition("available_west", "AVAILABLE");
+
+    $query->filter($filter);
+    unset($query_parameters['available']);
+  }
+
+  //product name parameters
+  if(array_key_exists("product_name", $query_parameters)) {
+
+    $parameters = explode("|", $query_parameters['product_name']);
+
+    //0 = boolean (must not / must)
+    //1 = qualifier
+    //  -Starts With = 0
+    //  -Ends With = 1
+    //  -Contains = 2
+    //2 = value
+
+    $c = "=";
+    if($parameters[0] == 0) {
+      $c = "<>";
+    }
+
+    switch($parameters[1]) {
+      case 0: {
+        //starts with
+        $query->condition("title", '/^' . $parameters[2] . '/', $c);
+        break;
+      }
+      case 1: {
+        //ends with
+        $query->condition("title", '/' . $parameters[2] . '$/', $c);
+        break;
+      }
+      case 2: {
+        //contains
+        $query->condition("title", '*' . $parameters[2] . '*', $c);
+        break;
+      }
+    }
+
+    unset($query_parameters['product_name']);
+  }
+
+  //product name parameters
+  if(array_key_exists("asset_name", $query_parameters)) {
+
+    $parameters = explode("|", $query_parameters['asset_name']);
+
+    //0 = boolean (must not / must)
+    //1 = qualifier
+    //  -Starts With = 0
+    //  -Ends With = 1
+    //  -Contains = 2
+    //2 = value
+
+    switch($parameters[1]) {
+      case 0: {
+        //starts with
+        $parameters[2] .= "*";
+        break;
+      }
+      case 1: {
+        //ends with
+        $parameters[2] = "*". $parameters[2];
+        break;
+      }
+      case 2: {
+        //contains
+        $parameters[2] = "*" . $parameters[2] . "*";
+        break;
+      }
+    }
+
+    if($parameters[0] == 0) {
+      $query->condition("title", $parameters[2], "<>");
+    }
+    else {
+      $query->condition("title", $parameters[2]);
+    }
+
+    unset($query_parameters['asset_name']);
+  }
+
+  if(array_key_exists("modified", $query_parameters)) {
+
+    if($idx == "default_node_index") {
+      $query->condition("changed", $query_parameters['modified'], ">");
+    }
+    else if($idx == "asset_index") {
+      $query->condition("timestamp", $query_parameters['modified'], ">");
+    }
+
+    unset($query_parameters['modified']);
+  }
+
+  if(array_key_exists("older", $query_parameters)) {
+
+    if($idx == "default_node_index") {
+      $query->condition("changed", $query_parameters['older'], "<");
+    }
+    else if($idx == "asset_index") {
+      $query->condition("timestamp", $query_parameters['older'], "<");
+    }
+
+    unset($query_parameters['older']);
+  }
+
+  //created must be a range to include a date range, even if its one day
+  if(array_key_exists("created-start", $query_parameters)) {
+
+    if($idx == "index") {
+      $query->condition("created", $query_parameters['created-start'], ">=");
+      $query->condition("created", $query_parameters['created-end'], "<=");
+    }
+    else if($idx == "asset_index") {
+      $query->condition("timestamp", $query_parameters['created-start'], ">=");
+      $query->condition("timestamp", $query_parameters['created-end'], "<=");
+    }
+
+    unset($query_parameters['created-start']);
+    unset($query_parameters['created-end']);
+  }
+
+  //primary image
+  tom_apply_empty_boolean_filter($query, $query_parameters, "primary_image");
+
+  //description
+  tom_apply_empty_boolean_filter($query, $query_parameters, "flyer_description");
+
+  //planogram images
+  tom_apply_empty_boolean_filter($query, $query_parameters, "planogram_image");
+
+  //assets internal only flag
+  tom_apply_boolean_filter($query, $query_parameters, "internal_only");
+
+  //cmp to do this is not boolean
+  tom_apply_boolean_filter($query, $query_parameters, "cmp_include");
+}
+
+
+/**
+ * Implements hook_search_api_solr_query_alter
+ */
+function digital_core_data_search_api_solr_query_alter(&$call_args, $query) {
+  $date_parameters = false;
+
+  if(array_key_exists("product_dates", $_GET)) {
+    $date_parameters = explode("|", $_GET['product_dates']);
+  }
+
+  if(array_key_exists("asset_dates", $_GET)) {
+    $date_parameters = explode("|", $_GET['asset_dates']);
+  }
+
+   //product dates
+  if($date_parameters) {
+
+    //0 = boolean
+    //1 = qualifier
+    //  0 - Have been added between
+    //  1 - Added Since
+    //  2 - Added Before
+    //  3 - Have been updated between
+    //  4 - Modified since
+    //  5 - Modified before
+    //
+    //2 = start month0
+    //3 = start day
+    //4 = start year
+    //5 = end month
+    //6 = end day
+    //7 = end year
+
+    $field = "ds_created";
+
+    if($date_parameters[1] > 2) {
+      //shift it down a set so that can compare the same
+      $date_parameters[1] = $date_parameters[1] - 3;
+      $field = "ds_changed";
+    }
+
+    switch($date_parameters[1]) {
+      case 0: {
+        $call_args['params']['fq'][] = "{$field}:[{$date_parameters[4]}-{$date_parameters[2]}-{$date_parameters[3]}T12:00:00Z TO {$date_parameters[7]}-{$date_parameters[5]}-{$date_parameters[6]}T12:00:00Z]";
+        break;
+      }
+      case 1: {
+        $currentDate = getdate();
+
+        $call_args['params']['fq'][] = "{$field}:[{$date_parameters[4]}-{$date_parameters[2]}-{$date_parameters[3]}T12:00:00Z TO {$currentDate['year']}-{$currentDate['mon']}-{$currentDate['mday']}T12:00:00Z]";
+        break;
+      }
+      case 2: {
+        $call_args['params']['fq'][] = "{$field}:[1970-01-01T12:00:00Z TO {$date_parameters[4]}-{$date_parameters[2]}-{$date_parameters[3]}T12:00:00Z]";
+        break;
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_entity_property_info_alter().
+ */
+function digital_core_data_entity_property_info_alter(&$info) {
+
+  $info['node']['bundles']['product_details']['properties']['containing_collections'] = array(
+    'type' => 'text',
+    'label' => t('Containing Collection'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_containing_collections',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['available_east'] = array(
+    'type' => 'text',
+    'label' => t('Available East'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_available_east_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['available_west'] = array(
+    'type' => 'text',
+    'label' => t('Available West'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_available_west_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['east_product_id_full'] = array(
+    'type' => 'text',
+    'label' => t('East Product ID Full'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_east_product_id_full_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['remitnum'] = array(
+    'type' => 'text',
+    'label' => t('Remit Number'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_remitnum',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['vendoracctnum'] = array(
+    'type' => 'text',
+    'label' => t('Vendor Account Number'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_vendoracctnum',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['vendoracctnm'] = array(
+    'type' => 'text',
+    'label' => t('Vendor Account Name'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_vendoracctnm',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['east_product_id'] = array(
+    'type' => 'text',
+    'label' => t('East Product ID'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_east_product_id_getter',
+  );
+  $info['node']['bundles']['product_details']['properties']['upc'] = array(
+    'type' => 'text',
+    'label' => t('UPC'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_upc_getter',
+  );
+  $info['node']['bundles']['product_details']['properties']['west_product_id'] = array(
+    'type' => 'text',
+    'label' => t('West Product ID'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_west_product_id_getter',
+  );
+  $info['node']['bundles']['product_details']['properties']['item_type'] = array(
+    'type' => 'text',
+    'label' => t('Item Type'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_item_type_getter',
+  );
+  $info['node']['bundles']['product_details']['properties']['product_name'] = array(
+    'type' => 'text',
+    'label' => t('Product Name'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_product_name_getter',
+  );
+  $info['node']['bundles']['product_details']['properties']['item_size'] = array(
+    'type' => 'text',
+    'label' => t('Item Size'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_item_size_getter',
+  );
+  $info['node']['bundles']['product_details']['properties']['source_created'] = array(
+    'type' => 'text',
+    'label' => t('Source Created'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_source_created_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['ein'] = array(
+    'type' => 'text',
+    'label' => t('EIN'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_ein_getter',
+  );
+  $info['node']['bundles']['product_details']['properties']['product_name'] = array(
+    'type' => 'text',
+    'label' => t('Product Name'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_product_name_getter',
+  );
+  $info['node']['bundles']['product_details']['properties']['west_product_desc'] = array(
+    'type' => 'text',
+    'label' => t('West Product Description'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_west_product_desc_getter',
+  );
+  $info['node']['bundles']['product_details']['properties']['item_dept_name'] = array(
+    'type' => 'text',
+    'label' => t('Item Department Name'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_item_dept_name_getter',
+  );
+  $info['node']['bundles']['product_details']['properties']['pack_component_qty'] = array(
+    'type' => 'text',
+    'label' => t('Pack Component QTY'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_pack_component_qty_getter',
+  );
+  $info['node']['bundles']['product_details']['properties']['case_component_qty'] = array(
+    'type' => 'text',
+    'label' => t('Case Component QTY'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_get_case_component_qty_getter',
+  );
+  $info['node']['bundles']['product_details']['properties']['base_item_size_measurement'] = array(
+    'type' => 'text',
+    'label' => t('Base Item Size Measurment'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_base_item_size_measurement_getter',
+  );
+  $info['node']['bundles']['product_details']['properties']['item_advertising_text'] = array(
+    'type' => 'text',
+    'label' => t('Item Advertising Text'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_item_advertising_text_getter',
+  );
+  $info['node']['bundles']['product_details']['properties']['src_item_advertising_text'] = array(
+    'type' => 'text',
+    'label' => t('Item Advertising Text'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_src_item_advertising_text_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['ecom_include'] = array(
+    'type' => 'boolean',
+    'label' => t('Ecom Include'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_ecom_include',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['min_order_qty'] = array(
+    'type' => 'text',
+    'label' => t('min order qty'),
+    'sanitized' => FALSE,
+    'getter callback' => 'digital_core_data_min_order_qty_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['total_qty_on_hand'] = array(
+      'type' => 'text',
+      'label' => t('total qty on hand'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_total_qty_on_hand_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['selling_unit'] = array(
+      'type' => 'text',
+      'label' => t('selling unit'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_selling_unit_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['srp'] = array(
+      'type' => 'text',
+      'label' => t('srp'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_srp_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['price_after_disc'] = array(
+      'type' => 'text',
+      'label' => t('price after disc'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_price_after_disc_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['net_margin'] = array(
+      'type' => 'text',
+      'label' => t('net margin'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_net_margin_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['whls_price_after_disc'] = array(
+      'type' => 'text',
+      'label' => t('wholesale price after disc'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_whls_price_after_disc_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['whls_net_margin'] = array(
+      'type' => 'text',
+      'label' => t('wholesale net margin'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_whls_net_margin_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['promo_disc'] = array(
+      'type' => 'text',
+      'label' => t('promo disc'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_promo_disc_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['base_whls'] = array(
+      'type' => 'text',
+      'label' => t('base wholesale'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_base_whls_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['discountable'] = array(
+      'type' => 'text',
+      'label' => t('discountable'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_discountable_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['organic'] = array(
+      'type' => 'text',
+      'label' => t('Organic'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_organic_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['gluten_free'] = array(
+      'type' => 'text',
+      'label' => t('gluten free'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_gluten_free_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['dairy_free'] = array(
+      'type' => 'text',
+      'label' => t('Dairy Free'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_dairy_free_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['yeast_free'] = array(
+      'type' => 'text',
+      'label' => t('Yeast Free'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_yeast_free_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['wheat_free'] = array(
+      'type' => 'text',
+      'label' => t('Wheat Free'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_wheat_free_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['vegan'] = array(
+      'type' => 'text',
+      'label' => t('vegan'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_vegan_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['kosher'] = array(
+      'type' => 'text',
+      'label' => t('Kosher'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_kosher_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['fair_trade'] = array(
+      'type' => 'text',
+      'label' => t('Fair Trade'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_fair_trade_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['gmo_free'] = array(
+      'type' => 'text',
+      'label' => t('GMO Free'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_gmo_free_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['pack'] = array(
+      'type' => 'text',
+      'label' => t('Pack'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_pack_getter',
+  );
+
+  $info['node']['bundles']['product_details']['properties']['size'] = array(
+      'type' => 'text',
+      'label' => t('size'),
+      'sanitized' => FALSE,
+      'getter callback' => 'digital_core_data_size_getter',
+  );
+}
+
+function digital_core_data_ecom_include($item) {
+
+  $q = db_select("users");
+  $q->addJoin("inner", "field_data_field_feed_owner", "o", "o.field_feed_owner_uid = users.uid");
+  $q->addJoin("inner", "field_data_field_product_filter", "f", "f.entity_id = o.entity_id");
+  $q->fields("f", array("field_product_filter_target_id"));
+  $feedids = $q->execute()->fetchCol();
+
+  if(in_array($item->nid, $feedids)) {
+    return true;
+  }
+
+  return false;
+}
+
+function digital_core_data_get_containing_collections($item) {
+
+  $collections = db_select("field_data_field_collection_data")
+                  ->fields("field_data_field_collection_data", array("entity_id"))
+                  ->condition("field_collection_data_target_id", $item->nid)
+                  ->execute()
+                  ->fetchCol();
+
+  return implode(",", $collections);
+}
+
+function digital_core_data_get_ext_field($item, $field) {
+  $value = null;
+  if($item->type == "product_details") {
+    if(isset($item->field_productsid) && array_key_exists("und", $item->field_productsid)) {
+      $q = db_select("digital_core_data_productinventory_ext");
+      $q->addJoin("inner", "digital_core_data_products", "dp", "dp.east_product_id = digital_core_data_productinventory_ext.east_product_id");
+      $value = $q->fields("digital_core_data_productinventory_ext", array($field))
+        ->condition("productsid", $item->field_productsid['und'][0]['value'])
+        ->execute()
+        ->fetchField();
+
+      if(!$value) {
+        $q = db_select("digital_core_data_productinventory_ext");
+        $q->addJoin("inner", "digital_core_data_products", "dp", "dp.west_product_id = digital_core_data_productinventory_ext.west_product_id");
+        $value = $q->fields("digital_core_data_productinventory_ext", array($field))
+          ->condition("productsid", $item->field_productsid['und'][0]['value'])
+          ->execute()
+          ->fetchField();
+      }
+    }
+  }
+  return $value;
+}
+
+function digital_core_data_get_field($item, $field) {
+  $value = null;
+  if($item->type == "product_details") {
+     if(isset($item->field_productsid) && array_key_exists("und", $item->field_productsid)) {
+        $value = db_select("digital_core_data_products")
+          ->fields("digital_core_data_products", array($field))
+          ->condition("productsid", $item->field_productsid['und'][0]['value'])
+          ->execute()
+          ->fetchField();
+    }
+  }
+  return $value;
+}
+
+function digital_core_data_get_remitnum($item) {
+//  select distinct v.remitnum, v.vendoracctnum, v.`VendorAcctNm` from digital_core_data_products p
+//  inner join digital_core_data_distcenter_product dp on dp.productsid = p.productsid
+//  inner join digital_core_data_vendors v on v.`VendoracctSid` = dp.`vendor_acct_sid`
+
+  $q = db_select("digital_core_data_products", "p");
+  $q->addJoin("inner", "digital_core_data_distcenter_product", "dp", "dp.productsid = p.productsid");
+  $q->addJoin("inner", "digital_core_data_vendors", "v", "v.VendoracctSid = dp.vendor_acct_sid");
+  $q->fields("v", array("RemitNum"));
+  $data = $q->condition("p.productsid", $item->field_productsid['und'][0]['value'])
+    ->execute()
+    ->fetchField();
+
+  return $data;
+}
+
+function digital_core_data_get_vendoracctnum($item) {
+//  select distinct v.remitnum, v.vendoracctnum, v.`VendorAcctNm` from digital_core_data_products p
+//  inner join digital_core_data_distcenter_product dp on dp.productsid = p.productsid
+//  inner join digital_core_data_vendors v on v.`VendoracctSid` = dp.`vendor_acct_sid`
+
+  $q = db_select("digital_core_data_products", "p");
+  $q->addJoin("inner", "digital_core_data_distcenter_product", "dp", "dp.productsid = p.productsid");
+  $q->addJoin("inner", "digital_core_data_vendors", "v", "v.`VendoracctSid` = dp.`vendor_acct_sid`");
+  $q->fields("v", array("vendoracctnum"));
+  $data = $q->condition("p.productsid", $item->field_productsid['und'][0]['value'])
+    ->execute()
+    ->fetchField();
+
+  return $data;
+}
+
+function digital_core_data_get_vendoracctnm($item) {
+//  select distinct v.remitnum, v.vendoracctnum, v.`VendorAcctNm` from digital_core_data_products p
+//  inner join digital_core_data_distcenter_product dp on dp.productsid = p.productsid
+//  inner join digital_core_data_vendors v on v.`VendoracctSid` = dp.`vendor_acct_sid`
+
+  $q = db_select("digital_core_data_products", "p");
+  $q->addJoin("inner", "digital_core_data_distcenter_product", "dp", "dp.productsid = p.productsid");
+  $q->addJoin("inner", "digital_core_data_vendors", "v", "v.`VendoracctSid` = dp.`vendor_acct_sid`");
+  $q->fields("v", array("VendorAcctNm"));
+  $data = $q->condition("p.productsid", $item->field_productsid['und'][0]['value'])
+    ->execute()
+    ->fetchField();
+
+  return $data;
+}
+
+function digital_core_data_get_available_east_getter($item) {
+  $q = db_select("digital_core_data_distcenter_product", "dp");
+  $q->addJoin("inner", "digital_core_data_distcenter", "d", "d.DistnCenterLocationSid = dp.DistnCenterLocationSid");
+  $q->fields("dp", array("avail_desc"));
+  $q->condition("dp.productsid", $item->field_productsid['und'][0]['value']);
+  $q->condition("d.Owning_Organization_Alias_Name", "UNFI East Region");
+  $q->orderBy("avail_desc", "ASC");
+  $data = $q->execute()
+    ->fetchField();
+
+  if ($data == "") {
+    $data = "AVAIlABLE";
+  }
+
+  return $data;
+}
+
+function digital_core_data_get_available_west_getter($item) {
+  $q = db_select("digital_core_data_distcenter_product", "dp");
+  $q->addJoin("inner", "digital_core_data_distcenter", "d", "d.DistnCenterLocationSid = dp.DistnCenterLocationSid");
+  $q->fields("dp", array("avail_desc"));
+  $q->condition("dp.productsid", $item->field_productsid['und'][0]['value']);
+  $q->condition("d.Owning_Organization_Alias_Name", "UNFI West Region");
+  $q->orderBy("avail_desc", "ASC");
+  $data = $q->execute()
+    ->fetchField();
+
+  if ($data == "") {
+    $data = "AVAIlABLE";
+  }
+
+  return $data;
+}
+
+function digital_core_data_min_order_qty_getter($item) {
+  return digital_core_data_get_ext_field($item, "min_order_qty");
+}
+
+function digital_core_data_total_qty_on_hand_getter($item) {
+  return digital_core_data_get_ext_field($item, "qty_on_hand");
+}
+
+function digital_core_data_selling_unit_getter($item) {
+  return digital_core_data_get_field($item, "selling_unit");
+}
+
+function digital_core_data_srp_getter($item) {
+  return digital_core_data_get_ext_field($item, "srp");
+}
+
+function digital_core_data_price_after_disc_getter($item) {
+  return digital_core_data_get_ext_field($item, "price_after_disc");
+}
+
+function digital_core_data_net_margin_getter($item) {
+  return digital_core_data_get_field($item, "net_margin");
+}
+
+function digital_core_data_whls_price_after_disc_getter($item) {
+  return digital_core_data_get_ext_field($item, "whls_price_after_disc");
+}
+
+function digital_core_data_whls_net_margin_getter($item) {
+  return digital_core_data_get_field($item, "whls_net_margin");
+}
+
+function digital_core_data_promo_disc_getter($item) {
+  return digital_core_data_get_ext_field($item, "promo_disc");
+}
+
+function digital_core_data_base_whls_getter($item) {
+  return digital_core_data_get_ext_field($item, "base_wholesale");
+}
+
+function digital_core_data_discountable_getter($item) {
+  return digital_core_data_get_ext_field($item, "discountable");
+}
+
+function digital_core_data_organic_getter($item) {
+  return digital_core_data_get_field($item, "organic");
+}
+
+function digital_core_data_gluten_free_getter($item) {
+  return digital_core_data_get_field($item, "gluten_free");
+}
+
+function digital_core_data_dairy_free_getter($item) {
+  return digital_core_data_get_field($item, "dairy_free");
+}
+
+function digital_core_data_yeast_free_getter($item) {
+  return digital_core_data_get_field($item, "yeast_free");
+}
+
+function digital_core_data_wheat_free_getter($item) {
+  return digital_core_data_get_field($item, "wheat_free");
+}
+
+function digital_core_data_vegan_getter($item) {
+  return digital_core_data_get_field($item, "vegan");
+}
+
+function digital_core_data_kosher_getter($item) {
+  return digital_core_data_get_field($item, "kosher");
+}
+
+function digital_core_data_fair_trade_getter($item) {
+  return digital_core_data_get_field($item, "fair_trade");
+}
+
+function digital_core_data_gmo_free_getter($item) {
+  return digital_core_data_get_field($item, "gmo_free");
+}
+
+function digital_core_data_pack_getter($item) {
+  return digital_core_data_get_field($item, "pack");
+}
+
+function digital_core_data_size_getter($item) {
+  return digital_core_data_get_field($item, "size");
+}
+
+function digital_core_data_get_east_product_id_full_getter($item) {
+  return digital_core_data_get_field($item, "east_product_id_full");
+}
+
+function digital_core_data_get_upc_getter($item) {
+  return digital_core_data_get_field($item, "upc");
+}
+
+function digital_core_data_get_product_name_getter($item) {
+  return digital_core_data_get_field($item, "product_name");
+}
+
+function digital_core_data_get_east_product_id_getter($item) {
+  return digital_core_data_get_field($item, "east_product_id");
+}
+
+function digital_core_data_get_west_product_id_getter($item) {
+  return digital_core_data_get_field($item, "west_product_id");
+}
+
+function digital_core_data_get_item_type_getter($item) {
+  return digital_core_data_get_field($item, "item_type");
+}
+
+function digital_core_data_get_item_size_getter($item) {
+  return digital_core_data_get_field($item, "item_size");
+}
+
+function digital_core_data_get_source_created_getter($item) {
+  return digital_core_data_get_field($item, "source_created");
+}
+
+function digital_core_data_get_ein_getter($item) {
+  return digital_core_data_get_field($item, "ein");
+}
+
+function digital_core_data_get_west_product_desc_getter($item) {
+  return digital_core_data_get_field($item, "west_product_desc");
+}
+
+function digital_core_data_get_item_dept_name_getter($item) {
+  return digital_core_data_get_field($item, "item_dept_name");
+}
+
+function digital_core_data_get_pack_component_qty_getter($item) {
+  return digital_core_data_get_field($item, "pack_component_qty");
+}
+
+function digital_core_data_get_case_component_qty_getter($item) {
+  return digital_core_data_get_field($item, "case_component_qty");
+}
+
+function digital_core_data_base_item_size_measurement_getter($item) {
+  return digital_core_data_get_field($item, "base_item_size_measurement");
+}
+
+function digital_core_data_item_advertising_text_getter($item) {
+  return digital_core_data_get_field($item, "item_advertising_text");
+}
+
+function digital_core_data_src_item_advertising_text_getter($item) {
+  return digital_core_data_get_field($item, "src_item_advertising_text");
+}
+
+//look up a product in the database based on a key field -> value supplied
+//returns the nid of that product
+function digital_core_data_get_nid($key_field, $key_value) {
+
+  //they key value may need to be converted to something stored in drupal first
+  //east and west product id values are not field entries, so not imediately searchable
+  //if the key field is in the field_config table then its a drupal field, otherwise
+  //get the value from the digital_core_data_products table and then match over to
+  //the nid on the node then
+
+  $field_exists = db_select("field_config")
+                    ->condition("field_name", $key_field)
+                    ->fields("field_config")
+                    ->execute()
+                    ->fetchAll();
+
+  if(!$field_exists) {
+    $key_value = db_select("digital_core_data_products")
+              ->condition($key_field, $key_value)
+              ->fields("digital_core_data_products", array("ein"))
+              ->execute()
+              ->fetchField();
+
+    $key_field = "ein";
+  }
+
+  return db_select("field_data_{$key_field}")
+            ->fields("field_data_{$key_field}", array("entity_id"))
+            ->condition("{$key_field}_value", $key_value)
+            ->execute()
+            ->fetchField();
+}
+
+
+function digital_core_data_get_primary_key($contentType, $staticTable = null) {
+   $key = db_select("digital_core_mapping")
+     ->fields('digital_core_mapping', array('toField'))
+     ->condition('primary_key', 1)
+     ->condition("source", "staging")
+     ->condition("destination", $contentType)
+     ->execute()
+     ->fetchField();
+
+   if($key == "" && $staticTable != null) {
+     $key = digital_core_data_get_primary_key($staticTable);
+   }
+
+   return $key;
+}
+
+function digital_core_data_update_solr_direct($entity_type, $field, $id, $value) {
+  //get some info about the index
+  $indexid = db_select("search_api_index")
+    ->fields("search_api_index", array("id"))
+    ->condition("machine_name", "default_node_index")
+    ->condition("item_type", $entity_type)
+    ->execute()
+    ->fetchField();
+
+  //get the solr index object
+  $index = search_api_index_load($indexid);
+
+  //get the server
+  $server = search_api_index_get_server($index);
+
+  //get the connection
+  $conn = $server->getSolrConnection();
+
+  //get the solr field name
+  $field_type = $index->options['fields'][$field]['type'];
+
+  $prefix = "ss_";
+
+  if($field_type == "integer") {
+    $prefix = "is_";
+  }
+  else if($field_type == "taxonomy_term") {
+    $prefix = "is_";
+  }
+  else if($field_type == "boolean") {
+    $prefix = "bs_";
+  }
+  else if($field_type == "date") {
+    $prefix = "ds_";
+  }
+
+  $req = '<add><doc><field name="id">'.$index->machine_name.'-'.$id.'</field><field name="'.$prefix.$field.'" update="set">'.$value.'</field></doc></add>';
+
+  //use the connection to run a query
+  $r = $conn->update($req);
+}
+
+//update the record directly, inserting the updated fields into the database bypassing drupal
+//performance reasons
+function digital_core_data_update_direct($entity_type, $bundle, $id, $fields, $index = true) {
+
+
+  //get the field info needed for knowing how to update a field
+  $field_info = db_select("field_config")
+    ->fields("field_config", array("field_name", "type"))
+    ->execute()
+    ->fetchAllAssoc("field_name");
+
+  foreach($fields as $field => $value) {
+
+    $value_field = "value";
+
+    $x = "";
+
+    if($field_info[$field]->type == "taxonomy_term_reference") {
+      $value_field = "target_id";
+    }
+    else if($field_info[$field]->type == "entityreference") {
+      $value_field = "target_id";
+    }
+
+    db_merge("field_data_{$field}")
+      ->key(array("entity_id" => $id))
+      ->fields(array($field."_".$value_field => $value,
+        "delta" => 0,
+        "entity_type" => $entity_type,
+        "bundle" => $bundle,
+        "language" => "und",
+        "revision_id" => $id))
+      ->execute();
+
+    db_merge("field_revision_{$field}")
+      ->key(array("entity_id" => $id))
+      ->fields(array($field."_".$value_field => $value,
+        "delta" => 0,
+        "entity_type" => $entity_type,
+        "bundle" => $bundle,
+        "language" => "und",
+        "revision_id" => $id))
+      ->execute();
+
+    //update solr
+
+    if($index) {
+      digital_core_data_update_solr_direct($entity_type, $field, $id, $value);
+    }
+  }
+}
+
+//add any missing east check digit
+function digital_core_data_add_missing_checkdigits() {
+  $products = db_select("digital_core_data_products")
+    ->fields("digital_core_data_products", array("ProductSid", "east_product_id"))
+    ->condition("east_product_id", "", "!=")
+    ->isNull("east_product_id_full")
+    ->execute()
+    ->fetchAll();
+
+  foreach($products as $product) {
+    $checkDigit = digital_core_data_calulate_check_digit($product->east_product_id);
+
+    if($product->east_product_id != "") {
+      echo $product->east_product_id . "-" . $checkDigit . "\n";
+      db_update("digital_core_data_products")
+        ->fields(array("east_product_id_full" => $product->east_product_id ."-". $checkDigit))
+        ->condition("east_product_id", $product->east_product_id)
+        ->execute();
+    }
+  }
+}
+
+function digital_core_data_calulate_check_digit($id) {
+  /*
+   * Take the 6 digit product number:    UVWXYZ
+
+      Fill in the following number like so   ABCDEF =
+
+      AB=V*2   cd=x*2     ef=Z*2
+
+      Sum = a+b+c+d+e+f+U+W+Y
+
+      Which=second digit of sum
+
+      List = 0,9,8,7,6,5,4,3,2,1
+
+      Check digit is  list(which  +1)
+   */
+
+  $data = str_split((string)$id);
+
+  $ab = ($data[1] * 2);
+  $cd = ($data[3] * 2);
+  $ef = ($data[5] * 2);
+
+  $abS = str_split((string)$ab);
+  $cdS = str_split((string)$cd);
+  $efS = str_split((string)$ef);
+
+  $sum += $abS[0];
+  if(count($abS) > 1) {
+    $sum += $abS[1];
+  }
+
+  $sum += $cdS[0];
+  if(count($cdS) > 1) {
+    $sum += $cdS[1];
+  }
+
+  $sum += $efS[0];
+  if(count($efS) > 1) {
+    $sum += $efS[1];
+  }
+
+  $sum += $data[0];
+  $sum += $data[2];
+  $sum += $data[4];
+
+  $list = array(0, 9, 8, 7, 6, 5, 4, 3, 2, 1);
+
+  $which = str_split($sum);
+
+  if(count($which) > 1) {
+    $d = $which[1];
+  }
+  else {
+    $d = $which[0];
+  }
+
+  $check = $list[$d];
+
+  return $check;
+}

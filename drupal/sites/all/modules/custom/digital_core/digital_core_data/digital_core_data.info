@@ -1,0 +1,11 @@
+name = Digital Core Data
+description = Digital Core data access.
+package = Digital Core
+core = 7.x
+dependencies[] = digital_core
+dependencies[] = simple_solr
+dependencies[] = tom
+files[] = digital_core_data_products.inc
+files[] = digital_core_data_brands.inc
+files[] = digital_core_data_assets.inc
+files[] = digital_core_data_categories.inc

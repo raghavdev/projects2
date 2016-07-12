@@ -1,0 +1,1428 @@
+<?php
+/**
+ * @file
+ * Blue Marble installation and update functions.
+ */
+
+/**
+ * Implements hook_update_N().
+ *
+ * Removes DigitalCore categories.
+ */
+function bluemarble_update_7004(&$sandbox) {
+  $vocab = taxonomy_vocabulary_machine_name_load('categories');
+
+  if (!isset($sandbox['max'])) {
+    $sandbox['max'] = db_select('taxonomy_term_data', 'td')
+      ->condition('td.vid', $vocab->vid)
+      ->countQuery()
+      ->execute()
+      ->fetchField();
+    $sandbox['position'] = 0;
+  }
+
+  $limit = 50;
+  $tids = db_select('taxonomy_term_data', 'td')
+    ->condition('td.vid', $vocab->vid)
+    ->fields('td', array('tid'))
+    ->range(0, $limit)
+    ->execute()
+    ->fetchCol();
+
+  if (!empty($tids)) {
+    foreach ($tids as $tid) {
+      taxonomy_term_delete($tid);
+    }
+  }
+
+  $sandbox['position'] += $limit;
+
+  if ($sandbox['max'] > 0 && $sandbox['max'] > $sandbox['position']) {
+    $sandbox['#finished'] = $sandbox['position'] / $sandbox['max'];
+  }
+  else {
+    $sandbox['#finished'] = 1;
+  }
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Adds Blue Marble categories.
+ */
+function bluemarble_update_7005(&$sandbox) {
+  $vocab = taxonomy_vocabulary_machine_name_load('categories');
+
+  $categories = array(
+    'Canned Chowders',
+    'Dried Fruits',
+    'Packaged Nuts',
+    'Snacks',
+    'Confections W',
+    'Bulk',
+    'Frozen Fruits',
+    'Frozen Veggies',
+    'Sugar',
+    'Canister',
+    'TenderFruit',
+    'Chips',
+    'Frozen Fish',
+    'Peanut Butters - Glass',
+    'Cereal',
+    'Canned Salmon',
+    'Canned Tuna Retail',
+    'Baby Food',
+    'Frozen Entrees',
+    'Coconut Water',
+    'Soken',
+    'Oils',
+    'Pasta',
+    'Snack Size E',
+    'InConsideration',
+    'Shippers',
+    'Packaged Seeds',
+    'Rice',
+    'Tubs',
+    'Miscellaneous',
+    'Breaded and Marinated',
+    'Miscellaneous Shelf Stable Items',
+    'IQF Seafood Items',
+    'Condiments',
+    'Juice',
+    'Smoked Seafood',
+    'Bulk Confections',
+    'Canned Tomatoes',
+    'Snack Size W',
+    'Canned Tuna D',
+    'Snack Size H',
+    'Confections H',
+    'Canned Tuna D Foodservice',
+    'Canned Tomatoes W Foodservice',
+    'Canned Tuna N Foodservice',
+    'Frozen Veggies Foodservice Size',
+    'Frozen Fruits Foodservice Size',
+    'Milk',
+    'Applesauce',
+    'Butter',
+    'Chocolate',
+    'Flour',
+    'Eggs',
+    'RMO Pizza',
+    'Vinegars',
+    'Olives',
+    'Tofu',
+    'Soy Milk',
+    'Breaded and Marinated FS',
+    'IQF Shrimp',
+    'Flax',
+    'Dressings',
+    'NFC Orange Juice',
+    'RMO Ravioli',
+    'Pesto Sauce',
+    'Salsa',
+    'Pasta Sauce',
+    'Concentrates',
+    'Meat',
+    'NEW PET Peanut Butters',
+    'Canned Tuna Yellowfin',
+    'Almond Butters',
+    'Milk - Western Region',
+    'Frozen Baby Food',
+    'RMO Primacotta Entrees',
+    'RMO Foodservice',
+    'Food Service Ravioli',
+    'Canned Sardines',
+    'RMO Mac & Cheese',
+    'Canada',
+    'Beverage, Misc Mix',
+    'Sweeteners',
+    'Dessert, Non-Frozen',
+    'Bulk Ravioli',
+    'Sardines',
+    'Waffles',
+    'Half & Half',
+    'Jerky',
+    'Rice Cakes',
+    'Acai',
+    'Fruit Drops',
+    'Baking',
+    'Beverages',
+    'Bulk Baking',
+    'Chocolate Bars',
+    'Chocolate Novelty',
+    'Culinary Oils - Loriva',
+    'Olives',
+    'Peppers',
+    'Preserves',
+    'Seasonings',
+    'Soups & Boullion',
+    'Sundried Tomatoes',
+    'Vinegar',
+    'Functional Juices',
+    'Coffee Substitute',
+    'Displays',
+    'Bulk Chocolate',
+    'Med Org Bulk',
+    'Soy Sauce - Tamari',
+    'Spreads',
+    'Coconut Oil',
+    'Glacier Water',
+    'Hummus',
+    'Coconut Milk',
+    'Pickles & Relish',
+    'Skillet Meals',
+    'Rubs',
+    'Rubs - Single Serve',
+    'Sea Salt',
+    'Shakers',
+    'Rubs - Displays',
+    'Rubs - Food Service',
+    'Organic Oil - Rapunzel',
+    'Deli Meats',
+    'Peanut Butters - PET',
+    'Bulk Deli Meats',
+    'Rice Chips',
+    'MW Refrigerated Soups',
+    'MW Bulk Frozen Soup',
+    'MW Bulk Frozen Entrees',
+    'MW Bulk Frozen Sauces',
+    'Capers & Dolmas',
+    'OC Refrigerated Soups',
+    'OC Bulk Frozen Soup',
+    'OC Bulk Frozen Entrees',
+    'OC Bulk Frozen Sauces',
+    'MW Frozen Entrees',
+    'OC Frozen Entrees',
+    'Tubs W',
+    'Display - Dessert, Non Frozen',
+    'Laundry Products',
+    'Artichokes',
+    'Tortillas',
+    'Tortillas, Organic',
+    'Agave Sparkling Beverages',
+    'Koyo Test',
+    'Tapenades',
+    'Ice Cream',
+    'Frozen Novelties',
+    'Baking Products',
+    'Oils - Tropical',
+    'FF Soup Cups',
+    'FF Entrée Dinner Mixes',
+    'FF Elegant Grains',
+    'FF Bagged Soup',
+    'FF Bulk',
+    'Flavored Nuts',
+    'FD Canned Beans',
+    'FD Water',
+    'FD Pasta',
+    'MV Cheese',
+    'MV Condiments',
+    'MV Toasts',
+    'Tortillas, Food Service',
+    'Chips, Tumaros',
+    'Canada - Laundry Door',
+    'Tortas',
+    'MV Taverna Meze',
+    'MV Cheese, Bulk',
+    'Granola',
+    'WF Temporary',
+    'Bonus Pack',
+    'FD Sea Salt',
+    'FD Broth',
+    'FD Canned Veggies',
+    'FD Paper Products',
+    'FD Packaged',
+    'FD Crackers',
+    'FD Dressings',
+    'FD Pasta Sauce',
+    'FD Rice',
+    'FD Canned Soups',
+    'FD Non Dairy Beverages',
+    'FD Sweeteners',
+    'FD Chips & Pretzels',
+    'FD Shelf Stable Salsa',
+    'FD Cold Cereal',
+    'FD Cookies',
+    'FD Snack Items',
+    'FD Flour',
+    'FD Condiments',
+    'FD Brown Rice Pasta',
+    'Jungle Butter',
+    'NP Deli Meats',
+    'NP Bacon',
+    'NP Cooked Sausage',
+    'FD Juice',
+    'FD Cookies, Gluten Free',
+    'FD Hair & Body Care',
+    'NP Cheese',
+    'Tortillas, Tradeshow Samples',
+    'FD Italian Soda',
+    'RMO Brown Rice Pasta',
+    'FD Household Cleaners',
+    'GA Cheese',
+    'WF Cheese',
+    'WF Cheese, Bulk',
+    'Steamable Frzn Veggies',
+    'Cereal - Packets',
+    'Cereal - Canisters',
+    'OC Frzn Retail Soups',
+    'MW Frzn Retail Soups',
+    'FF Shippers',
+    'OW Shippers',
+    'Ramen',
+    'Cheese, Misc',
+    'RMO Shippers',
+    'Tortillas, Soy-full Heart',
+    'Tortillas, Low in Carb',
+    'Tortillas, Bilingual',
+    'Tortillas, Variety Packs',
+    'Tortillas, Food Service, Organic',
+    'IR Displays',
+    'FD Baby Products',
+    'FD Household Products',
+    'Tortillas, Gluten Free',
+    'Bins',
+    'RMO Pierogies',
+    'RMO Ravioli Family Size',
+    'Charcoal',
+    'Tortillas, NY Deli Style',
+    'FD Canned Pasta',
+    'FD Canned Chili',
+    'FD Olive Oil',
+    'Ketchup',
+    'Mustard',
+    'Frozen Natural Veggies',
+    'Frozen Potatoes',
+    'Packaged Grains',
+    'Packaged Mixes',
+    'Mayo',
+    'FD Fruit Cups',
+    'FD Canned Olives',
+    'Discontinued Items',
+    'FD Gluten Free Pasta',
+    'FD Balsamic Vinegar',
+    'FD Peanut Butter',
+    'Canned Tuna - Maldive',
+    'FD Maple Syrup',
+    'FD Applesauce',
+    'BBQ Sauce',
+    'FD Cereal Bars',
+    'FD Pretzels',
+    'Sweet Potato Fries',
+    'FD Tortilla Chips',
+    'FD Chicken Chili',
+    'Mayo',
+    'Wood Chips',
+    'FD Microwaveable Popcorn',
+    'Ramen, Reduced Sodium',
+    'Cranberry Sauce',
+    'Reduced Sodium Dinner Entrees',
+    'Tortillas, Low Carb Low Cal',
+    'Tortillas, Mexican',
+    'FD Packaged Tubs',
+    '0',
+    'FD Snacks',
+    'Rice Crackers',
+    'RMO Pasta Bowls',
+    'Quinoa Entrees',
+    'FD Fruit Spreads',
+    'Organic Cheese',
+    'MM - Organic Cookies',
+    'Tuna - Pouches',
+    'Specialty Nut Butters',
+    'Tahinis',
+    'Frozen Grilled Veggies',
+    'FD Mac & Cheese',
+    'FD Macaroni and Cheese',
+  );
+
+  if (!isset($sandbox['max'])) {
+    $sandbox['max'] = count($categories);
+    $sandbox['position'] = 0;
+  }
+
+  $limit = 50;
+  $names = array_slice($categories, $sandbox['position'], $limit);
+  foreach ($names as $name) {
+    $term = (object) array(
+      'name' => $name,
+      'vid' => $vocab->vid,
+    );
+    taxonomy_term_save($term);
+  }
+
+  $sandbox['position'] += $limit;
+
+  if ($sandbox['max'] > 0 && $sandbox['max'] > $sandbox['position']) {
+    $sandbox['#finished'] = $sandbox['position'] / $sandbox['max'];
+  }
+  else {
+    $sandbox['#finished'] = 1;
+  }
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Removes DigitalCore fields from product_details.
+ */
+function bluemarble_update_7006() {
+  $field_names = array(
+    'field_account_state_restrictions',
+    'field_additional_images',
+    'field_alergens',
+    'field_amazon_restricted',
+    'field_base_wholesale',
+    'field_brand',
+    'field_calcium',
+    'field_calories',
+    'field_calories_from_fat',
+    'field_category',
+    'field_cholesterol',
+    'field_cholesterol_pdv',
+    'field_cmp_end_day',
+    'field_cmp_end_month',
+    'field_cmp_end_year',
+    'field_cmp_include',
+    'field_cmp_start_day',
+    'field_cmp_start_month',
+    'field_cmp_start_year',
+    'field_color',
+    'field_consumer_product_name',
+    'field_country_of_origin',
+    'field_description4',
+    'field_dietary_fiber',
+    'field_dietary_fiber_pdv',
+    'field_ecom_amazon_restrict',
+    'field_ecom_height',
+    'field_ecom_length',
+    'field_ecom_state_restrict',
+    'field_ecom_weight',
+    'field_ecom_width',
+    'field_enterprise_brand',
+    'field_ethnicity',
+    'field_extended_description',
+    'field_feature1',
+    'field_feature2',
+    'field_feature3',
+    'field_feature4',
+    'field_feature5',
+    'field_flavor',
+    'field_flyer_description',
+    'field_food_service_advertising_t',
+    'field_food_service_hierarchy',
+    'field_form',
+    'field_height',
+    'field_html_description',
+    'field_ingredients',
+    'field_ingredients_mod_user',
+    'field_ingredients_modified',
+    'field_iron',
+    'field_keywords',
+    'field_length',
+    'field_manufacturer_info',
+    'field_map_policy',
+    'field_map_policy_price',
+    'field_master_case_upc',
+    'field_nutritional_label_image',
+    'field_nutritional_shown',
+    'field_planogram_front_image',
+    'field_planogram_side_image',
+    'field_planogram_top_image',
+    'field_primary_image',
+    'field_print_image',
+    'field_product_type',
+    'field_productsid',
+    'field_protein',
+    'field_protein_pdv',
+    'field_rcm_hierarchy',
+    'field_recipe_urls',
+    'field_saturated_fat',
+    'field_saturated_fat_pdv',
+    'field_scent',
+    'field_serving_size',
+    'field_servings_per_container',
+    'field_sodium',
+    'field_sodium_pdv',
+    'field_status',
+    'field_subcategory',
+    'field_sugars',
+    'field_sugars_pdv',
+    'field_total_carbs',
+    'field_total_carbs_pdv',
+    'field_total_fat',
+    'field_total_fat_pdv',
+    'field_trans_fat',
+    'field_unit_height',
+    'field_unit_length',
+    'field_unit_weight',
+    'field_unit_width',
+    'field_video_link',
+    'field_video_link_alt',
+    'field_vitamin_a',
+    'field_vitamin_c',
+    'field_web_description',
+    'field_weight',
+    'field_width',
+  );
+  foreach ($field_names as $field_name) {
+    $instance = field_info_instance('node', $field_name, 'product_details');
+    field_delete_instance($instance);
+  }
+}
+
+/**
+ * Implements hook_update_N().
+ *
+ * Disables and uninstalls bmb_products.
+ */
+function bluemarble_update_7007() {
+  module_disable(array('bmb_products'));
+  drupal_uninstall_modules(array('bmb_products'));
+
+  // Delete the bmb_products content type
+  node_type_delete('bmb_products');
+}
+
+/**
+ * Re-runs removing DigitalCore categories and adding Blue Marble categories.
+ *
+ * There was a bug previously in deleting DigitalCore categories.
+ */
+function bluemarble_update_7008(&$sandbox) {
+  if (!isset($sandbox['scripts'])) {
+    $sandbox['scripts'] = array(7004, 7005);
+    $sandbox['position'] = 0;
+    $sandbox['max'] = count($sandbox['scripts']);
+    foreach ($sandbox['scripts'] as $script) {
+      $sandbox['script_sandbox'][$script] = array();
+    }
+  }
+
+  $pos = $sandbox['position'];
+  $current_script = $sandbox['scripts'][$pos];
+  $current_sandbox =& $sandbox['script_sandbox'][$current_script];
+  unset($current_sandbox['#finished']);
+  try {
+    $func = 'bluemarble_update_' . $current_script;
+    $func($current_sandbox);
+    if (!isset($current_sandbox['#finished']) || $current_sandbox['#finished'] >= 1) {
+      $pos++; // Increment now, but don't save to sandbox until we have calculated our total completion.
+    }
+  }
+  catch (Exception $e) {
+    throw new DrupalUpdateException('Error running update script ' . $current_script . ': ' . $e->getMessage());
+  }
+
+  if ($sandbox['max'] > 0 && $sandbox['max'] > $sandbox['position']) {
+    if (isset($current_sandbox['#finished'])) {
+      $sandbox['#finished'] = ($current_sandbox['#finished'] + $sandbox['position']) / $sandbox['max'];
+    }
+    else {
+      $sandbox['#finished'] = $sandbox['position'] / $sandbox['max'];
+    }
+  }
+  else {
+    $sandbox['#finished'] = 1;
+  }
+  $sandbox['position'] = $pos;
+}
+
+/**
+ * Removes PIM roles.
+ */
+function bluemarble_update_7009() {
+  user_role_delete('PIM Admin');
+  user_role_delete('PIM Viewer');
+}
+
+/**
+ * Add taxonomy terms for attributes
+ * Copied from Supplier Portal
+ */
+function bluemarble_update_7010() {
+  //Contains Attributes
+  $vocab_contains = (object) array(
+    'name' => 'Contains Attributes',
+    'machine_name' => 'contains_attributes'
+  );
+  taxonomy_vocabulary_save($vocab_contains);
+
+  $terms_contains = array(
+    'Artificial Preservatives',
+    'Clean ingredients',
+    'MSG',
+    'Sulfur Dioxide',
+    'Artificial Ingredients'
+  );
+
+  $names = $terms_contains;
+  foreach ($names as $name) {
+    $term_contains = (object) array(
+      'name' => $name,
+      'vid' => $vocab_contains->vid,
+    );
+    taxonomy_term_save($term_contains);
+  }
+
+  //Dietary Preference Attributes
+  $vocab_diet = (object) array(
+    'name' => 'Dietary Preferences Attributes',
+    'machine_name' => 'dietary_preference_attributes'
+  );
+  taxonomy_vocabulary_save($vocab_diet);
+
+  $terms_diet = array(
+    'Diabetic Support',
+    'Hypo-Allergenic',
+    'Low Carbohydrate',
+    'Low Glycemic',
+    'Raw Food',
+    'Vegan',
+    'Vegetarian'
+  );
+
+  $names = $terms_diet;
+  foreach ($names as $name) {
+    $term_diet = (object) array(
+      'name' => $name,
+      'vid' => $vocab_diet->vid,
+    );
+    taxonomy_term_save($term_diet);
+  }
+
+  //Ethnic
+  $vocab_ethnic = (object) array(
+    'name' => 'Ethnic',
+    'machine_name' => 'ethnic'
+  );
+  taxonomy_vocabulary_save($vocab_ethnic);
+
+  $terms_ethnic = array(
+    'Kosher',
+    'Hispanic',
+    'Indian',
+    'Asian'
+  );
+
+  $names = $terms_ethnic;
+  foreach ($names as $name) {
+    $term_ethnic = (object) array(
+      'name' => $name,
+      'vid' => $vocab_ethnic->vid,
+    );
+    taxonomy_term_save($term_ethnic);
+  }
+
+  //Fat Content Attributes
+  $vocab_fat = (object) array(
+    'name' => 'Fat Content Attributes',
+    'machine_name' => 'fat_content_attributes'
+  );
+  taxonomy_vocabulary_save($vocab_fat);
+
+  $terms_fat = array(
+    'Fat Free',
+    'Low Fat',
+    'Reduced Fat',
+    'Trans Fat Free'
+  );
+
+  $names = $terms_fat;
+  foreach ($names as $name) {
+    $term_fat = (object) array(
+      'name' => $name,
+      'vid' => $vocab_fat->vid,
+    );
+    taxonomy_term_save($term_fat);
+  }
+
+  //Free Of Attributes
+  $vocab_free = (object) array(
+    'name' => 'Free Of Attributes',
+    'machine_name' => 'free_of_attributes'
+  );
+  taxonomy_vocabulary_save($vocab_free);
+
+  $terms_free = array(
+    'Alcohol Free',
+    'Casein Free',
+    'Cholesterol Free',
+    'Corn Free',
+    'Fragrance Free',
+    'Gluten Free (labeled)',
+    'Gluten Free (not labeled)',
+    'Hydrogenated Oil Free',
+    'Lactose Free',
+    'Latex Free',
+    'Rennet Free',
+    'rGBH Free',
+    'Yeast Free'
+  );
+
+  $names = $terms_free;
+  foreach ($names as $name) {
+    $term_free = (object) array(
+      'name' => $name,
+      'vid' => $vocab_free->vid,
+    );
+    taxonomy_term_save($term_free);
+  }
+
+  //Kosher Certificates
+  $vocab_kosher = (object) array(
+    'name' => 'Kosher Certificates',
+    'machine_name' => 'kosher_certificates'
+  );
+  taxonomy_vocabulary_save($vocab_kosher);
+
+  $terms_kosher = array(
+    'Kosher - Daily',
+    'Kosher - MBUF',
+    'Kosher - Passover Only',
+    'Pareve'
+  );
+
+  $names = $terms_kosher;
+  foreach ($names as $name) {
+    $term_kosher = (object) array(
+      'name' => $name,
+      'vid' => $vocab_kosher->vid,
+    );
+    taxonomy_term_save($term_kosher);
+  }
+
+  //Major Allergen Attributes
+  $vocab_allergen = (object) array(
+    'name' => 'Major Allergen Attributes',
+    'machine_name' => 'major_allergen_attributes'
+  );
+  taxonomy_vocabulary_save($vocab_allergen);
+
+  $terms_allergen = array(
+    'Allergen Free',
+    'Egg Free',
+    'Fish Free',
+    'Milk Free',
+    'Peanut Free',
+    'Shellfish Free',
+    'Soy Free',
+    'Tree Nut Free',
+    'Wheat Free'
+  );
+
+  $names = $terms_allergen;
+  foreach ($names as $name) {
+    $term_allergen = (object) array(
+      'name' => $name,
+      'vid' => $vocab_allergen->vid,
+    );
+    taxonomy_term_save($term_allergen);
+  }
+
+  //Other Attributes
+  $vocab_other = (object) array(
+    'name' => 'Other Attributes',
+    'machine_name' => 'other_attributes'
+  );
+  taxonomy_vocabulary_save($vocab_other);
+
+  $terms_other = array(
+    'Biodegradable',
+    'Food Service/Bulk Pack',
+    'SPF',
+    'Sustained Release'
+  );
+
+  $names = $terms_other;
+  foreach ($names as $name) {
+    $term_other = (object) array(
+      'name' => $name,
+      'vid' => $vocab_other->vid,
+    );
+    taxonomy_term_save($term_other);
+  }
+
+  //Processing Attributes
+  $vocab_processing = (object) array(
+    'name' => 'Processing Attributes',
+    'machine_name' => 'processing_attributes'
+  );
+  taxonomy_vocabulary_save($vocab_processing);
+
+  $terms_processing = array(
+    'BPA Free Packaging',
+    'Dolphin Safe',
+    'Heat Treated',
+    'No Animal Testing',
+    'Raised w/o Antibiotics',
+    'Raised w/o Hormones',
+    'Recycled Materials'
+  );
+
+  $names = $terms_processing;
+  foreach ($names as $name) {
+    $term_processing = (object) array(
+      'name' => $name,
+      'vid' => $vocab_processing->vid,
+    );
+    taxonomy_term_save($term_processing);
+  }
+
+  //Salt Content Attributes
+  $vocab_salt = (object) array(
+    'name' => 'Salt Content Attributes',
+    'machine_name' => 'salt_content_attributes'
+  );
+  taxonomy_vocabulary_save($vocab_salt);
+
+  $terms_salt = array(
+    'Low Sodium',
+    'No Salt Added',
+    'Reduced Sodium',
+    'Sodium Free'
+  );
+
+  $names = $terms_salt;
+  foreach ($names as $name) {
+    $term_salt = (object) array(
+      'name' => $name,
+      'vid' => $vocab_salt->vid,
+    );
+    taxonomy_term_save($term_salt);
+  }
+
+  //Sweetener Attributes
+  $vocab_sweetener = (object) array(
+    'name' => 'Sweetener Attributes',
+    'machine_name' => 'sweetener_attributes'
+  );
+  taxonomy_vocabulary_save($vocab_sweetener);
+
+  $terms_sweetener = array(
+    'Alternative Natural Sweetener',
+    'Artificial Sweetener',
+    'Beet Sugar Sweetened',
+    'Cane Sugar Sweetened',
+    'Contains Refined Sugar',
+    'Fruit Juice Sweetened',
+    'No Sugar Added',
+    'Sugar Free'
+  );
+
+  $names = $terms_sweetener;
+  foreach ($names as $name) {
+    $term_sweetener = (object) array(
+      'name' => $name,
+      'vid' => $vocab_sweetener->vid,
+    );
+    taxonomy_term_save($term_sweetener);
+  }
+
+  //Third Party Certificates
+  $vocab_certificates = (object) array(
+    'name' => 'Third Party Certificates',
+    'machine_name' => 'third_party_certificates'
+  );
+  taxonomy_vocabulary_save($vocab_certificates);
+
+  $terms_certificates = array(
+    'Whole Grain Council',
+    'Certified Vegan',
+    'Non-GMO Project',
+    'Certified Humane'
+  );
+
+  $names = $terms_certificates;
+  foreach ($names as $name) {
+    $term_certificates = (object) array(
+      'name' => $name,
+      'vid' => $vocab_certificates->vid,
+    );
+    taxonomy_term_save($term_certificates);
+  }
+
+}
+/**
+ * Removes old Activity Code field.
+ */
+function bluemarble_update_7011() {
+  field_delete_field('field_activity_code');
+  field_delete_field('field_available_in_macola');
+}
+
+/**
+ * Removes old tables.
+ */
+function bluemarble_update_7012() {
+  $table_names = array(
+    'drangular_apps-',
+    'drangular_apps_paths-',
+    'eiw_brand-old',
+    'eiw_product-old',
+    'eiw_rcm_category-',
+    'pws_productdetails-',
+    'pws_productnutrition-',
+    'pws_productnutrition--',
+    'pws_products-',
+  );
+  foreach ($table_names as $table) {
+    // db_drop_table() doesn't work because of the - in the name.
+    db_query("DROP TABLE `$table`");
+  }
+}
+
+/**
+ * Removes old tables.
+ */
+function bluemarble_update_7013() {
+  $table_names = array(
+    'eiw_brand',
+    'eiw_brandcustname',
+    'eiw_distcenter_codes',
+    'eiw_distncenter',
+    'eiw_distncenterproduct',
+    'eiw_eastbrand',
+    'eiw_easttoentbrand',
+    'eiw_extproductdata',
+    'eiw_jobs',
+    'eiw_product',
+    'eiw_product_',
+    'eiw_product_missing',
+    'eiw_productextdata',
+    'eiw_productinventoryextdata',
+    'eiw_rcm_category',
+    'eiw_spplr',
+    'eiw_westbrand',
+    'eiw_westtoentbrand',
+    'pws_cmp',
+    'pws_import',
+    'pws_nutrtion',
+    'pws_product_details',
+    'pws_productdetails',
+    'pws_products',
+    'hg_products',
+    'productnutrition',
+    'products',
+  );
+  foreach ($table_names as $table) {
+    db_drop_table($table);
+  }
+}
+
+/**
+ * Remove field groups from product_details
+ */
+function bluemarble_update_7014() {
+  $groups = array(
+    'group_product_detail_tabs',
+    'group_product',
+    'group_product_extended_data',
+    'group_product_core_business_data',
+    'group_marketing',
+    'group_marketing_man_info',
+    'group_marketing_recipes',
+    'group_marketing_keywords',
+    'group_marketing_bullets',
+    'group_images',
+    'group_descriptions',
+    'group_desc_flyer_desc',
+    'group_attributes',
+    'group_attrs_assigned',
+    'group_attrs_available_attributes',
+    'group_desc_ext_desc',
+    'group_desc_html_desc',
+    'group_nutritional',
+    'group_nutritional_allergens',
+    'group_nutritional_information',
+    'group_nutritional_ingredients',
+    'group_other',
+    'group_other_video_urls',
+    'group_specs',
+    'group_specs_case_specs',
+    'group_specs_other',
+    'group_specs_unit_specs',
+  );
+  foreach ($groups as $group) {
+    db_delete('field_group')
+      ->condition('group_name', $group)
+      ->execute();
+  }
+}
+
+/**
+ * Import the workflow.
+ */
+function bluemarble_update_7015() {
+  // Remove other workflows
+  $existing = workflow_load_multiple();
+  foreach ($existing as $workflow) {
+    $workflow->delete();
+  }
+  // Ensure we are workflow id 1, because our features exported field depends
+  // on it. db_truncate() may not actually reset the index.
+  db_query('TRUNCATE {workflows}');
+  db_query('TRUNCATE {workflow_states}');
+  db_query('TRUNCATE {workflow_transitions}');
+
+  // Create a workflow
+  $workflow = workflow_create('activity_state');
+  $workflow->wid = 1;
+  $workflow->label = 'Activity State';
+  $workflow->save();
+
+  $state_creation = current($workflow->states);
+
+  // Create states and transitions
+  $states = array(
+    array(
+      "weight" => "-20",
+      "state" => "Development",
+      "status" => "1",
+      "name" => "development",
+    ),
+    array(
+      "weight" => "-19",
+      "state" => "Review",
+      "status" => "1",
+      "name" => "review",
+    ),
+    array(
+      "weight" => "-18",
+      "state" => "Approved",
+      "status" => "1",
+      "name" => "approved",
+    ),
+    array(
+      "weight" => "-17",
+      "state" => "Active",
+      "status" => "1",
+      "name" => "active",
+    ),
+    array(
+      "weight" => "-16",
+      "state" => "Hold",
+      "status" => "1",
+      "name" => "hold",
+    ),
+    array(
+      "weight" => "-15",
+      "state" => "Discontinued",
+      "status" => "1",
+      "name" => "discontinued",
+    ),
+  );
+  $states_by_name = array(
+    '(creation)' => $state_creation->sid,
+  );
+  foreach ($states as $state) {
+    $stateObj = $workflow->createState($state['name']);
+    $stateObj->state = $state['state'];
+    $stateObj->weight = $state['weight'];
+    $stateObj->save();
+    $states_by_name[$state['name']] = $stateObj->sid;
+  }
+
+  $transitions = array(
+    array(
+      "state" => "(creation)",
+      "target_state" => "development",
+      "roles" => array("-1" => -1,"2" => "2"),
+    ),
+    array(
+      "state" => "development",
+      "target_state" => "development",
+      "roles" => array("-1" => -1,"2" => "2"),
+    ),
+    array(
+      "state" => "development",
+      "target_state" => "review",
+      "roles" => array("2" => "2"),
+    ),
+    array(
+      "state" => "review",
+      "target_state" => "review",
+      "roles" => array("-1" => -1,"2" => "2"),
+    ),
+    array(
+      "state" => "review",
+      "target_state" => "approved",
+      "roles" => array("2" => "2"),
+    ),
+    array(
+      "state" => "approved",
+      "target_state" => "approved",
+      "roles" => array("-1" => -1,"2" => "2"),
+    ),
+    array(
+      "state" => "approved",
+      "target_state" => "active",
+      "roles" => array("2" => "2"),
+    ),
+    array(
+      "state" => "active",
+      "target_state" => "active",
+      "roles" => array("-1" => -1,"2" => "2"),
+    ),
+    array(
+      "state" => "active",
+      "target_state" => "hold",
+      "roles" => array("2" => "2"),
+    ),
+    array(
+      "state" => "hold",
+      "target_state" => "active",
+      "roles" => array("2" => "2"),
+    ),
+    array(
+      "state" => "hold",
+      "target_state" => "hold",
+      "roles" => array("-1" => -1,"2" => "2"),
+    ),
+    array(
+      "state" => "hold",
+      "target_state" => "discontinued",
+      "roles" => array("2" => "2"),
+    ),
+    array(
+      "state" => "discontinued",
+      "target_state" => "hold",
+      "roles" => array("2" => "2"),
+    ),
+    array(
+      "state" => "discontinued",
+      "target_state" => "discontinued",
+      "roles" => array("-1" => -1,"2" => "2"),
+    ),
+  );
+  foreach ($transitions as $transition) {
+    $fromState = $states_by_name[$transition['state']];
+    $toState = $states_by_name[$transition['target_state']];
+    $transitionObj = $workflow->createTransition($fromState, $toState);
+    $transitionObj->roles = $transition['roles'];
+    $transitionObj->save();
+  }
+}
+
+/**
+ * Remove old Material Cost type field, replaced with a termreference field.
+ */
+function bluemarble_update_7016() {
+  field_delete_field('field_material_cost_type');
+}
+
+/**
+ * Enable Macola Connect module.
+ */
+function bluemarble_update_7017() {
+  module_enable(array('macola_connect'));
+  // For now we will use the Mock api server, until a real one exists.
+  variable_set('macola_connect_api_url', 'http://private-edc8d-testapi1092.apiary-mock.com');
+}
+
+/**
+ * Removes old Buyer/Planner field, replaced with a termreference field.
+ */
+function bluemarble_update_7018() {
+  field_delete_field('field_buyer_planner');
+}
+
+/**
+ * Update all products, setting the new Item Number field.
+ */
+function bluemarble_update_7019(&$sandbox) {
+  if (!isset($sandbox['max'])) {
+    // Ensure that
+    $sandbox['max'] = db_select('node', 'n')
+      ->condition('n.type', 'product_details')
+      ->countQuery()
+      ->execute()
+      ->fetchField();
+    $sandbox['position'] = 0;
+  }
+
+  $limit = 10;
+  $pos = $sandbox['position'];
+  $nids = db_select('node', 'n')
+    ->fields('n', array('nid'))
+    ->condition('n.type', 'product_details')
+    ->orderBy('n.nid')
+    ->range($pos, $limit)
+    ->execute()
+    ->fetchCol();
+  if ($nids) {
+    $nodes = node_load_multiple($nids);
+    foreach ($nodes as $node) {
+      $node->field_item_num = $node->field_item_number;
+      $node->field_upc = $node->field_upc_code;
+      node_save($node);
+    }
+  }
+
+  $sandbox['position'] += $limit;
+
+  if ($sandbox['max'] > 0 && $sandbox['max'] > $sandbox['position']) {
+    $sandbox['#finished'] = $sandbox['position'] / $sandbox['max'];
+  }
+  else {
+    $sandbox['#finished'] = 1;
+  }
+}
+
+/**
+ * Remove old item number field, replace with text field.
+ */
+function bluemarble_update_7020() {
+  field_delete_field('field_macola_id');
+  field_delete_field('field_item_number');
+  field_delete_field('field_upc_code');
+}
+
+/**
+ * Remove old percentage fields, replaced with new ones that are not integers.
+ */
+function bluemarble_update_7021() {
+  $fields = array(
+    'field_fat_percent_daily_value', // Replaced by field_fat_percent
+    'field_sat_percent_daily_value', // Replaced by field_saturated_fat_percent
+    'field_chol_percent_daily_value', // Replaced by field_cholesterol_percent
+    'field_sodium_percent_daily_value', // Replaced by field_sodium_percent
+    'field_carb_percent_daily_value', // Replaced by field_carbohydrate_percent
+    'field_fiber_percent_daily_value', // Replaced by field_fiber_percent
+    'field_iron_percent_daily_value', // Replaced by field_iron_percent
+  );
+  foreach ($fields as $field) {
+    field_delete_field($field);
+  }
+}
+
+/**
+ * Remove fields, some entirely, others to change data types.
+ */
+function bluemarble_update_7022() {
+  // Placeholder for an update that was the first attempt at refactoring the
+  // product_details model
+}
+
+/**
+ * Remove old taxonomy vocabularies.
+ */
+function bluemarble_update_7023(&$sandbox) {
+  if (!isset($sandbox['vocab_ids'])) {
+    $vocab_names = array(
+      'contains_attributes',
+      'ethnic',
+      'fat_content_attributes',
+      'flavor',
+      'form',
+      'keywords',
+      'kosher_certificates',
+      'other_attributes',
+      'status',
+      'type',
+    );
+
+    $query = db_select('taxonomy_vocabulary', 'tv');
+    $query->fields('tv', array('vid'));
+    $query->condition('tv.machine_name', $vocab_names);
+    $result = $query->execute();
+
+    $sandbox['vocab_ids'] = $result->fetchCol();
+    $sandbox['total']     = count($sandbox['vocab_ids']);
+  }
+
+  if (!empty($sandbox['vocab_ids'])) {
+    $vocab_id = array_shift($sandbox['vocab_ids']);
+    taxonomy_vocabulary_delete($vocab_id);
+  }
+
+  if (empty($sandbox['total'])) {
+    $sandbox['#finished'] = 1;
+  }
+  else {
+    $sandbox['#finished'] = 1 - (count($sandbox['vocab_ids']) / $sandbox['total']);
+  }
+}
+
+
+/**
+ * Remove old roles
+ */
+function bluemarble_update_7024() {
+  user_role_delete('management');
+  user_role_delete('DigitalCore User');
+  user_role_delete('DAM Viewer');
+  user_role_delete('DAM Admin');
+  user_role_delete('Bulk Ops');
+  user_role_delete('CMP Admin');
+  user_role_delete('Honest Green Admin');
+  user_role_delete('Photographer');
+  user_role_delete('Creative');
+}
+
+/**
+ * Remove old users.
+ */
+function bluemarble_update_7025(&$sandbox) {
+  if (!isset($sandbox['max'])) {
+    // Before deleting any users, make sure the node_revisions table is clean.
+    // Having too many revisions makes deleting a user take too long
+    $nids = db_select('node', 'n')
+      ->fields('n', array('nid'))
+      ->execute()
+      ->fetchCol();
+    db_delete('node_revision')
+      ->condition('nid', $nids, 'NOT IN')
+      ->execute();
+
+    $sandbox['uids'] = array(
+      4, // peter
+      7, // aaron (johnson)
+      8, // jenny
+      458, // Tommy
+      467, // Creative A
+      468, // Photographer A
+      469, // Honest Green Admin A
+      470, // CMP Admin A
+      471, // DAM Admin A
+      472, // Bulk Ops
+      473, // DAM Viewer A
+      474, // Item Manager A
+      475, // DigitalCore User A
+      476, // Manager A
+      477, // Administrator A
+    );
+    $sandbox['max'] = count($sandbox['uids']);
+    $sandbox['pos'] = 0;
+  }
+
+  $pos = $sandbox['pos'];
+  $uid = $sandbox['uids'][$pos];
+
+  // TIL: This deletes the user's nodes automatically. user_cancel() may be what
+  // you really want to use in some cases.
+  user_delete($uid);
+  $sandbox['pos']++;
+
+  $sandbox['#finished'] = $sandbox['pos'] / $sandbox['max'];
+}
+
+/**
+ * Update workflow transitions.
+ */
+function bluemarble_update_7026() {
+  $workflow = workflow_load_single(1); // Activity state
+  $transitions = $workflow->getTransitions();
+
+  $creation = workflow_state_load_by_name('(creation)', 1);
+  $development = workflow_state_load_by_name('development', 1);
+  foreach ($transitions as $transition) {
+    // Marketing is only allowed to create products and set state to Development
+    if ($transition->sid == $creation->sid && $transition->target_sid == $development->sid) {
+      $transition->roles = array(
+        "-1" => -1, // author
+        "2" => "2", // authenticated
+        "18" => "18", // Marketing
+      );
+    }
+    // For all other transitions only certain roles are allowed
+    else if ($transition->sid != $transition->target_sid) {
+      $transition->roles = array(
+        "4" => "4", // Programmer
+        "3" => "3", // administrator
+        "17" => "17", // Manager
+        "19" => "19", // Supply Chain
+      );
+    }
+    $transition->save();
+  }
+}
+
+/**
+ * Enable Field Validation modules.
+ */
+function bluemarble_update_7027() {
+  module_enable(array('field_validation', 'field_validation_extras'));
+}
+
+/**
+ * Add Grocery Type and Third Party Certificates vocabularies to Content URI config.
+ */
+function bluemarble_update_7028() {
+  $uri = db_select('content_uri', 'c')
+    ->fields('c', array('id', 'contentData'))
+    ->condition('url', 'service/digitalcore/product_details')
+    ->execute()
+    ->fetchAssoc();
+  $config = unserialize($uri['contentData']);
+
+  $vocabularies = taxonomy_vocabulary_get_names();
+
+  if (!isset($vocabularies['grocery_type']->vid) || !isset($vocabularies['third_party_certificates']->vid)) {
+    throw new DrupalUpdateException('Grocery Type or Third Party Certificates vocabulary is missing.');
+  }
+
+  $grocery_type_vid = $vocabularies['grocery_type']->vid;
+  $third_party_certificates_vid = $vocabularies['third_party_certificates']->vid;
+
+  $config['taxonomy'][$grocery_type_vid] = 1;
+  $config['taxonomy'][$third_party_certificates_vid] = 1;
+
+  db_update('content_uri')
+    ->fields(array(
+      'contentData' => serialize($config),
+    ))
+    ->condition('id', $uri['id'])
+    ->execute();
+}
+
+/**
+ * Remove Unit SRP, Supplier Cost, Cost Effective Date and Price Sheet fields.
+ */
+function bluemarble_update_7029() {
+  field_delete_field('field_unit_srp');
+  field_delete_field('field_supplier_cost');
+  field_delete_field('field_cost_effective_date');
+  field_delete_field('field_pricing_sheet');
+}
+
+/**
+ * Add Vendor Pricing field collection to Content URI config.
+ */
+function bluemarble_update_7030() {
+  $uri = db_select('content_uri', 'c')
+    ->fields('c', array('id', 'contentData'))
+    ->condition('url', 'service/digitalcore/product_details')
+    ->execute()
+    ->fetchAssoc();
+  $config = unserialize($uri['contentData']);
+
+  $config['field_collections']['field_vendor_pricing'] = 1;
+
+  db_update('content_uri')
+    ->fields(array(
+      'contentData' => serialize($config),
+    ))
+    ->condition('id', $uri['id'])
+    ->execute();
+}
+
+/**
+ * Remove nodes that were created by delete users.
+ */
+function bluemarble_update_7031() {
+  $uids = db_select('users', 'u')
+    ->fields('u', array('uid'))
+    ->execute()
+    ->fetchCol();
+  if ($uids) {
+    $nids = db_select('node', 'n')
+      ->fields('n', array('nid'))
+      ->condition('n.uid', $uids, 'NOT IN')
+      ->execute()
+      ->fetchCol();
+    if ($nids) {
+      node_delete_multiple($nids);
+    }
+  }
+}

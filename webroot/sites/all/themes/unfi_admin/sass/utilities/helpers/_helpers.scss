@@ -1,0 +1,99 @@
+// ----------------
+// THEME RELATED HELPERS/EXTENDS
+// ----------------
+
+.separator-small {
+  @extend %border-top-thin;
+}
+.separator-medium {
+  @extend %border-top-medium;
+}
+.separator-large {
+  @extend %border-top-thick;
+}
+
+%button-shadow {
+  box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
+}
+
+%secondary-link-color {
+  color: $color-link-secondary;
+  &:hover {
+    color: $color-link-secondary-hover;
+  }
+}
+
+// ------
+// LAYOUT RELATED HELPERS/EXTENDS
+// ------
+
+.full {
+  width: 100%;
+  display: inline-block;
+}
+.left {
+  display: inline-block;
+  float: left;
+  margin-bottom: $spacing-xsmall;
+  width: 50%;
+}
+.right {
+  display: inline-block;
+  float: right;
+  margin-bottom: $spacing-xsmall;
+  width: 50%;
+}
+.indent {
+  padding-left: $spacing-small;
+}
+.clearfix, %clearfix {
+  &:after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+}
+.clearall {
+  color: $g600;
+  @include position-relative(-25px, -10px);
+  width: 78px;
+  height: 36px;
+  @extend %align-right;
+  float: right;
+  cursor: pointer;
+}
+// remove Ember arrows from select
+.chosen-container.form-select {
+  background: none;
+}
+// keep dropdown from extending beyond parent
+.chosen-container .chosen-drop {
+  max-width: 298px;
+  width: auto;
+  padding-right: 0.27em;
+}
+// override chosen css (all/libraries) so text shows on dropdowns
+.chosen-container-single .chosen-search {
+  padding: inherit;
+}
+
+// ----------------
+// MARGINS/PADDING
+// ----------------
+
+%margin-vert-large {
+  margin-top: $spacing-large;
+  margin-bottom: $spacing-large;
+}
+
+// ----------------
+// LISTS
+// ----------------
+
+// Remove bullets and margins from lists
+%ul-reset {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+

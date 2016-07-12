@@ -1,0 +1,55 @@
+<?php
+
+function enterprise_data_brands_install() {
+  user_role_grant_permissions(4, array('administer views', 'access all views',
+    'edit enterprise data brands', 'administer enterprise data brands'));
+}
+
+/**
+ * Removes commenting from brand content types.
+ */
+function enterprise_data_brands_update_7000(&$sandbox) {
+  // Define brand content types
+  $content_types = array('enterprise_brand', 'east_brand', 'west_brand');
+  // Initialize batch information
+  if (!isset($sandbox['progress'])) {
+    // Start a query to count how many to process
+    $query = db_select('node', 'n');
+    $query->condition('type', $content_types);
+    // Batch info
+    $sandbox['limit']    = 5;
+    $sandbox['progress'] = 0;
+    $sandbox['max']      = (int)$query->countQuery()->execute()->fetchField();
+  }
+  // If there are items to process
+  if (!empty($sandbox['max'])) {
+    // Start query to select a limited set of node IDs
+    $query = db_select('node', 'n');
+    $query->fields('n', array('nid'));
+    $query->condition('type', $content_types);
+    $query->orderBy('n.nid');
+    $query->range($sandbox['progress'], $sandbox['limit']);
+    // Execute
+    $result = $query->execute();
+    // Extract node IDs
+    $nids = $result->fetchCol();
+    // Disable comments on the node table
+    db_update('node')
+      ->fields(array('comment' => 0))
+      ->condition('nid', $nids)
+      ->execute();
+    // Disable comments on the revision table
+    db_update('node_revision')
+      ->fields(array('comment' => 0))
+      ->condition('nid', $nids)
+      ->execute();
+    $sandbox['progress'] += count($nids);
+  }
+  // Determine if the batch is finished
+  if (empty($sandbox['max'])) {
+    $sandbox['#finished'] = 1;
+  }
+  else {
+    $sandbox['#finished'] = $sandbox['progress'] / $sandbox['max'];
+  }
+}

@@ -1,0 +1,11 @@
+<div class="{{field_name}} form-field form-field-boolean" layout="row">
+  <div ng-if="section_meta.marketing_icons != ''" class="marketing-icons">
+    <i ng-repeat="icon in section_meta.marketing_icons" class="{{icon}}"></i>
+  </div>
+  <md-checkbox name="{{field_name}}" value="{{record[field_name]}}" ng-model="record[field_name]" ng-model-options="{debounce:500}" ng-required="{{section_meta.required}}" ng-disabled="nopermission" drupal-validate><label ng-show="section_meta.label">{{section_meta.label}}</label></md-checkbox>
+  <div ng-messages="recordForm[field_name].$error">
+    <div ng-message="required">This is required!</div>
+    <div ng-message="drupal">{{drupal_messages}}</div>
+  </div>
+  <div class="field-description" ng-bind-html="section_meta.description"></div>
+</div>

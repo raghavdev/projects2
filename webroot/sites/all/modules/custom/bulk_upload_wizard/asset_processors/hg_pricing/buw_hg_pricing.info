@@ -1,0 +1,5 @@
+core = "7.x"
+description = "HG Pricing Processor"
+name = "buw_hg_pricing"
+package = "Bulk Upload Wizard"
+php = "5.2.4"

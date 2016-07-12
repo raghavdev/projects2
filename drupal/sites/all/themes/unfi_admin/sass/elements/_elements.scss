@@ -1,0 +1,228 @@
+// ----------------
+// BASE ELEMENT STYLES
+//
+// Contains: General site-wide styles for basic HTML elements
+//
+// Many of these override base styles in _normalize.scss
+// ----------------
+
+// ----------------
+// BODY
+// ----------------
+
+* {
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+html {
+  font-size: $font-size-base;
+  line-height: $line-height-base;
+  background: $p50;
+}
+
+body {
+  position: absolute;
+  width: 100%;
+  height: auto;
+  min-height: 100%;
+  margin: 0;
+  color: $font-color-base;
+  @extend %word-wrap;
+}
+
+body.ng-scope {
+  overflow-y:hidden;
+}
+
+// ----------------
+// LINKS
+// ----------------
+
+a {
+  color: $color-link-primary;
+  cursor: pointer;
+  text-decoration: none;
+  &:hover, &:visited, &:focus {
+    color: $color-link-primary-hover;
+    outline: none;
+  }
+}
+
+// ----------------
+// HEADERS
+// ----------------
+
+// @see _normalize.scss
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: normal;
+}
+
+h1 {
+  font-size: $font-size-h1;
+}
+
+h2 {
+  font-size: $font-size-h2;
+  margin-bottom: .83em;
+  font-weight: normal;
+  text-transform: uppercase;
+}
+
+h3 {
+  font-size: $font-size-h3;
+}
+
+h4 {
+  font-size: $font-size-h4;
+}
+
+// ----------------
+// LISTS
+// ----------------
+
+ul, ol {
+  padding-left: 1.5em;
+}
+
+// -----------
+// PARAGRAPHS
+// -----------
+
+p {
+  line-height: 1;
+  margin-bottom: 0;
+}
+
+// ----------------
+// FIELDSETS
+// ----------------
+
+legend {
+  width: 100%;
+  border-radius: 0;
+}
+fieldset {
+  margin: $spacing-xlarge 0;
+  padding: $spacing-large 0 $spacing-large $spacing-large;
+  border: 1px solid $g300;
+  border-top: none;
+  border-right: none;
+  ul {
+    margin-left: 0;
+    padding-left: 0;
+    list-style: none;
+  }
+}
+fieldset > :first-child, fieldset > legend + * {
+  margin-top: 0;
+}
+fieldset > :last-child {
+  margin-bottom: 0;
+}
+
+//
+// Fieldset without borders
+//
+
+fieldset.fieldset-no-divider {
+  margin: $spacing-xlarge 0;
+  padding: 0;
+  border: none;
+}
+
+// ----------------
+// LABELS
+// ----------------
+
+label, .label {
+  margin-bottom: $spacing-xsmall;
+  line-height: $line-height-base;
+  font-size: $font-size-small;
+  letter-spacing: .04em;
+}
+.md-label,
+md-input-container.md-default-theme label, // Angular MD labels
+md-input-container.md-default-theme .md-placeholder {
+  display: block;
+  font-weight: normal;
+  color: $a600;
+  position: absolute;
+  top: -18px;
+}
+md-input-container.md-input-focused label:not(.md-no-float),
+md-input-container.md-input-has-value label:not(.md-no-float) {
+  transform: translate3d(0, 0, 0) scale(1);
+}
+md-input-container.md-default-theme:not(.md-input-invalid).md-input-has-value label {
+  color: $a600;
+}
+
+// Field Prefix and suffix
+.form-field-prefix,
+.form-field-suffix {
+  position: relative;
+  top: 8px;
+}
+.form-field-prefix {
+  float: left;
+}
+.form-field-suffix {
+    position: absolute;
+    right: 0;
+    top: 2em;
+}
+
+// ----------------
+// TABLES
+// ----------------
+
+table {
+  border-collapse: collapse;
+  @extend %no-border;
+  tbody {
+    border-top: none;
+  }
+  width: 100%;
+}
+
+tbody {
+  tr {
+    border-left: 1px solid #ccc;
+    border-right: 1px solid #ccc;
+  }
+}
+
+.draggable a.tabledrag-handle {
+  margin-left: -.5em;
+}
+
+a.tabledrag-handle {
+  .handle {
+    height: 22px;
+    margin-top: -0.2em;
+  }
+}
+
+div.indentation {
+  margin-left: -0.2em;
+}
+
+// ----------------
+// SCROLLBARS
+// ----------------
+
+::-webkit-scrollbar {
+  width: $scrollbar-width;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: $color-action-secondary;
+}
+.dark-theme ::-webkit-scrollbar-thumb {
+  background: $white50;
+}

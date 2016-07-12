@@ -1,0 +1,383 @@
+<?php
+/**
+ * @file
+ * Blue Marble Staging installation and update functions.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function bluemarble_staging_schema() {
+  $schema['bluemarble_mapping'] = array(
+    'description' => 'Stores field mappings between staging tables for other systems to Drupal tables.',
+    'fields' => array(
+      'source' => array(
+        'description' => 'The source of the data.',
+        'type' => 'varchar',
+        'length' => 32,
+        'default' => NULL,
+      ),
+      'destination' => array(
+        'description' => 'The destination table.',
+        'type' => 'varchar',
+        'length' => 50,
+        'default' => NULL,
+      ),
+      'dataType' => array(
+        'description' => 'The source table.',
+        'type' => 'varchar',
+        'length' => 32,
+        'default' => NULL,
+      ),
+      'fromField' => array(
+        'description' => 'The source field name.',
+        'type' => 'varchar',
+        'length' => 32,
+        'default' => NULL,
+      ),
+      'toField' => array(
+        'description' => 'The destination field name.',
+        'type' => 'varchar',
+        'length' => 32,
+        'default' => NULL,
+      ),
+      'fromAlt' => array(
+        'description' => 'Alternate source field name.',
+        'type' => 'varchar',
+        'length' => 32,
+        'default' => NULL,
+      ),
+      'primary_key' => array(
+        'description' => 'Whether or not the field is the primary key.',
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => 0,
+      ),
+      'customProcessing' => array(
+        'description' => 'Custom processing to run on the data.',
+        'type' => 'varchar',
+        'length' => 500,
+        'default' => NULL,
+      ),
+      'customProcessingArgs' => array(
+        'description' => 'Additional arguments for custom processing.',
+        'type' => 'text',
+        'size' => 'big',
+      ),
+    ),
+    'indexes' => array(
+      'source' => array('source'),
+      'destination' => array('destination'),
+      'dataType' => array('dataType'),
+      'fromField' => array('fromField'),
+      'toField' => array('toField'),
+    ),
+  );
+
+  return $schema;
+}
+
+/**
+ * Update columns to 32 characters instead of 30.
+ */
+function bluemarble_staging_update_7000() {
+  $fields = array(
+    'source' => array(
+      'description' => 'The source of the data.',
+      'type' => 'varchar',
+      'length' => 32,
+      'default' => NULL,
+    ),
+    'dataType' => array(
+      'description' => 'The source table.',
+      'type' => 'varchar',
+      'length' => 32,
+      'default' => NULL,
+    ),
+    'fromField' => array(
+      'description' => 'The source field name.',
+      'type' => 'varchar',
+      'length' => 32,
+      'default' => NULL,
+    ),
+    'toField' => array(
+      'description' => 'The destination field name.',
+      'type' => 'varchar',
+      'length' => 32,
+      'default' => NULL,
+    ),
+    'fromAlt' => array(
+      'description' => 'Alternate source field name.',
+      'type' => 'varchar',
+      'length' => 32,
+      'default' => NULL,
+    ),
+  );
+
+  foreach ($fields as $name => $def) {
+    db_change_field('bluemarble_mapping', $name, $name, $def);
+  }
+}
+
+/**
+ * Remove old product_detail mappings to Macola and replace with updated list.
+ */
+function bluemarble_staging_update_7001() {
+  db_delete('bluemarble_mapping')
+    ->condition('source', 'macola_connect')
+    ->condition('destination', 'product_details')
+    ->execute();
+
+  $mappings = array(
+    'macola_id'             => array(
+      'fromField'   => 'id',
+      'primary_key' => TRUE,
+    ),
+    'upc'                   => array(
+      'fromField' => 'upc_cd',
+    ),
+    'activity_state'        => array(
+      'fromField'        => 'activity_cd',
+      'customProcessing' => 'macola_connect_map_activity_code',
+    ),
+    'brand'                 => array(
+      'fromField'        => 'note_5',
+      'customProcessing' => 'macola_connect_map_brand',
+    ),
+    'item_description'      => array(
+      'fromField' => 'item_desc_1',
+    ),
+    'item_description_2'   => array(
+      'fromField' => 'item_desc_2',
+    ),
+    'item_num'   => array(
+      'fromField' => 'item_no',
+    ),
+    'item_size'             => array(
+      'fromField' => 'item_weight',
+    ),
+    'item_size_uom'         => array(
+      'fromField' => 'item_weight_uom',
+    ),
+    'cube_height'           => array(
+      'fromField' => 'cube_height',
+    ),
+    'cube_width'            => array(
+      'fromField' => 'cube_width',
+    ),
+    'cube_length'           => array(
+      'fromField' => 'cube_length',
+    ),
+    'case_weight'           => array(
+      'fromField' => 'item_weight',
+    ),
+    'tie'                   => array(
+      'fromField'        => 'note_2',
+      'customProcessing' => 'macola_connect_map_tie',
+    ),
+    'high'                  => array(
+      'fromField'        => 'note_2',
+      'customProcessing' => 'macola_connect_map_high',
+    ),
+    'buyer'                 => array(
+      'fromField'        => 'byr_plnr',
+      'customProcessing' => 'macola_connect_map_buyers',
+    ),
+    'stocking_uom'          => array(
+      'fromField' => 'uom',
+    ),
+    'material_cost_type'    => array(
+      'fromField'        => 'mat_cost_type',
+      'customProcessing' => 'macola_connect_map_material_cost_types',
+    ),
+    'backorderable'         => array(
+      'fromField'        => 'bkord_fg',
+      'customProcessing' => 'macola_connect_map_boolean',
+    ),
+    'category'      => array(
+      'fromField'        => 'prod_cat',
+      'customProcessing' => 'macola_connect_map_product_category',
+    ),
+    'item_category'         => array(
+      'fromField'        => 'pur_or_mfg',
+      'customProcessing' => 'macola_connect_map_manufacturing_method_option',
+    ),
+    'supplier_cost'         => array(
+      'fromField' => 'neg_price_1',
+    ),
+    'cost_effective_date'   => array(
+      'fromField'        => 'contract_frm_dt',
+      'customProcessing' => 'macola_connect_map_date',
+    ),
+    'warranty_days'         => array(
+      'fromField' => 'ser_warranty_days',
+    ),
+    'shelf_life_days'       => array(
+      'fromField' => 'shelf_life_days',
+    ),
+    'freight_protection_level'          => array(
+      'fromField' => 'note_1',
+      'customProcessing' => 'macola_connect_map_freight_protection_level_option',
+    ),
+    'primary_location'      => array(
+      'fromField'        => 'loc',
+      'customProcessing' => 'macola_connect_map_warehouse',
+    ),
+    'east_freight_rate'     => array(
+      'fromField' => 'note_3',
+    ),
+    'west_freight_rate'     => array(
+      'fromField' => 'note_4',
+    ),
+    'vendor_id'             => array(
+      'fromField' => 'vend_no',
+    ),
+    'vendor_item_number'    => array(
+      'fromField' => 'vend_item_no',
+    ),
+    'taxable'               => array(
+      'fromField'        => 'tax_fg',
+      'customProcessing' => 'macola_connect_map_boolean',
+    ),
+    'controlled'            => array(
+      'fromField' => 'controlled_fg',
+    ),
+    'inv_transaction_audit' => array(
+      'fromField' => 'inv_trx_aud',
+    ),
+    'stocked'               => array(
+      'fromField' => 'stocked_fg',
+    ),
+    'cost_end_date'         => array(
+      'fromField'        => 'contract_thru_dt',
+      'customProcessing' => 'macola_connect_map_date',
+    ),
+    'purchasing_uom'        => array(
+      'fromField' => 'pur_uom',
+    ),
+    'price_uom'             => array(
+      'fromField' => 'price_uom',
+    ),
+    'manufacturing_uom'     => array(
+      'fromField' => 'mfg_uom',
+    ),
+    'price_basis_code'      => array(
+      'fromField' => 'cd_prc_basis',
+    ),
+    'contract_number'       => array(
+      'fromField' => 'contract_no',
+    ),
+    'manufacturing_method'  => array(
+      'fromField' => 'mfg_method',
+    ),
+    'po_req_fg'             => array(
+      'fromField' => 'po_req_fg',
+    ),
+  );
+
+  $default_values = array(
+    'source'           => 'macola_connect',
+    'destination'      => 'product_details',
+    'dataType'         => 'macola_connect_products',
+    'fromAlt'          => NULL,
+    'primary_key'      => 0,
+    'customProcessing' => NULL,
+  );
+
+  $query = db_insert('bluemarble_mapping');
+  $query->fields(array(
+    'source',
+    'destination',
+    'dataType',
+    'fromField',
+    'toField',
+    'fromAlt',
+    'primary_key',
+    'customProcessing',
+  ));
+  foreach ($mappings as $toField => $mapping) {
+    if ($toField != 'title') {
+      $toField = 'field_' . $toField;
+    }
+    $mapping['toField'] = $toField;
+    $query->values($mapping + $default_values);
+  }
+  $query->execute();
+}
+
+function bluemarble_staging_update_7002() {
+  db_update('bluemarble_mapping')
+    ->fields(array('customProcessing' => 'macola_connect_map_uom'))
+    ->condition('source', 'macola_connect')
+    ->condition('destination', 'product_details')
+    ->condition('fromField', array('item_weight_uom', 'pur_uom', 'price_uom', 'mfg_uom'))
+    ->execute();
+  // Update existing products
+  $fields = array(
+    'item_size_uom',
+    'purchasing_uom',
+    'price_uom',
+    'manufacturing_uom',
+  );
+  foreach ($fields as $field) {
+    // Ah string concatenation! Not a sql-injection risk since this is my array though :D
+    db_query('UPDATE `field_data_field_' . $field . '` SET `field_' . $field . '_value`=LOWER(`field_' . $field . '_value`)');
+    db_query('UPDATE `field_revision_field_' . $field . '` SET `field_' . $field . '_value`=LOWER(`field_' . $field . '_value`)');
+  }
+
+  search_api_index_reindex(13); // the node index
+}
+
+/**
+ * Map product description from Macola for now.
+ */
+function bluemarble_staging_update_7003() {
+  $query = db_insert('bluemarble_mapping');
+  $query->fields(array(
+    'source',
+    'destination',
+    'dataType',
+    'fromField',
+    'toField',
+    'fromAlt',
+    'primary_key',
+    'customProcessing',
+  ));
+  $query->values(array(
+    'source' => 'macola_connect',
+    'destination' => 'product_details',
+    'dataType' => 'macola_connect_products',
+    'fromField' => 'item_desc_1',
+    'toField' => 'title',
+    'fromAlt' => NULL,
+    'primary_key' => 0,
+    'customProcessing' => NULL,
+  ));
+  $query->execute();
+}
+
+/**
+ * Add custom processing arguments field to the bluemarble_mapping table.
+ */
+function bluemarble_staging_update_7004() {
+  db_add_field('bluemarble_mapping', 'customProcessingArgs', array(
+    'description' => 'Additional arguments for custom processing.',
+    'type' => 'text',
+    'size' => 'big',
+  ));
+}
+
+/**
+ * Update inv_transaction_audit mapping.
+ */
+function bluemarble_staging_update_7005() {
+  db_update('bluemarble_mapping')
+    ->fields(array(
+      'fromField' => 'trx_aud_fg',
+    ))
+    ->condition('toField', 'field_inv_transaction_audit')
+    ->condition('source', 'macola_connect')
+    ->condition('destination', 'product_details')
+    ->execute();
+}

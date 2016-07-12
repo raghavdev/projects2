@@ -1,0 +1,110 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function drangular_schema() {
+  $schema = array();
+
+  $schema['drangular_apps'] = array(
+    'description' => 'Angular apps setup to be managed by drupal',
+    'fields' => array(
+      'app_name' => array(
+        'description' => 'Name of the app as it is in angular',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => TRUE,
+      ),
+      'scripts_folder' => array(
+        'description' => 'Folder inside the app folder containing the scripts',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'styles_folder' => array(
+        'description' => 'Folder inside the app folder containing the styles',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'styles_cache' => array(
+        'description' => 'A serialized array of the styles found in the styles folder',
+        'type'        => 'text',
+        'not null'    => TRUE,
+      ),
+      'scripts_cache' => array(
+        'description' => 'Serialized array of the scripts found in the scripts folder',
+        'type'        => 'text',
+        'not null'    => FALSE,
+      ),
+      'active' => array(
+        'description' => 'Active 0-false 1-true',
+        'type'        => 'int',
+        'not null'    => FALSE,
+      ),
+      'script_load_scope' => array(
+        'description' => 'Where to load the scripts on the page',
+        'type'        => 'varchar',
+        'length'      => 7,
+        'not null'    => FALSE,
+      ),
+    )
+  );
+
+  $schema['drangular_apps_paths'] = array(
+    'description' => 'Paths that are used by the angular apps',
+    'fields' => array(
+      'path_id' => array(
+        'description' => 'id of the path record',
+        'type'        => 'serial',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'app_name' => array(
+        'description' => 'Name of the app as it is in angular',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => TRUE,
+      ),
+      'path' => array(
+        'description' => 'Path the angular app is on / angular will be loaded if this is current path',
+        'type'        => 'varchar',
+        'length'      => 200,
+        'not null'    => FALSE,
+      ),
+      'title' => array(
+        'description' => 'Title of the page at this page',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'description' => array(
+        'description' => 'Description of the page at this path',
+        'type'        => 'varchar',
+        'length'      => 300,
+        'not null'    => TRUE,
+      ),
+      'template' => array(
+        'description' => 'Template used to render the page at this path',
+        'type'        => 'varchar',
+        'length'      => 200,
+        'not null'    => TRUE,
+      ),
+      'create_link' => array(
+        'description' => '0 -> the path link is just a marker that angular is used here, 1 -> a menu call back is made for this path',
+        'type'        => 'int',
+        'length'      => 1,
+        'not null'    => FALSE,
+      ),
+      'permissions' => array(
+        'description' => 'Permissions list that this path will use',
+        'type'        => 'varchar',
+        'length'      => 300,
+        'not null'    => FALSE,
+      ),
+    ),
+    'primary key' => array('path_id')
+  );
+
+  return $schema;
+}

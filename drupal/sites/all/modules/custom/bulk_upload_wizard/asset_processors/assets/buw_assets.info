@@ -1,0 +1,5 @@
+core = "7.x"
+description = "Non Product Assets processor"
+name = "buw_assets"
+package = "Bulk Upload Wizard"
+php = "5.2.4"

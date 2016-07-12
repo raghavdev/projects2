@@ -1,0 +1,5 @@
+core = "7.x"
+description = "CMP inclusion sheet processor"
+name = "buw_cmp_inclusion_sheet"
+package = "Bulk Upload Wizard"
+php = "5.2.4"

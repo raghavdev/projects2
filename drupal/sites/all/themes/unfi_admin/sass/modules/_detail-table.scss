@@ -1,0 +1,30 @@
+// Detail table
+table.detail-table {
+  margin: 0;
+  color: $font-color-light;
+  tbody {
+    border-top: none;
+  }
+  tr {
+    display: inline-block;
+    width: 100%;
+    border-bottom: 1px dotted $g500;
+  }
+  td, th {
+    float: left;
+    width: 100%;
+    background: none;
+    border-top: none;
+    border-bottom: none;
+    &.table-label {
+      @extend .label;
+      padding: $spacing-large 0 0 0;
+      margin-bottom: 0;
+    }
+    &.table-data {
+      padding: 0;
+      font-size: $font-size-large;
+      line-height: $line-height-large;
+    }
+  }
+}

@@ -1,0 +1,74 @@
+.polling-form {
+  tr.odd {
+    background: $p50;
+  }
+  tr.even {
+    background: $p700;
+  }
+  th {
+    background: $p700;
+  }
+  select {
+    margin-bottom: 5px;
+    background: $p700;
+    &:active,
+    &:focus {
+      background: $p700;
+    }
+  }
+  .poll-time-atday .form-item {
+    float: left;
+    margin: 5px;
+  }
+  button {
+    a {
+      color: $white;
+      &:hover {
+        color: $white;
+      }
+    }
+    &:hover {
+      opacity: .7;
+    }
+  }
+
+}
+.status-switch {
+  .form-item {
+    display: inline;
+
+  }
+  input {
+    visibility: hidden;
+    &+label {
+
+      color: $g400;
+      @extend %bold-font;
+      padding: 10px;
+      margin-left: -17px;
+      border: $g400 1px solid;
+    }
+    &:checked + label {
+      background: $p700;
+    }
+  }
+}
+.polling_task {
+  @extend %bold-font;
+}
+.polling_task_help {
+  color: $g400;
+}
+#edit-configuration {
+  label {
+    display: block;
+  }
+  input[type='text'],
+  input[type='password'] {
+    max-width: 233px;
+  }
+  .form-item {
+    margin-bottom: 40px;
+  }
+}
+

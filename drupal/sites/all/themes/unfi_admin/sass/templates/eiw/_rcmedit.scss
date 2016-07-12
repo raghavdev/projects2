@@ -1,0 +1,56 @@
+.rcm-edit-form {
+ input,
+ input[type='text'],
+ label {
+    float: left;
+    margin-right: 10px;
+    display: block;
+    margin-bottom: 15px;
+  }
+  .form-item {
+    @extend .clearfix;
+  }
+  .form-submit {
+    padding: 5px;
+    @extend .clearfix;
+  }
+}
+.assigned {
+  .fieldset-legend {
+
+  }
+  .fieldset-wrapper {
+    min-height: 35px;
+    padding: $spacing-medium;
+    @extend %border-thin;
+    border-color: $g400;
+    border-radius: 2px;
+    label {
+      margin-left: 10px;
+    }
+    .form-item, .form-submit {
+      clear: none;
+      margin: 0;
+    }
+    .views-exposed-form .views-exposed-widget {
+      padding: .5em 0 0 0;
+    }
+    .form-select {
+      padding: 0;
+    }
+    .chosen-container {
+      width: 237px !important; //width is set inline :(
+    }
+    .view-filters {
+      position: absolute;
+      top: -19px;
+      right: 0;
+      .form-submit {
+        margin-top: 17px;
+      }
+      label {
+        margin: 0;
+      }
+    }
+  }
+}

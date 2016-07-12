@@ -1,0 +1,192 @@
+FORMAT: 1A
+HOST: https://bluemarbledm-staging.metaltoad.com/
+
+# BMB CRM
+
+The BMB PIM CRM API is designed to provide information about current Blue Marble Brand products to the Microsoft Dynamics
+Customer Relationship Manager through the BizTalk middleware layer. Note: SSL is required for all requests.
+
+# Group Authorization
+
+## Token [/oauth2/token]
+
+### Get Token [POST]
+    The Get Token username and password can be obtained by contacting the PIM administrator.
+
++ Attributes
+    
+    + username: api_user (optional, string) The username for the API Service account. 
+    + password: 89u89ajl (optional, string) The password for the API Service account.
+    + `grant_type`: password (required, string) One of password or refresh token. If using `refresh_token`, omit username and password.
+    + `refresh_token`: 6dcaa5b55f8691bef4c48e6a225a0dfce2e5845f (optional, string) Use the `refresh_token` parameter in conjunction with the `grant_type` of `refresh_token`.
+
++ Request (application/x-www-form-urlencoded)
+
+        grant_type=password&client_id=default&username={username}&password={password}
+
++ Response 200 (application/json)
+
+        {
+          "access_token": "dc2b3eb79b7d5ac86d141c89db49727449cb2d5e",
+          "expires_in": 3600,
+          "token_type": "Bearer",
+          "scope": null,
+          "refresh_token": "6dcaa5b55f8691bef4c48e6a225a0dfce2e5845f"
+        }
+
+# Group Brands
+
+## Brands [/service/bmbcrm/brands]
+**Deprecated – Currently returns HTTP 500 error** This will return a list of all brands used by Blue Marble. A Bearer token (access_token) is required for 
+authorization. The Bearer token can be retrieved by calling [[Get Token]]
+
+### List All [GET]
+
++ Request
+    + Headers
+    
+            Authorization: Bearer {token}
+
++ Response 200 (application/xml)
+
+        <result>
+            <brands>
+                <brand>PRIVATE LABEL</brand>
+                <brand>FIELD DAY</brand>
+                <brand>WOODSTOCK</brand>
+                <brand>RISING MOON ORGANICS</brand>
+                <brand>TUMARO'S</brand>
+                <brand>INES ROSALES</brand>
+                <brand>AH!LASKA</brand>
+                <brand>KOYO</brand>
+                <brand>FANTASTIC WORLD FOODS</brand>
+                <brand>TUMARO'S-FLOUR</brand>
+                <brand>MT. VIKOS</brand>
+                <brand>A. VOGEL</brand>
+                <brand>NATURAL SEA</brand>
+                <brand>OLD WESSEX</brand>
+                <brand>MEDITERRANEAN ORGANICS</brand>
+                <brand>HARVEST BAY</brand>
+                <brand>GOURMET ARTISAN</brand>
+                <brand>WOODSTOCK MINIMES</brand>
+                <brand>WOODSTOCK MINI-MES</brand>
+            </brands>
+        </result>
+
+# Group Products
+
+## Products [/service/bmbcrm/product.{format}?page={page}&perPage={perPage}&modified={modified}]
+This will return a paginated list of all products currently in the Active, Hold, or Discontinued state. A Bearer token (access_token) is required for 
+authorization. The Bearer token can be retrieved by calling [Get Token]
+
+### List All [GET]
+
++ Request
+    + Headers
+    
+            Authorization: Bearer {token}
+
++ Parameters
+    + format: json (optional, string) - Either json or xml. Omitting the parameter will return json. To return xml, specify xml.
+    + page: 0 (optional, number) - The page of results to return. Default is 0
+    + perPage: 100 (optional, number) - The number of results to return per page. Default is 100. Options include 25, 50, 100, or 250. Other values will be ignored.
+    + modified: 2015-12-17 (optional, date) - A machine readable date or datetime. Providing this argument will return only products modifed at or after the date and time specified.
+
++ Response 200 (application/xml)
+
+        <?xml version="1.0" encoding="utf-8"?>
+        <result>
+            <current_page>0</current_page>
+            <total_pages>20</total_pages>
+            <total_results>2075</total_results>
+            <results is_array="true">
+                <item>
+                    <product_name>TEX MEX SHIPPER 2015 COPACK</product_name>
+                    <brand>TUMARO&amp;#039;S</brand>
+                    <country_origin/>
+                    <ti>5</ti>
+                    <hi>7</hi>
+                    <kosher_daily>TRUE</kosher_daily>
+                    <kosher_mbuf>TRUE</kosher_mbuf>
+                    <kosher_pareve></kosher_pareve>
+                    <kosher_passover></kosher_passover>
+                    <retail_dimensions_uom>in</retail_dimensions_uom>
+                    <retail_height>12.00</retail_height>
+                    <retail_length>12.00</retail_length>
+                    <retail_width>12.00</retail_width>
+                    <case_height>144.00</case_height>
+                    <case_length>144.00</case_length>
+                    <case_width>144.00</case_width>
+                    <gluten_attributes/>
+                    <non_gmo>Enrolled</non_gmo>
+                    <open_code_life_dating>Sell By</open_code_life_dating>
+                    <closed_code_life_dating>Reading the code from right to left, transpose every third and fifth character. Replace the fourth character with the Mayan glyph for &amp;#039;A&amp;#039;. Invert the code. Take the numerical value of each letter and replace the letter with its numerical value.Divide by 0</closed_code_life_dating>
+                    <shelf_life>105days</shelf_life>
+                    <code_life_dating_type>Open</code_life_dating_type>
+                    <upc>02514790096</upc>
+                    <vegan/>
+                    <net_size>42.20</net_size>
+                    <net_size_uom>lb</net_size_uom>
+                    <free_of is_array="true">
+                        <item>BPA</item>
+                        <item>Yeast Free</item>
+                        <item>Casein Free</item>
+                        <item>Gluten Free (labeled)</item>
+                    </free_of>
+                    <item_number>C02514790096</item_number>
+                    <unfi_east_id>500005</unfi_east_id>
+                    <unfi_west_id>40004</unfi_west_id>
+                    <macola_id>2142</macola_id>
+                </item>
+            </results>
+        </result>
+        
++ Response 200 (application/json)
+
+        {
+          "current_page": 0,
+          "total_pages": 1,
+          "total_results": "1",
+          "results": [
+            {
+              "product_name": "TEX MEX SHIPPER 2015 COPACK",
+              "brand": "TUMARO&#039;S",
+              "country_origin": [],
+              "ti": "5",
+              "hi": "7",
+              "kosher_daily": "TRUE",
+              "kosher_mbuf": "TRUE",
+              "kosher_pareve": "FALSE",
+              "kosher_passover": "FALSE",
+              "retail_dimensions_uom": "in",
+              "retail_height": "12.00",
+              "retail_length": "12.00",
+              "retail_width": "12.00",
+              "case_height": "144.00",
+              "case_length": "144.00",
+              "case_width": "144.00",
+              "gluten_attributes": [],
+              "non_gmo": "Enrolled",
+              "open_code_life_dating": "Sell By",
+              "closed_code_life_dating": "Reading the code from right to left, transpose every third and fifth character. Replace the fourth character with the Mayan glyph for &#039;A&#039;. Invert the code. Take the numerical value of each letter and replace the letter with its numerical value.Divide by 0",
+              "shelf_life": "105days",
+              "code_life_dating_type": "Open",
+              "upc": "02514790096",
+              "vegan": [],
+              "net_size": "42.20",
+              "net_size_uom": "lb",
+              "free_of": [
+                "BPA",
+                "Yeast Free",
+                "Casein Free",
+                "Gluten Free (labeled)"
+              ],
+              "item_number": "C02514790096",
+              "unfi_east_id": "500005",
+              "unfi_west_id": "40004",
+              "macola_id": "2142"
+            }
+          ]
+        }
+        
+        

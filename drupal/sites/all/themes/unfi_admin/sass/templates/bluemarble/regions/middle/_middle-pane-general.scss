@@ -1,0 +1,194 @@
+// ----------------
+// Listing pane (middle pane)
+// ----------------
+
+// General content pane styling
+#pane-listing {
+  background: $white;
+  bottom: 0;
+  left: 0;
+  padding: 0;
+  position: absolute;
+  top: 0;
+  @include transition(left .25s ease-in-out, width .25s ease-in-out);
+  @extend .twelve;
+
+  .filters-open & {
+    left: 25%;
+    @extend .nine;
+  }
+
+  .product-open.filters-closed & {
+    @extend .six;
+  }
+
+  .product-open.filters-open & {
+    @extend .four;
+  }
+
+  // Tablet view
+  @include breakpoint($breakpoint-navigation-max) {
+    .filters-open & {
+      left: 41%;
+      width: 59%;
+    }
+  }
+
+  // Mobile view
+  @include breakpoint($breakpoint-tablet-max) {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: 0;
+    z-index: 5;
+
+    .filters-open & {
+      @include transform(translate3d(100%, 0, 0));
+    }
+
+    .product-open & {
+      @include transform(translate3d(-100%, 0, 0));
+    }
+  }
+
+  .pane-header {
+    padding: $spacing-small;
+  }
+
+  .pane-content {
+    overflow: hidden;
+  }
+
+  .scroll-full-height {
+    padding: 0;
+    height: 100%;
+    .pane-listing__content__wrapper {
+      // where listing-view-type icon height = 22px
+      @include scroll-full-height(0px, 0px, (#{$logo-height} + 22px + #{$line-height-small} + #{$spacing-small} * 2));
+    }
+  }
+}
+
+// Listing sort filters
+.listing-menu {
+  font-size: $font-size-small;
+  color: $a400;
+  line-height: $line-height-small;
+  ul {
+    @extend %ul-reset;
+  }
+  .listing-sort-wrapper {
+    float: left;
+    label {
+      margin: 0;
+      float: left;
+      line-height: inherit;
+    }
+    select {
+      @extend md-select;
+    }
+    select,
+    md-select {
+      // Make this select shorter than default so it will fit better
+      height: 20px;
+      border: 0;
+      margin: 0 0 0 $spacing-medium;
+      background: transparent;
+      font-size: $font-size-xsmall;
+      color: $a400;
+      -webkit-appearance: none; // TODO: other browsers
+      md-select-label {
+        padding: 0;
+      }
+    }
+  }
+  div {
+    &:hover, &:hover select, &:hover md-select {
+      color: $a600;
+    }
+  }
+}
+// Listing view mode filters
+.listing-view-menu {
+  float: right;
+  ul {
+    @extend %ul-reset;
+  }
+  li {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    margin-left: $spacing-xsmall;
+    font-size: 0px;
+    background-size: cover;
+    background-position: -18px;
+    cursor: pointer;
+    &.selected {
+      background-position: 0;
+    }
+  }
+  .filters {
+    background-image: url('../images/filter-button.png');
+  }
+  .listview {
+    background-image: url('../images/list-view-button.png');
+  }
+  .thumbnailview {
+    background-image: url('../images/grid-view-button.png');
+  }
+}
+// Listing result count
+.listing-result-count {
+  clear: both;
+  font-size: $font-size-xsmall;
+}
+.listing-result-info__progress-bar {
+  clear: both;
+  text-align: center;
+  line-height: 0;
+  img {
+    height: $line-height-small;
+  }
+}
+// Listing result info and progress bar
+.listing-result-info {
+  width: 100%;
+  padding: $spacing-large;
+  text-align: center;
+}
+
+// Activity State / Workflow State / Status Icons
+.thumb-view__result-activity_state,
+.list-view__result-activity_state {
+  display: block;
+  position: absolute;
+  width: $activity-state-width;
+  height: $activity-state-height;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+
+  &.activity-state-2 { // Magic number: 2 = Development
+    background-image: url(../images/status-icon-development.png);
+  }
+
+  &.activity-state-3 { // Magic number: 3 = Review
+    background-image: url(../images/status-icon-review.png);
+  }
+
+  &.activity-state-4 { // Magic number: 4 = Approved
+    background-image: url(../images/status-icon-other.png);
+  }
+
+  &.activity-state-5 { // Magic number: 5 = Active
+    background-image: url(../images/status-icon-active.png);
+  }
+
+  &.activity-state-6 { // Magic number: 6 = Hold
+    background-image: url(../images/status-icon-other.png);
+  }
+
+  &.activity-state-7 { // Magic number: 7 = Discontinued
+    background-image: url(../images/status-icon-discontinued.png);
+  }
+}

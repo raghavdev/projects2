@@ -1,0 +1,15 @@
+<div id="detail" class="clearfix" ng-if="record !== null">
+  <header class="detail-header">
+    <ul ng-if="view != 'assets'">
+      <li ng-repeat="field in meta[view].detail.header.fields">{{record | records:field.record:field:this:'.detail-header ul li':$index}}</li>
+    </ul>
+  </header>
+  <header class="detail-subheader">
+    <ul>
+      <li ng-repeat="field in meta[view].detail.header.subheader">{{record | records:field.record:field:this:'.detail-subheader ul li':$index}}</li>
+    </ul>
+  </header>
+  <ng-form name="recordForm">
+    <div ng-include="getDetailTemplate()" onload="onDetailTemplateLoaded()"></div>
+  </ng-form>
+</div>

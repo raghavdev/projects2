@@ -1,0 +1,175 @@
+// ----------------
+// Detail pane (right pane)
+// ----------------
+
+#pane-detail {
+  background: $white;
+  border: solid 1px $g700;
+  bottom: 0;
+  padding: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  @include transform(translate3d(100%, 0, 0));
+  @include transition(transform .25s ease-in-out, width .25s ease-in-out);
+  @extend .five;
+
+  .product-open & {
+    @include transform(translate3d(0, 0, 0));
+  }
+
+  .product-open.filters-closed & {
+    @extend .six;
+  }
+
+  // Mobile view
+  @include breakpoint($breakpoint-tablet-max) {
+    bottom: 0;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: 10;
+    @include transform(translate3d(100%, 0, 0));
+
+    .product-open & {
+      @include transform(translate3d(0, 0, 0));
+    }
+  }
+
+  > form {
+    height: 100%;
+  }
+
+  md-tabs {
+    .md-header {
+      height: calc(#{$font-size-large} + (#{$spacing-small} * 2) + #{$line-height-small});
+      padding-top: $spacing-small;
+    }
+
+    .md-paginator {
+      margin-top: -#{$spacing-small};
+    }
+  }
+
+  md-tabs-ink-bar {
+    background-color: $white;
+    height: 100%;
+    z-index: -1;
+  }
+
+  md-tab {
+    color: $a400;
+
+    &.active,
+    :focus {
+      color: $a600;
+    }
+  }
+
+  label {
+    font-weight: normal;
+  }
+
+  fieldset {
+    padding: 0;
+    margin: $spacing-medium 0;
+    border: 0;
+  }
+
+  .field-description {
+    font-size: $font-size-xsmall;
+  }
+
+  md-input-container {
+    padding: 0;
+    margin-top: $spacing-large;
+  }
+
+  .form-field {
+    padding-left: $spacing-medium;
+
+    label {
+      position: relative;
+      margin: 13px 0 0 -13px;
+    }
+  }
+
+  .form-field.form-field-boolean {
+    label {
+      margin: 0;
+    }
+
+    display: block;
+  }
+
+  .detail-main {
+    > *:first-child {
+      margin-top: 0;
+    }
+  }
+
+  .download-export {
+    margin-top: $spacing-medium;
+
+    ul {
+      padding: 0;
+      margin: $spacing-small 0 0;
+    }
+
+    li {
+      float: left;
+      padding: 0;
+      margin: 0 $spacing-small $spacing-small 0;
+
+      a {
+        display: block;
+        padding: $spacing-medium $spacing-large;
+        border: solid 1px $color-action-secondary;
+        color: $color-action-secondary;
+        font-weight: bold;
+
+        &:hover {
+          background-color: $color-action-secondary-hover;
+          color: $white;
+          border-color: transparent;
+        }
+      }
+    }
+  }
+}
+
+.pane-detail-column.pane-column {
+  .product-close {
+    background-color: $a400;
+    cursor: pointer;
+    padding: 5px;
+  }
+
+  .pane-content {
+    // Override default scroll padding
+    &.scroll-full-height {
+      // Header height + MD-Tab height + Save Info height
+      @include scroll-full-height($spacing-medium, $spacing-medium, unquote("#{$logo-height} + #{$spacing-large} + #{$spacing-small} * 2 + #{$spacing-xsmall} + #{$spacing-large} + #{$spacing-small} * 2"));
+    }
+  }
+
+  .detail-header {
+    ul {
+      @extend %ul-reset;
+    }
+  }
+}
+
+// ----------------
+// Detail menu (right pane)
+// ----------------
+#detail-menu {
+  select {
+    border: none;
+    font-weight: bold;
+    height: 50px;
+    margin: 0 10px;
+    text-transform: uppercase;
+  }
+}

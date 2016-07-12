@@ -1,0 +1,14 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function bmb_material_cost_types_install() {
+  db_update('taxonomy_vocabulary')
+    ->fields(array(
+      'name'         => 'Material Cost Type',
+      'machine_name' => 'material_cost_type',
+    ))
+    ->condition('machine_name', 'material_cost_types')
+    ->execute();
+}

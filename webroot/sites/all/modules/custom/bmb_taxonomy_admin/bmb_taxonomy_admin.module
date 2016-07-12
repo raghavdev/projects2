@@ -1,0 +1,360 @@
+<?php
+
+define('BMB_TAXONOMY_ADMIN_PATH', 'lists');
+
+/**
+ * Implements hook_menu().
+ */
+function bmb_taxonomy_admin_menu() {
+  $items = array();
+
+  $items[BMB_TAXONOMY_ADMIN_PATH] = array(
+    'title'            => 'Manage Lists',
+    'access callback'  => 'bmb_taxonomy_admin_page_access',
+    'access arguments' => array('index'),
+    'page callback'    => 'bmb_taxonomy_admin_overview_page',
+    'page arguments'   => array(),
+    'menu_name'        => 'menu-digital-core-menu',
+  );
+
+  // Build menu links for each vocabulary
+  $vocabs = taxonomy_vocabulary_load_multiple(FALSE);
+  foreach ($vocabs as $vocab) {
+    $vocab_path = BMB_TAXONOMY_ADMIN_PATH . '/' . $vocab->machine_name;
+
+    $items[$vocab_path] = array(
+      'title'            => $vocab->name,
+      'access callback'  => 'bmb_taxonomy_admin_page_access',
+      'access arguments' => array('admin', 1),
+      'page callback'    => 'bmb_taxonomy_admin_overview_page',
+      'page arguments'   => array(1),
+    );
+
+    $items[$vocab_path . '/add'] = array(
+      'type'             => MENU_LOCAL_ACTION,
+      'title'            => 'Add new ' . $vocab->name,
+      'access callback'  => 'bmb_taxonomy_admin_page_access',
+      'access arguments' => array('add', 1),
+      'page callback'    => 'bmb_taxonomy_admin_edit_page',
+      'page arguments'   => array(1, NULL),
+    );
+
+    $items[$vocab_path . '/%taxonomy_term'] = array(
+      'title'            => 'Edit ' . $vocab->name,
+      'title callback'   => 'bmb_taxonomy_admin_page_title',
+      'title arguments'  => array(1, 2),
+      'access callback'  => 'bmb_taxonomy_admin_page_access',
+      'access arguments' => array('edit', 1),
+      'page callback'    => 'bmb_taxonomy_admin_edit_page',
+      'page arguments'   => array(1, 2),
+    );
+  }
+
+  return $items;
+}
+
+/**
+ * Determines if the current user has access to these pages.
+ *
+ * @param string $op
+ * @param string $vocab_name
+ * @return bool
+ */
+function bmb_taxonomy_admin_page_access($op, $vocab_name = NULL) {
+  // Normalize operations
+  switch ($op) {
+    case 'admin':
+    case 'manage':
+    case 'overview':
+      $op = empty($vocab_name) ? 'index' : 'list terms';
+      break;
+    case 'add':
+    case 'create':
+    case 'insert':
+    case 'new':
+      $op = 'add terms';
+      break;
+    case 'edit terms':
+    case 'modify':
+    case 'update':
+    case 'change':
+      $op = 'edit';
+      break;
+    case 'delete terms':
+    case 'remove':
+      $op = 'delete';
+      break;
+  }
+
+  // Rely on taxonomy_access_fix to check the basic cases
+  $access = taxonomy_access_fix_access($op, $vocab_name);
+  if ($access) {
+    return TRUE;
+  }
+  elseif (in_array($op, array('index', 'list terms', 'reorder', 'add terms'))) {
+    // If taxonomy_access_fix does not return a solid true for these specific
+    // operations, then return a hard "no"
+    return FALSE;
+  }
+
+  // Finally, simply handle the edit and delete cases like core,
+  // BUT since (for some reason) it stores the vocab ID in the permission,
+  // the vocabulary needs to be loaded to determine that ID from the name given.
+  $vocab = taxonomy_vocabulary_machine_name_load($vocab_name);
+  if (empty($vocab)) {
+    return FALSE;
+  }
+
+  switch ($op) {
+    case 'edit':
+      return user_access('edit terms in ' . $vocab->vid);
+    case 'delete':
+      return user_access('delete terms in '. $vocab->vid);
+    default:
+      return FALSE;
+  }
+}
+
+/**
+ * Page building function to build a form for listing the vocabs or the terms of
+ * a vocabulary.
+ *
+ * @param string $vocab_name
+ * @return array
+ */
+function bmb_taxonomy_admin_overview_page($vocab_name = NULL) {
+  module_load_include('inc', 'taxonomy', 'taxonomy.admin');
+
+  // List vocabularies if none is given
+  if (empty($vocab_name)) {
+    $form = drupal_get_form('taxonomy_overview_vocabularies', 'bmb_taxonomy_admin');
+  }
+  else {
+    $vocab = taxonomy_vocabulary_machine_name_load($vocab_name);
+    $form = drupal_get_form('taxonomy_overview_terms', $vocab, 'bmb_taxonomy_admin');
+  }
+
+  return $form;
+}
+
+/**
+ * Page building function to build a form for editing a single term.
+ *
+ * @param string $vocab_name
+ * @param stdClass|null $entity
+ * @return array
+ */
+function bmb_taxonomy_admin_edit_page($vocab_name, $entity) {
+  $vocab = taxonomy_vocabulary_machine_name_load($vocab_name);
+  if (empty($entity)) {
+    $entity = new stdClass();
+  }
+  // Creation happens when an empty $entity is passed in with a valid vocab,
+  // so do some error checking
+  if (empty($entity->vid) && empty($vocab)) {
+    drupal_not_found();
+    drupal_exit();
+  }
+  // Force the title, rather than simply displaying the vocab name
+  if (empty($entity->vid)) {
+    drupal_set_title('Add new ' . $vocab->name);
+  }
+
+  module_load_include('inc', 'taxonomy', 'taxonomy.admin');
+
+  $form = drupal_get_form('taxonomy_form_term', $entity, $vocab, 'bmb_taxonomy_admin');
+
+  return $form;
+}
+
+/**
+ * Constructs a page title for operating on a taxonomy term.
+ *
+ * @param string $vocab_name
+ * @param stdClass $entity
+ * @param string $op
+ * @return string
+ */
+function bmb_taxonomy_admin_page_title($vocab_name, $entity = NULL, $op = 'edit') {
+  $vocab = taxonomy_vocabulary_machine_name_load($vocab_name);
+  if (isset($entity->name)) {
+    $name = $entity->name;
+  }
+  elseif (isset($vocab->name)) {
+    $name = $vocab->name;
+  }
+  else {
+    $name = 'Unknown Taxonomy Vocabulary or Term';
+  }
+
+  switch ($op) {
+    default:
+      $title = ucfirst($op) . ': ' . $name;
+      break;
+  }
+
+  return $title;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Purpose: correct the links to vocabulary overview pages.
+ */
+function bmb_taxonomy_admin_form_taxonomy_overview_vocabularies_alter(&$form, &$form_state, $form_id) {
+  if (!_bmb_taxonomy_admin_form_alter_check($form_state)) {
+    return; // Do nothing if the form was not called from this module
+  }
+
+  $path_base = rtrim(current_path(), '/') . '/';
+  foreach (element_children($form) as $key) {
+    $row = &$form[$key];
+    if (isset($row['#vocabulary'])) {
+      _bmb_taxonomy_admin_correct_overview_links_vocab($row, $path_base);
+    }
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Purpose: correct the links to term editing pages.
+ * Purpose: provide a path to return to if the user resets the term order.
+ */
+function bmb_taxonomy_admin_form_taxonomy_overview_terms_alter(&$form, &$form_state, $form_id) {
+  if (!_bmb_taxonomy_admin_form_alter_check($form_state)) {
+    return; // Do nothing if the form was not called from this module
+  }
+
+  $path_base = current_path();
+  if (!empty($form['reset_alphabetical']['#value'])) {
+    $form['#submit'][] = '_bmb_taxonomy_admin_form_redirection_correction';
+
+    $form_state['bmb_taxonomy_admin'] = array(
+      'redirect_path' => $path_base,
+    );
+  }
+
+  $path_base = rtrim($path_base, '/') . '/';
+  foreach (element_children($form) as $key) {
+    $row = &$form[$key];
+    if (isset($row['#term'])) {
+      _bmb_taxonomy_admin_correct_overview_links_term($row, $path_base);
+    }
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Purpose: provide a path to return to if the user deletes the term.
+ */
+function bmb_taxonomy_admin_form_taxonomy_form_term_alter(&$form, &$form_state, $form_id) {
+  if (!_bmb_taxonomy_admin_form_alter_check($form_state)) {
+    return; // Do nothing if the form was not called from this module
+  }
+
+  if (!empty($form['delete']['#value'])) {
+    $form['#submit'][] = '_bmb_taxonomy_admin_form_redirection_correction';
+    // Trim the current path down to the overview page
+    $path_parts = explode('/', current_path());
+    // Just in case a separate path is implemented for editing and viewing
+    if (end($path_parts) == 'edit') {
+      array_pop($path_parts);
+    }
+    // Remove this term's ID
+    if (end($path_parts) == $form_state['values']['tid']) {
+      array_pop($path_parts);
+    }
+    // Prevent double slash paths
+    if (reset($path_parts) === '') {
+      array_shift($path_parts);
+    }
+
+    $form_state['bmb_taxonomy_admin'] = array(
+      'redirect_path' => implode('/', $path_parts),
+    );
+  }
+}
+
+/**
+ * Checks if a form was built from this module, as it should have the module's
+ * name as the last argument.
+ *
+ * @see bmb_taxonomy_admin_form_taxonomy_overview_vocabularies_alter
+ * @see bmb_taxonomy_admin_form_taxonomy_overview_terms_alter
+ * @see bmb_taxonomy_admin_form_taxonomy_form_term_alter
+ *
+ * @param array $form_state
+ * @return bool
+ */
+function _bmb_taxonomy_admin_form_alter_check($form_state) {
+  return !empty($form_state['build_info']['args'])
+    && end($form_state['build_info']['args']) == 'bmb_taxonomy_admin';
+}
+
+/**
+ * Corrects the path for a single row in the vocabularies overview form.
+ *
+ * @see bmb_taxonomy_admin_form_taxonomy_overview_vocabularies_alter
+ *
+ * @param array $row
+ * @param string $path_base
+ *   Note: expects a trailing slash is already appended
+ */
+function _bmb_taxonomy_admin_correct_overview_links_vocab(&$row, $path_base) {
+  $edit_path = $path_base . $row['#vocabulary']->machine_name;
+
+  if (isset($row['list']['#href'])) {
+    $row['list']['#href'] = $edit_path;
+  }
+
+  if (isset($row['add']['#href'])) {
+    $row['add']['#href'] = $edit_path . '/add';
+  }
+}
+
+/**
+ * Corrects the path for a single row in the terms overview form.
+ *
+ * @see bmb_taxonomy_admin_form_taxonomy_overview_terms_alter
+ *
+ * @param array $row
+ * @param string $path_base
+ *   Note: expects a trailing slash is already appended
+ */
+function _bmb_taxonomy_admin_correct_overview_links_term(&$row, $path_base) {
+  $edit_path = $path_base . $row['#term']['tid'];
+
+  if (isset($row['view']['#href'])) {
+    $row['view']['#href'] = $edit_path;
+  }
+
+  if (isset($row['edit']['#href'])) {
+    $row['edit']['#href'] = $edit_path;
+  }
+}
+
+/**
+ * Forces the redirection back to pages that are managed by this module.
+ *
+ * @see bmb_taxonomy_admin_form_taxonomy_overview_vocabularies_alter
+ * @see bmb_taxonomy_admin_form_taxonomy_overview_terms_alter
+ * @see bmb_taxonomy_admin_form_taxonomy_form_term_alter
+ *
+ * @param array $form
+ * @param array $form_state
+ */
+function _bmb_taxonomy_admin_form_redirection_correction($form, &$form_state) {
+  if (
+    isset($form_state['bmb_taxonomy_admin']['redirect_path'])
+    && isset($form_state['redirect'])
+  ) {
+    if (is_array($form_state['redirect'])) {
+      $form_state['redirect'][0] = $form_state['bmb_taxonomy_admin']['redirect_path'];
+    }
+    else {
+      $form_state['redirect'] = $form_state['bmb_taxonomy_admin']['redirect_path'];
+    }
+  }
+}

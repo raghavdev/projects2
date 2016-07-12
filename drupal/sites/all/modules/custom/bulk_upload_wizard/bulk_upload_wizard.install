@@ -1,0 +1,34 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function bulk_upload_wizard_schema() {
+  $schema = array();
+
+  $schema['bulk_upload_wizard_jobs'] = array(
+    'description' => 'Holds information about the jobs that are passed thru the wizard',
+    'fields' => array(
+      'job_id' => array(
+        'description' => 'Job ID',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => TRUE,
+      ),
+      'job_record' => array(
+        'description' => 'Serialized array of the job record information',
+        'type'        => 'text',
+        'size'        => 'big',
+        'not null'    => FALSE,
+      ),
+      'record_type' => array(
+        'description' => 'record type (record, asset_info, options)',
+        'type'        => 'varchar',
+        'size'        => '11',
+        'not null'    => FALSE,
+      )
+    ),
+  );
+
+  return $schema;
+}

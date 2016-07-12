@@ -1,0 +1,438 @@
+<?php
+/**
+ * @file
+ * Code for the Enterprise Data brands feature.
+ */
+
+include_once 'enterprise_data_brands.features.inc';
+
+/**
+ * Implements hook_menu().
+ */
+function enterprise_data_brands_menu() {
+
+  $items['admin/config/enterprisedata/brands/enterprise'] = array(
+    'type'   => MENU_DEFAULT_LOCAL_TASK,
+    'title'  => 'Enterprise Brands',
+    'weight' => 0,
+  );
+
+  $items['admin/config/enterprisedata/brands/enterprise/all'] = array(
+    'type'   => MENU_DEFAULT_LOCAL_TASK,
+    'title'  => 'All',
+    'weight' => 0,
+  );
+
+  $items['admin/config/enterprisedata/brands/east/all'] = array(
+    'type'   => MENU_DEFAULT_LOCAL_TASK,
+    'title'  => 'All',
+    'weight' => 0,
+  );
+
+  $items['admin/config/enterprisedata/brands/west/all'] = array(
+    'type'   => MENU_DEFAULT_LOCAL_TASK,
+    'title'  => 'All',
+    'weight' => 0,
+  );
+
+  $items['node/%node/edit/enterprise'] = array(
+    'type'             => MENU_LOCAL_TASK,
+    'title'            => 'Edit Assignment to Enterprise Brand',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('enterprise_data_brands_east_west_edit_form', 1),
+    'access arguments' => array('edit enterprise data brands'),
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function enterprise_data_brands_permission() {
+  return array(
+    'edit enterprise data brands' => array(
+      'title' => 'Edit Enterprise Data Brands',
+    ),
+    'administer enterprise data brands' => array(
+      'title' => 'Administer Enterprise Data Brands',
+    ),
+  );
+}
+
+function enterprise_data_brands_preprocess_views_view_table(&$variables) {
+  $allowed_views = array('east_brands', 'west_brands');
+  if (in_array($variables['view']->name, $allowed_views)) {
+    foreach ($variables['rows'] as $key => &$row) {
+      $row['nid'] = l(t('Edit'), 'node/' . $row['nid'] . '/edit/enterprise', array('query' => array('destination' => current_path())));
+    }
+  }
+}
+
+function enterprise_data_brands_preprocess_views_view_summary(&$variables) {
+  $allowed_views = array('enterprise_brands', 'east_brands', 'west_brands');
+  $allowed_displays = array('enterprise_brands_glossary', 'missing_east_glossary', 'missing_west_glossary', 'east_brands_glossary', 'unassigned_glossary', 'west_brands_glossary');
+
+  if (
+    !empty($variables['view']->name)
+    && !empty($variables['view']->current_display)
+    && in_array($variables['view']->name, $allowed_views)
+    && in_array($variables['view']->current_display, $allowed_displays)
+  ) {
+    $old_keys = array();
+    $new_keys = array('&', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+      'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
+    $old_rows = $variables['rows'];
+    $new_rows = array();
+
+    foreach ($old_rows as $key => $row) {
+      if (isset($row->link)) {
+        $old_keys[$row->link] = $key;
+      }
+    }
+
+    foreach ($new_keys as $key => $char) {
+      $char = check_plain($char);
+      if (isset($old_keys[$char])) {
+        $new_rows[$key] = $old_rows[$old_keys[$char]];
+      }
+      else {
+        $new_rows[$key] = new StdClass();
+        $new_rows[$key]->field_short_brand_name_value_truncated = $char;
+        $new_rows[$key]->num_records = 0;
+        $new_rows[$key]->field_field_ent_long_brand_name = array();
+        $new_rows[$key]->field_field_short_brand_name = array();
+        $new_rows[$key]->field_field_customer_name = array();
+        $new_rows[$key]->link = $char;
+        $new_rows[$key]->count = 0;
+      }
+    }
+
+    $variables['rows'] = $new_rows;
+  }
+}
+
+function enterprise_data_brands_views_query_alter(&$view, &$query) {
+
+  // Page Glossaries
+  /////////////////////////////////////////////////////////
+
+  $allowed_views = array('enterprise_brands', 'east_brands', 'west_brands');
+  $allowed_displays = array('enterprise_brands_glossary', 'missing_east_glossary', 'missing_west_glossary', 'east_brands_glossary', 'unassigned_glossary', 'west_brands_glossary');
+  $fields = array(
+    'enterprise_brands' => array(
+      'truncated' => 'field_short_brand_name_value_truncated',
+      'db_column' => 'field_data_field_short_brand_name.field_short_brand_name_value',
+    ),
+    'east_brands' => array(
+      'truncated' => 'field_east_short_brand_name_value_truncated',
+      'db_column' => 'field_data_field_east_short_brand_name.field_east_short_brand_name_value',
+    ),
+    'west_brands' => array(
+      'truncated' => 'field_west_short_brand_name_value_truncated',
+      'db_column' => 'field_data_field_west_short_brand_name.field_west_short_brand_name_value',
+    ),
+  );
+
+  if (
+    !empty($view->name)
+    && !empty($view->current_display)
+    && in_array($view->name, $allowed_views)
+  ) {
+    // Glossary character links
+    if (in_array($view->current_display, $allowed_displays)) {
+      // Replace field_short_brand_name_value_truncated so that we group all special characters
+      if (isset($query->fields[$fields[$view->name]['truncated']])) {
+        $substring = $query->fields[$fields[$view->name]['truncated']]['field'];
+        $query->fields[$fields[$view->name]['truncated']]['field'] = "(CASE WHEN " . $substring . " IN ('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z') THEN " . $substring . " ELSE '&' END)";
+      }
+    }
+
+    // Page view
+    if (
+      strpos($view->current_display, '_page')
+      && !empty($view->args)
+      && $view->args[0] == '&'
+    ) {
+      // Replace condition when &
+      $placeholders = array_keys($query->where[0]['conditions'][0]['value']);
+      $query->where[0]['conditions'][0]['field'] = "SUBSTRING(" . $fields[$view->name]['db_column'] . ", 1, 1) NOT IN (" . $placeholders[0] . ")";
+      $query->where[0]['conditions'][0]['value'][$placeholders[0]] = array(
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+        'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
+    }
+  }
+
+  // Field Entity References
+  /////////////////////////////////////////////////////////
+
+  $allowed_views = array('east_brands_field', 'west_brands_field');
+  $allowed_displays = array('east_brands_field_reference', 'west_brands_field_reference');
+  $fields = array(
+    'east_brands_field_reference' => 'field_east_brands_node.nid',
+    'west_brands_field_reference' => 'field_west_brands_node.nid',
+  );
+
+  if (
+    !empty($view->name)
+    && !empty($view->current_display)
+    && in_array($view->name, $allowed_views)
+    && in_array($view->current_display, $allowed_displays)
+  ) {
+    // Overwrite where contextual filters would go
+    $query->where[0] = array(
+      'conditions' => array(),
+      'args'       => array(),
+      'type'       => 'OR',
+    );
+    // Determine page's node same way 'Content ID from URL' does
+    foreach (range(1, 3) as $i) {
+      $node = menu_get_object('node', $i);
+      if (!empty($node->nid)) {
+        // On the first node found,
+        // limit the East/West Brands that are already referenced by this node (Enterprise Brand)
+        $query->where[0]['conditions'][] = array(
+          'field'    => $fields[$view->current_display],
+          'value'    => $node->nid,
+          'operator' => '=',
+        );
+        break;
+      }
+    }
+    // For views testing, allow admin to pass a node ID
+    if (empty($query->where[0]['conditions']) && !empty($view->args[0])) {
+      $query->where[0]['conditions'][] = array(
+        'field'    => $fields[$view->current_display],
+        'value'    => $view->args[0],
+        'operator' => '=',
+      );
+    }
+    // Limit the East/West Brands that have not yet been referenced by an Enterprise Node
+    $query->where[0]['conditions'][] = array(
+      'field'    => $fields[$view->current_display],
+      'value'    => NULL,
+      'operator' => 'is null',
+    );
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function enterprise_data_brands_form_enterprise_brand_node_form_alter(&$form, &$form_state, $form_id) {
+  // Hide the title field,
+  // will be overwritten with the short name value
+  $form['title']['#access'] = FALSE;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function enterprise_data_brands_form_east_brand_node_form_alter(&$form, &$form_state, $form_id) {
+  // Hide the title field,
+  // will be overwritten with the short name value
+  $form['title']['#access'] = FALSE;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function enterprise_data_brands_form_west_brand_node_form_alter(&$form, &$form_state, $form_id) {
+  // Hide the title field,
+  // will be overwritten with the short name value
+  $form['title']['#access'] = FALSE;
+}
+
+/**
+ * Implements hook_node_presave().
+ */
+function enterprise_data_brands_node_presave($node) {
+  switch ($node->type) {
+    case 'enterprise_brand':
+      // Convert short & long name fields to uppercase
+      $node->field_short_brand_name['und'][0]['value'] = drupal_strtoupper($node->field_short_brand_name['und'][0]['value']);
+      $node->field_ent_long_brand_name['und'][0]['value'] = drupal_strtoupper($node->field_ent_long_brand_name['und'][0]['value']);
+      // Trim whitespace from text fields
+      $node->field_short_brand_name['und'][0]['value'] = trim($node->field_short_brand_name['und'][0]['value']);
+      $node->field_ent_long_brand_name['und'][0]['value'] = trim($node->field_ent_long_brand_name['und'][0]['value']);
+      $node->field_public_facing_name['und'][0]['value'] = trim($node->field_public_facing_name['und'][0]['value']);
+      // Convert multiple spaces to single
+      $node->field_ent_long_brand_name['und'][0]['value'] = preg_replace('/\s{2,}/', ' ', $node->field_ent_long_brand_name['und'][0]['value']);
+      // Overwrite title with short name value
+      $node->title = $node->field_short_brand_name['und'][0]['value'];
+      break;
+
+    case 'east_brand':
+      // Convert short name fields to uppercase
+      $node->field_east_short_brand_name['und'][0]['value'] = drupal_strtoupper($node->field_east_short_brand_name['und'][0]['value']);
+      // Overwrite title with short name value
+      $node->title = $node->field_east_short_brand_name['und'][0]['value'];
+      break;
+
+    case 'west_brand':
+      // Convert short & long name fields to uppercase
+      $node->field_west_short_brand_name['und'][0]['value'] = drupal_strtoupper($node->field_west_short_brand_name['und'][0]['value']);
+      $node->field_west_long_brand_name['und'][0]['value'] = drupal_strtoupper($node->field_west_long_brand_name['und'][0]['value']);
+      // Convert multiple spaces to single
+      $node->field_west_long_brand_name['und'][0]['value'] = preg_replace('/\s{2,}/', ' ', $node->field_west_long_brand_name['und'][0]['value']);
+      // Overwrite title with short name value
+      $node->title = $node->field_west_short_brand_name['und'][0]['value'];
+      break;
+  }
+}
+
+/**
+ * Form for reverse assignment changes of an East/West Brand to an Enterprise Brand.
+ * TODO: This work well for the most part, but revisioning throws big wrenches into the system.
+ */
+function enterprise_data_brands_east_west_edit_form($form, &$form_state, $node) {
+
+  if (!in_array($node->type, array('east_brand', 'west_brand'))) {
+    drupal_not_found();
+    drupal_exit();
+  }
+
+  $get_params = drupal_get_query_parameters();
+
+  $enterprise_nid = db_select('field_data_field_' . $node->type . 's', 'br')
+    ->fields('br', array('entity_id'))
+    ->condition('br.entity_type', 'node')
+    ->condition('br.bundle', 'enterprise_brand')
+    ->condition('br.field_' . $node->type . 's_target_id', $node->nid)
+    ->execute()
+    ->fetchField();
+
+  $query = db_select('field_data_field_ent_long_brand_name', 'ln');
+  $query->join('field_data_field_ent_active', 'a', 'ln.entity_id = a.entity_id');
+  $query->fields('ln', array('entity_id', 'field_ent_long_brand_name_value'));
+  $query->condition('ln.entity_type', 'node');
+  $query->condition('ln.bundle', 'enterprise_brand');
+  $query->condition('a.entity_type', 'node');
+  $query->condition('a.bundle', 'enterprise_brand');
+  $query->condition('a.field_ent_active_value', 1);
+  $query->orderBy('ln.field_ent_long_brand_name_value');
+  $result = $query->execute();
+  $enterprise_labels = $result->fetchAllKeyed();
+
+  $form['brand_type'] = array(
+    '#type'  => 'hidden',
+    '#value' => $node->type,
+  );
+
+  $form['brand_nid'] = array(
+    '#type'  => 'hidden',
+    '#value' => $node->nid,
+  );
+
+  $form['original_enterprise'] = array(
+    '#type'  => 'hidden',
+    '#value' => $enterprise_nid,
+  );
+
+  $form['enterprise_brand'] = array(
+    '#type'          => 'select',
+    '#title'         => t('Enterprise Brands'),
+    '#options'       => array(0 => '- None -') + $enterprise_labels,
+    '#default_value' => $enterprise_nid,
+  );
+
+  $form['actions'] = array('#type' => 'actions');
+
+  $form['actions']['submit'] = array(
+    '#type'  => 'submit',
+    '#value' => t('Update'),
+  );
+
+  if (!empty($get_params['destination'])) {
+    $form['actions']['cancel'] = array(
+      '#theme'   => 'link',
+      '#text'    => t('Cancel'),
+      '#path'    => $get_params['destination'],
+      '#options' => array(
+        'html'       => FALSE,
+        'attributes' => array(),
+      ),
+    );
+  }
+
+  return $form;
+}
+
+/**
+ * Form submit to re-assign an East/West Brand to or from an Enterprise Brand
+ * TODO: This work well for the most part, but revisioning throws big wrenches into the system.
+ */
+function enterprise_data_brands_east_west_edit_form_submit($form, &$form_state) {
+  // Enterprise Brand entity reference field to either East or West Brands
+  $field_name = 'field_' . $form_state['values']['brand_type'] . 's';
+  // East/West Brand node ID
+  $brand_nid = $form_state['values']['brand_nid'];
+  // Enterprise Brand that this East/West Brand was assigned
+  $old_ent_nid = (int)$form_state['values']['original_enterprise'];
+  // Enterprise Brand that this East/West Brand will be assigned
+  $new_ent_nid = (int)$form_state['values']['enterprise_brand'];
+  // Title placeholders
+  $old_title = 'none';
+  $new_title = 'none';
+
+  // Only make changes if there are changes
+  if ($old_ent_nid != $new_ent_nid) {
+    // Load the old Enterprise Brand,
+    // if old ID is 0, this will return false
+    $old_enterprise = node_load($old_ent_nid);
+    // If the old Enterprise Brand is valid
+    if ($old_ent_nid && $old_enterprise) {
+      // Wrap with metadata wrapper for easier operations
+      $old_wrapper = entity_metadata_wrapper('node', $old_enterprise);
+      // Obtain the original list of East/West Brand IDs
+      $old_list = $old_wrapper->$field_name->raw();
+      // If this East/West Brand IS in the list, then a valid index will be returned
+      // Remember 0 is a valid index
+      if (($old_index = array_search($brand_nid, $old_list)) !== FALSE) {
+        // Remove by unsetting the index
+        unset($old_list[$old_index]);
+        // Set the field's values
+        $old_wrapper->$field_name->set($old_list);
+        // Mark the old Enterprise Brand to be revisioned
+        $old_wrapper->revision->set(1);
+        // Save the old Enterprise Brand
+        $old_wrapper->save();
+        // Store the title
+        $old_title = $old_wrapper->field_ent_long_brand_name->value();
+      }
+    }
+
+    // Load the new Enterprise Brand,
+    // if new ID is 0, this will return false
+    $new_enterprise = node_load($new_ent_nid);
+    // If the new Enterprise Brand is valid
+    if ($new_ent_nid && $new_enterprise) {
+      // Wrap with metadata wrapper for easier operations
+      $new_wrapper = entity_metadata_wrapper('node', $new_enterprise);
+      // Obtain the original list of East/West Brand IDs
+      $new_list = $new_wrapper->$field_name->raw();
+      // If this East/West Brand IS NOT in the list, then FALSE will be returned
+      if (($new_index = array_search($brand_nid, $new_list)) === FALSE) {
+        // Append the list with this East/West Brand's ID
+        $new_list[] = $brand_nid;
+        // Set the field's values
+        $new_wrapper->$field_name->set($new_list);
+        // Mark the new Enterprise Brand to be revisioned
+        $new_wrapper->revision->set(1);
+        // Save the new Enterprise Brand
+        $new_wrapper->save();
+        // Store the title
+        $new_title = $new_wrapper->field_ent_long_brand_name->value();
+      }
+    }
+
+    // Notify the user
+    // TODO: wording could be changed when revisioning is fine tuned to better describe that the change needs approval
+    drupal_set_message(t('Changed Enterprise Brand assignment from %old to %new', array(
+      '%old' => $old_title,
+      '%new' => $new_title,
+    )));
+  }
+}

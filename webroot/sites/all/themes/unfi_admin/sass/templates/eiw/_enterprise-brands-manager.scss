@@ -1,0 +1,13 @@
+.view-display-id-enterprise_brands_glossary,
+.view-display-id-missing_east_glossary,
+.view-display-id-missing_west_glossary,
+.view-display-id-east_brands_glossary,
+.view-display-id-unassigned_glossary,
+.view-display-id-west_brands_glossary {
+  .item-list ul li {
+    float: left;
+    margin: 0;
+    margin: $spacing-xsmall;
+    color: $g400;
+  }
+}

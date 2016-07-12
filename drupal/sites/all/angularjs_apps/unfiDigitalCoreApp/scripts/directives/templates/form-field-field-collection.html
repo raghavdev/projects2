@@ -1,0 +1,29 @@
+<div class="{{field_name}} form-field form-field-field-collection">
+  <label>{{section_meta.label}}<span ng-show="{{section_meta.required}}"> *</span>
+    <div ng-if="section_meta.marketing_icons != ''" class="marketing-icons">
+      <i ng-repeat="icon in section_meta.marketing_icons" class="{{icon}}"></i>
+    </div>
+  </label>
+   <div ng-if="multivalued">
+   <div class="field-collection">
+      <section ng-repeat="(collection_delta, item) in record[field_name] track by $index">
+        <div ng-repeat="(field_name_delta, collection_field) in collection_fields" >
+          <div ng-show="collection_field" formsubfield="field_name_delta"></div>
+        </div>
+      <!-- <td><md-button ng-show="record" ng-click="removeItem($event, collection_delta)">Remove</md-button></td> -->
+      </section>
+   </div>
+    <button ng-click="addItem()" tabindex="0">Add Item<span class="button-icon button-create"></span></button>
+  </div>
+  <div ng-if="!multivalued">
+    <div ng-show="item">Item here</div>
+<!--     <md-button ng-show="record[field_name]" ng-click="removeItem($event)">Remove</md-button> -->
+  </div>
+
+  <div ng-messages="recordForm[field_name].$error">
+    <div ng-message="required">This is required!</div>
+    <div ng-message="drupal">{{drupal_messages}}</div>
+  </div>
+
+  <div class="field-description" ng-bind-html="section_meta.description"></div>
+</div>

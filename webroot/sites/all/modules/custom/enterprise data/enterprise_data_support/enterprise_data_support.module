@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Enterprise Data support feature.
+ */
+
+include_once 'enterprise_data_support.features.inc';

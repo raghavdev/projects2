@@ -1,0 +1,12 @@
+name = Blue Marble
+description = General functionality for the Blue Marble modules.
+core = 7.x
+package = Blue Marble
+dependencies[] = angularjs
+dependencies[] = bluemarble_search_settings
+dependencies[] = content_uri
+dependencies[] = ctools
+dependencies[] = drangular
+dependencies[] = entity
+dependencies[] = file
+dependencies[] = services

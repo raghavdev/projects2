@@ -1,0 +1,86 @@
+#nutritional {
+  h4 {
+    font-size: 40px;
+    line-height: 1.1em;
+    margin: 0;
+    @extend %bold-font;
+    @extend %align-center;
+  }
+  .nutrition-row {
+     margin-bottom: $spacing-xsmall;
+     margin-top: $spacing-xsmall;
+     @extend .clearfix;
+  }
+  .nutrition-facts {
+    .form-field {
+      width: auto;
+      label {
+        font-weight: bold;
+      }
+    }
+    .indent {
+      .form-field label {
+        font-weight: normal;
+      }
+    }
+  }
+  .label-bold {
+    @extend %bold-font;
+  }
+  .left,
+  .right {
+    .form-field {
+      padding-left: 2*$spacing-small;
+    }
+  }
+}
+
+.nutrition-facts {
+  width: 90%;
+  padding-bottom: 62px;
+  margin: 1em auto 3em;
+  @extend %border-medium;
+  border-color: $black;
+  padding: $spacing-xsmall;
+  background: $white;
+
+  * {
+    font-size: 14px;
+  }
+
+  .daily-value-heading {
+    float: right;
+    @extend %bold-font;
+  }
+  .calories {
+    margin-bottom: $spacing-xsmall;
+  }
+  .form-field-suffix {
+    position: absolute;
+    top: 48px;
+    right: 0;
+  }
+  .form-field-prefix {
+    position: absolute;
+    top: 48px;
+    left: 0;
+  }
+  // UGH. UGH. UGH.
+  md-input-container.md-default-theme .form-field-prefix + .md-input {
+    padding-left: 3em;
+  }
+  .indent {
+    padding-left: 20px;
+  }
+  .left,
+  .right {
+    .marketing-icons {
+      margin-right: $spacing-xsmall;
+    }
+  }
+}
+
+.relative-width {
+  max-width: 155px;
+  min-width: 126px;
+}

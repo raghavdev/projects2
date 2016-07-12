@@ -1,0 +1,71 @@
+<?php
+
+/**
+ * Remove empty brands.
+ */
+function bmb_brands_update_7001(&$sandbox) {
+  $query = db_select('node', 'n');
+  $query->leftJoin('field_data_field_brand', 'fb', 'n.nid=fb.field_brand_target_id');
+  $query->condition('n.type', 'brand');
+  $query->isNull('fb.field_brand_target_id');
+
+  if (!isset($sandbox['progress'])) {
+    $sandbox['progress'] = 0;
+    $sandbox['limit']    = 10;
+    $sandbox['max']      = (int) $query->countQuery()->execute()->fetchField();
+  }
+
+  $query->fields('n', array('nid'));
+  $query->orderBy('n.nid');
+  $query->range(0, $sandbox['limit']);
+
+  $results = $query->execute();
+  $node_ids = $results->fetchCol();
+
+  if (!empty($node_ids)) {
+    node_delete_multiple($node_ids);
+    $sandbox['progress'] += count($node_ids);
+//    drupal_flush_all_caches();
+  }
+
+  if (empty($sandbox['max'])) {
+    $sandbox['#finished'] = 1;
+  }
+  else {
+    $sandbox['#finished'] = $sandbox['progress'] / $sandbox['max'];
+  }
+}
+
+/**
+ * Remove empty brands.
+ */
+function bmb_brands_update_7002(&$sandbox) {
+  $query = db_select('node', 'n');
+  $query->leftJoin('field_data_field_brand', 'fb', 'n.nid=fb.field_brand_target_id');
+  $query->condition('n.type', 'brand');
+  $query->isNull('fb.field_brand_target_id');
+
+  if (!isset($sandbox['progress'])) {
+    $sandbox['progress'] = 0;
+    $sandbox['limit']    = 10;
+    $sandbox['max']      = (int) $query->countQuery()->execute()->fetchField();
+  }
+
+  $query->fields('n', array('nid'));
+  $query->orderBy('n.nid');
+  $query->range(0, $sandbox['limit']);
+
+  $results = $query->execute();
+  $node_ids = $results->fetchCol();
+
+  if (!empty($node_ids)) {
+    node_delete_multiple($node_ids);
+    $sandbox['progress'] += count($node_ids);
+  }
+
+  if (empty($sandbox['max'])) {
+    $sandbox['#finished'] = 1;
+  }
+  else {
+    $sandbox['#finished'] = $sandbox['progress'] / $sandbox['max'];
+  }}

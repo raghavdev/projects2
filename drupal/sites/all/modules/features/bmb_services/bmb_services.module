@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Blue Marble - Services feature.
+ */
+
+include_once 'bmb_services.features.inc';

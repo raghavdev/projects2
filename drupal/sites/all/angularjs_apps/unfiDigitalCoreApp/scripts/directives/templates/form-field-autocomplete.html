@@ -1,0 +1,16 @@
+<div class="{{field_name}} form-field form-field-autocomplete">
+  <div ng-if="section_meta.marketing_icons != ''" class="marketing-icons">
+    <i ng-repeat="icon in section_meta.marketing_icons" class="{{icon}}"></i>
+  </div>
+  <label>{{section_meta.label}}<span ng-show="{{section_meta.required}}"> *</span></label>
+  <mtdc-chips ng-model="selectedItems"></mtdc-chips>
+  <md-autocomplete md-selected-item="selectedItem" md-search-text="searchText" md-items="item in getMatches(searchText)" md-item-text="item.label" md-selected-item-change="addItem(selectedItem)" placeholder="Change {{section_meta.label}}" ng-disabled="nopermission">
+  <span md-highlight-text="searchText">{{item.label}}</span>
+  </md-autocomplete>
+  <div ng-messages="recordForm[field_name].$error">
+    <div ng-message="required">This is required!</div>
+    <div ng-message="maxlength">Exceeds {{section_meta.config.settings.max_length}}</div>
+    <div ng-message="drupal">{{drupal_messages}}></div>
+  </div>
+  <div class="field-description" ng-bind-html="section_meta.description"></div>
+</div>

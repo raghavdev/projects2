@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Blue Marble - Ingredients Import feature.
+ */
+
+include_once 'bmb_ingredients_import.features.inc';

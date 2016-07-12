@@ -1,0 +1,106 @@
+<?php
+/**
+ * @file
+ * Drupal needs this blank file.
+ */
+
+function bmb_select_opts_staging_taxonomy_terms() {
+  $all_terms = array(
+    'organic_certifier'        => array(
+      array('name' => 'Oregon Tilth Certified Organic'),
+      array('name' => 'Agricultural Services Certified Organic'),
+      array('name' => 'Ecocert ICO'),
+    ),
+    'whole_grain_council'      => array(
+      array(
+        'name'              => 'Basic',
+        'field_macola_name' => array(LANGUAGE_NONE => array(array('value' => 'basic'))),
+      ),
+      array(
+        'name'              => '100%',
+        'field_macola_name' => array(LANGUAGE_NONE => array(array('value' => '100%'))),
+      ),
+    ),
+    'country_of_origin'        => array(
+      array('name' => 'UNITED STATES OF AMERICA'),
+      array('name' => 'MEXICO'),
+      array('name' => 'CANADA'),
+    ),
+    'bottle_color'             => array(
+      array('name' => 'Green'),
+      array('name' => 'Blue'),
+      array('name' => 'Clear'),
+    ),
+    'container_type'           => array(
+      array('name' => 'Aluminum'),
+      array('name' => 'Glass'),
+      array('name' => 'HDPE2'),
+      array('name' => 'PETE1'),
+      array('name' => 'RPET'),
+      array('name' => 'Tetra'),
+    ),
+    'gtin_type'                => array(
+      array(
+        'name'              => 'UPC',
+        'field_macola_name' => array(LANGUAGE_NONE => array(array('value' => 'upc'))),
+      ),
+    ),
+    'manufacturing_method'     => array(
+      array(
+        'name'              => 'Purchased',
+        'field_macola_name' => array(LANGUAGE_NONE => array(array('value' => 'P'))),
+      ),
+      array(
+        'name'              => 'Manufactured',
+        'field_macola_name' => array(LANGUAGE_NONE => array(array('value' => 'M'))),
+      ),
+    ),
+    'freight_protection_from'  => array(
+      array('name' => 'Heat'),
+      array('name' => 'Freeze'),
+    ),
+    'freight_protection_level' => array(
+      array('name' => 'Chill'),
+      array('name' => 'Dry'),
+      array('name' => 'Frozen'),
+      array('name' => 'Grain Room'),
+    ),
+    'life_dating_type'         => array(
+      array('name' => 'Open'),
+      array('name' => 'Closed'),
+      array('name' => 'No Expiration'),
+    ),
+    'life_dating_open'         => array(
+      array('name' => 'Sell By'),
+      array('name' => 'Use By'),
+      array('name' => 'Best By'),
+    ),
+  );
+
+  foreach ($all_terms as $bundle => $terms) {
+    $vocab = taxonomy_vocabulary_machine_name_load($bundle);
+    foreach ($terms as $weight => $term) {
+      $temp_term = db_select('taxonomy_term_data', 'td')
+        ->fields('td', array('tid'))
+        ->condition('td.name', $term['name'])
+        ->condition('td.vid', $vocab->vid)
+        ->execute()
+        ->fetchAssoc();
+
+      if (!empty($temp_term)) {
+        $term += $temp_term;
+      }
+
+      $term                          = (object) $term;
+      $term->vocabulary_machine_name = $bundle;
+      $term->vid                     = $vocab->vid;
+      $term->weight                  = $weight;
+
+      if (!isset($term->field_macola_name)) {
+        $term->field_macola_name[LANGUAGE_NONE][0]['value'] = $term->name;
+      }
+
+      taxonomy_term_save($term);
+    }
+  }
+}

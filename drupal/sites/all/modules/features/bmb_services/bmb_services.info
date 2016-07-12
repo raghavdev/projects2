@@ -1,0 +1,14 @@
+name = Blue Marble - Services
+description = API service end-point configuration.
+core = 7.x
+package = Blue Marble
+dependencies[] = ctools
+dependencies[] = entity
+dependencies[] = features
+dependencies[] = oauth2_server
+dependencies[] = services
+features[ctools][] = services:services:3
+features[features_api][] = api:2
+features[oauth2_server][] = auth_server
+features[services_endpoint][] = bmbcrm
+features[services_endpoint][] = digitalcore

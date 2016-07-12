@@ -1,0 +1,39 @@
+<div class="detail-main twelve columns row">
+  <div class="six columns">
+    <fieldset class="filter">
+      <legend>Categories</legend>
+      <div class="filter-rows-wrapper">
+        <div class="filter-row-wrapper" ng-repeat="category in categories | orderBy:'order'">
+          <div class="filter-row" accordion accordion-state="closed" accordion-model="category" accordion-header-template="multi-select-header.html" on-accordion-item-click="assignCategory" accordion-content-template="filter-accordion-content.html">
+        </div>
+      </div>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Other</legend>
+      <div>
+        <label>Copyright Notice</label>
+        <textarea ng-model="record.copyright_notice"></textarea>
+      </div>
+      <div>
+        <label>Asset Creator</label>
+        <input type="text" ng-model="record.creator">
+      </div>
+    </fieldset>
+  </div>
+  <div class="six columns">
+    <fieldset>
+      <legend>Keywords</legend>
+      <div>
+        <input type="text" ng-model="record.keywords">
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Description</legend>
+      <div>
+        <textarea ng-model="record.description"></textarea>
+      </div>
+    </fieldset>
+  </div>
+  <div class="clearfix"></div>
+</div>

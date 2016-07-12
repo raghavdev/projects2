@@ -1,0 +1,9 @@
+name = Blue Marble Access Import
+description = Logic for importing data from CSV exports of Blue Marble's Access database.
+package = Blue Marble
+configure = admin/config/bluemarble/access_import
+core = 7.x
+
+dependencies[] = bluemarble
+dependencies[] = bluemarble_staging
+dependencies[] = sudo_workflow

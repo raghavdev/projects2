@@ -1,0 +1,241 @@
+<?php
+
+// TODO: the report generated will be considered a new web upload
+
+/**
+ * Implements hook_menu().
+ *
+ */
+function unfi_reports_web_uploads_menu() {
+  // Create a page to manually run the report.
+  $items['reports/web_uploads'] = array(
+    'title'            => t('Web Uploads Report'),
+    'description'      => t('Search for assets upload on a specified day.'),
+    'page callback'    => 'unfi_reports_web_uploads',
+    'access callback'  => 'unfi_reports_user_access',
+    'access arguments' => array('access unfi web uploads report'),
+  );
+  // Create a settings page.
+  $items['admin/config/unfi_reports/web_uploads_settings'] = array(
+    'title'            => t('Web Uploads Report Settings'),
+    'description'      => t('Configure the web uploads report settings.'),
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('unfi_reports_web_uploads_settings_form'),
+    'access callback'  => 'unfi_reports_user_access',
+    'access arguments' => array('access unfi web uploads report'),
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function unfi_reports_web_uploads_permission() {
+  return array(
+    'access unfi web uploads report' => array(
+      'title'           => t('Access UNFI Web Uploads Report'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_cron().
+ */
+function unfi_reports_web_uploads_cron() {
+  if (unfi_reports_check_cron_report_status('unfi_reports_web_uploads')) {
+    $cron_vars = variable_get('unfi_reports_web_uploads_cron_info', array());
+    unfi_reports_set_background_process('unfi_reports_web_uploads', $cron_vars['recipient'], $cron_vars['filter_params'], $cron_vars['download_type']);
+  }
+}
+
+/**
+ * Display the form page that allows the user to set some filtering options.
+ */
+function unfi_reports_web_uploads() {
+  return drupal_get_form('unfi_reports_form', unfi_reports_web_uploads_params());
+}
+
+/**
+ * Permit access to report files if the user has access permissions for this module.
+ */
+function unfi_reports_web_uploads_file_download($uri) {
+  $params    = unfi_reports_web_uploads_params();
+  $path_info = unfi_reports_build_download_path($params);
+
+  if (drupal_dirname($uri) == $path_info['export_path']) {
+    if (unfi_reports_user_access('access unfi web uploads report')) {
+      return array('Content-Type' => file_get_mimetype($uri));
+    }
+    else {
+      return -1;
+    }
+  }
+}
+
+/**
+ * Parse the filter params so that they can be used.
+ */
+function unfi_reports_web_uploads_parse_filters($filters) {
+  $parsed = unfi_reports_parse_filters($filters);
+
+  // The shared parse filters function will do most of the work, but additional adjustments can be done here.
+
+  return $parsed;
+}
+
+/**
+ * Return an array of params that will be used to build the filters form.
+ */
+function unfi_reports_web_uploads_params() {
+  $params = array(
+    'label'            => 'Web Uploads Report',
+    'module_name'      => 'unfi_reports_web_uploads',
+    'processor'        => 'unfi_reports_web_uploads_run',
+    'destination_path' => 'web_uploads',
+    'filename_prefix'  => 'web_uploads',  // NULL to use module_name.
+    'columns'          => array(
+      'asset' =>  array(
+        'format' => 'unfi_reports_image_format',
+        'name'   => 'Asset',
+      ),
+      'name' => 'Asset File Name',
+      'timestamp' => array(
+        'format' => 'unfi_reports_datetime_format',
+        'name'   => 'Upload Date'
+      ),
+    ),
+    'filter_params' => array(
+      'date' => array(
+        'title'       => 'Run Report For: ',
+        'description' => '',
+      ),
+    ),
+  );
+
+  return $params;
+}
+
+/**
+ * Execute the report.
+ */
+function unfi_reports_web_uploads_run($filter_args, $page) {
+  module_load_include('inc', 'digital_core_data', 'digital_core_data_assets');
+
+  $params = array('pagination' => FAlSE,);
+
+  $parameters = array();
+  if ($page >= 0) {
+    $params['pagination']['per_page'] = variable_get('unfi_reports_results_per_page', 100);
+    $params['pagination']['cur_page'] = $page;
+    $parameters["perPage"] = variable_get('unfi_reports_results_per_page', 100);
+    $parameters["page"] = $page;
+  }
+
+  if(array_key_exists('date', $filter_args)) {
+    $parameters["created-start"] = date('c', $filter_args['date']['timestamp']);
+    $parameters["created-end"] = date('c', ($filter_args['date']['timestamp'] + 86400));
+  }
+
+  //get ethe list of assets that are stale, we need the product that it relates to tho
+  $assets = digital_core_data_assets_read($parameters);
+
+  if (!empty($assets['results'])) {
+    foreach($assets['results'] as $idx => $asset) {
+
+      $assets['results'][$idx]['asset'] = 'file ' . $asset['fid'] . ' not found';
+
+      $file = file_load($asset['fid']);
+
+      if($file) {
+        $image_url = digital_core_assets_get_thumbnail_url($file);
+
+        $assets['results'][$idx]['asset'] = $image_url;
+      }
+
+      // For some reason, each asset has the 'name' element as an array,
+      // e.g.: $asset['name'][0] = 'some-name.jpg'
+      if (!is_string($asset['name'])) {
+        if(is_array($asset['name']) && is_string(current($asset['name']))) {
+          $assets['results'][$idx]['name'] = current($asset['name']);
+        }
+      }
+    }
+  }
+
+  return $assets;
+}
+
+/**
+ * Settings page for web upload report settings.
+ */
+function unfi_reports_web_uploads_settings_form($form, &$form_state) {
+  $var = variable_get('unfi_reports_web_uploads_cron_info', array(
+    'enabled'       => '0',
+    'recipient'     => '',
+    'filter_params' => '',
+    'download_type' => 'csv',
+    'interval'      => '',
+  ));
+
+  $form['unfi_reports_web_uploads_cron_info'] = array(
+    '#type'        => 'fieldset',
+    '#title'       => t('Background Report Settings'),
+    '#collapsible' => TRUE,
+    '#collapsed'   => FALSE,
+    '#tree'        => TRUE,
+  );
+
+  $form['unfi_reports_web_uploads_cron_info']['enabled'] = array(
+    '#type'          => 'checkbox',
+    '#title'         => t('Enable'),
+    '#default_value' => $var['enabled'],
+  );
+
+  $form['unfi_reports_web_uploads_cron_info']['recipient'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Recipient(s)'),
+    '#default_value' => $var['recipient'],
+    '#description'   => unfi_reports_cron_setting_descriptions('recipient'),
+  );
+
+  $form['unfi_reports_web_uploads_cron_info']['filter_params'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Filter Parameter(s)'),
+    '#default_value' => $var['filter_params'],
+    '#description'   => unfi_reports_cron_setting_descriptions('filter_params'),
+  );
+
+  $form['unfi_reports_web_uploads_cron_info']['download_type'] = array(
+    '#type'          => 'select',
+    '#title'         => t('File Type'),
+    '#options'       => unfi_reports_download_options(),
+    '#default_value' => $var['download_type'],
+  );
+
+  $form['unfi_reports_web_uploads_cron_info']['interval'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Run Interval'),
+    '#default_value' => $var['interval'],
+    '#description'   => unfi_reports_cron_setting_descriptions('interval'),
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+ * Form API validation of user input
+ */
+function unfi_reports_web_uploads_settings_form_validate($form, &$form_state) {
+  if (
+    isset($form_state['values']['unfi_reports_web_uploads_cron_info']['interval']) 
+    && $form_state['values']['unfi_reports_web_uploads_cron_info']['interval'] != ''
+  ) {
+    if (strtotime($form_state['values']['unfi_reports_web_uploads_cron_info']['interval']) === FALSE) {
+      form_set_error('unfi_reports_web_uploads_cron_info][interval', t('Run Interval is not a valid format.'));
+    }
+    elseif (strtotime($form_state['values']['unfi_reports_web_uploads_cron_info']['interval']) >= REQUEST_TIME) {
+      form_set_error('unfi_reports_web_uploads_cron_info][interval', t('Run Interval should be a relative time in the past.'));
+    }
+  }
+}

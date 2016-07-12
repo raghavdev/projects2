@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Blue Marble - Brands feature.
+ */
+
+include_once 'bmb_brands.features.inc';

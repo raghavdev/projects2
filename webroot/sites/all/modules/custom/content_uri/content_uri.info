@@ -1,0 +1,6 @@
+core = "7.x"
+
+description = "Expose Content via URIs in JSON format"
+name = "content_uri"
+package = "Content URI"
+php = "5.2.4"

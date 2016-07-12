@@ -1,0 +1,15 @@
+<div class="{{field_name}} form-field form-field-date">
+  <md-input-container>
+  <label>{{section_meta.label}}<span ng-show="{{section_meta.required}}"> *</span>
+    <div ng-if="section_meta.marketing_icons != ''" class="marketing-icons">
+      <i ng-repeat="icon in section_meta.marketing_icons" class="{{icon}}"></i>
+    </div>
+  </label>
+  <input name="{{field_name}}" ui-date="dateOptions" ng-model="date_object.value" ng-model-options="{debounce:500}" record="{{field_name}}" ng-required="{{section_meta.required}}" ng-disabled="nopermission" drupal-validate>
+  <div ng-messages="recordForm[field_name].$error">
+    <div ng-message="required">This is required!</div>
+    <div ng-message="drupal">{{drupal_messages}}</div>
+  </div>
+  <div class="field-description" ng-bind-html="section_meta.description"></div>
+  </md-input-container>
+</div>

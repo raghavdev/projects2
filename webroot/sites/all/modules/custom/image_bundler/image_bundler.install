@@ -1,0 +1,65 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function image_bundler_schema()
+{
+    $schema = array();
+
+    $schema['image_bundler'] = array(
+        'description' => 'track bundles',
+        'fields' => array(
+            'bundle_id' => array(
+                'description' => 'bundle_id',
+                'type' => 'serial',
+                'length' => 11,
+            ),
+            'zip_name' => array(
+                'description' => 'zip_name',
+                'type' => 'varchar',
+                'length' => 50,
+                'not null' => true,
+            ),
+            'active' => array(
+                'description' => 'active',
+                'type' => 'tinyint',
+                'length' => 4,
+                'not null' => true,
+            ),
+            'filter_parameters' => array(
+                'description' => 'filter_parameters',
+                'type' => 'varchar',
+                'length' => 400,
+                'not null' => true,
+            ),
+            'frequency' => array(
+                'description' => 'frequency',
+                'type' => 'varchar',
+                'length' => 20,
+                'not null' => FALSE,
+            ),
+            'image_renditions' => array(
+                'description' => 'image_renditions',
+                'type' => 'varchar',
+                'length' => 300,
+                'not null' => FALSE,
+            ),
+            'image_types' => array(
+                'description' => 'image_types',
+                'type' => 'varchar',
+                'length' => 300,
+                'not null' => FALSE,
+            ),
+            'last_run' => array(
+                'description' => 'last_run',
+                'type' => 'int',
+                'length' => 11,
+                'not null' => FALSE,
+          ),
+        ),
+        'primary key' => array('bundle_id'),
+    );
+
+    return $schema;
+}

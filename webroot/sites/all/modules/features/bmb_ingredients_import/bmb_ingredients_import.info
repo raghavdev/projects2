@@ -1,0 +1,13 @@
+name = Blue Marble - Ingredients Import
+description = Feature to manage Import of Ingredients into Taxonomy
+core = 7.x
+package = Features
+dependencies[] = ctools
+dependencies[] = features
+dependencies[] = feeds
+dependencies[] = job_scheduler
+dependencies[] = taxonomy
+features[ctools][] = feeds:feeds_importer_default:1
+features[features_api][] = api:2
+features[feeds_importer][] = ingredients_importer
+features[taxonomy][] = ingredients

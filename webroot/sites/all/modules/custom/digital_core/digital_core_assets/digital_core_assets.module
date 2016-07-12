@@ -1,0 +1,637 @@
+<?php
+
+/**
+ * Implements hook_rules_event_info().
+ */
+function digital_core_assets_rules_event_info() {
+  $events = array(
+    'digital_core_assets_upload_asset' => array(
+      'label' => t('Upload of an asset'),
+      'group' => t('Assets'),
+      'variables' => array(
+        'asset_type' => array(
+          'label' => t('Type of the asset.'),
+          'type' => 'text',
+          'skip save' => TRUE,
+        ),
+        'fid' => array(
+          'label' => t('File ID.'),
+          'type' => 'file',
+          'skip save' => TRUE,
+        ),
+        'nid' => array(
+          'label' => t('Related node ID'),
+          'type' => 'text',
+          'skip save' => TRUE,
+        ),
+        'image_type' => array(
+          'label' => t('RGB or CMYK'),
+          'type' => 'text',
+          'skip save' => TRUE,
+        ),
+      ),
+    ),
+  );
+  return $events;
+}
+
+/**
+ * Implements hook_rules_action_info().
+ */
+function digital_core_assets_rules_action_info() {
+  $actions = array(
+    'digital_core_assets_convert_cmyk_rgb' => array(
+      'label' => t('Convert the image file from cmyk to rgb'),
+      'group' => t('Assets'),
+      'parameter' => array(
+        // To select a user role.
+        'fid' => array(
+          'type' => 'text',
+          'label' => t('File ID'),
+          'description' => t('File ID of the image file to convert.'),
+        ),
+      ),
+    ),
+  );
+  return $actions;
+}
+
+/**
+ * Implements hook_file_metadata_info().
+ */
+function digital_core_assets_file_metadata_info() {
+  $info['channels'] = array(
+    'label' => t('Channels'),
+    'type' => 'integer',
+  );
+
+  return $info;
+}
+
+/**
+ * Implements hook_file_presave().
+ */
+function digital_core_assets_file_presave($file) {
+  // Only work on new files.
+  if (isset($file->fid) && $file->fid) {
+    return;
+  }
+
+  // Prevent PHP notices when trying to read empty files.
+  // @see http://drupal.org/node/681042
+  if (!$file->filesize) {
+    return;
+  }
+
+  // Do not bother proceeding if this file does not have an image mime type.
+  if (file_entity_file_get_mimetype_type($file) != 'image') {
+    return;
+  }
+
+  // Get channel info for the file
+  if (function_exists('getimagesize')) {
+    $info = @getimagesize($file->uri);
+    if (isset($info['channels'])) {
+      $file->metadata['channels'] = (int) $info['channels'];
+    }
+    else {
+      $file->metadata['channels'] = 3; // Default to RGB
+    }
+  }
+}
+
+function digital_core_assets_convert_cmyk_rgb($fid) {
+  $file = file_load($fid);
+
+  $img = digital_core_assets_open_image($file->uri, $file->filemime);
+  $width = imagesx($img);
+  $height = imagesy($img);
+  $new = imagecreatetruecolor($width, $height);
+
+  if(imagecopyresampled($new, $img, 0, 0, 0, 0, $width, $height, $width, $height)) {
+    digital_core_assets_save_image($new, $file->uri, $file->filemime);
+  }
+}
+
+function digital_core_assets_open_image($file, $mime = false) {
+  if(file_exists($file) && is_readable($file)) {
+
+    switch($mime){
+      case "image/jpeg": {
+        $im = imagecreatefromjpeg($file); //jpeg file
+        break;
+      }
+
+      case "image/gif": {
+        $im = imagecreatefromgif($file); //gif file
+        break;
+      }
+
+      case "image/png": {
+        $im = imagecreatefrompng($file); //png file
+        break;
+      }
+
+      default: {
+        $im=false;
+        break;
+      }
+    }
+    return $im;
+  }
+}
+
+function digital_core_assets_save_image($image, $file_path, $mime) {
+
+  if(file_exists($file_path)) {
+    unlink($file_path);
+  }
+
+  switch($mime){
+    case "image/jpeg": {
+      $im = imagejpeg($image, $file_path); //jpeg file
+      break;
+    }
+
+    case "image/gif": {
+      $im = imagegif($image, $file_path); //gif file
+      break;
+    }
+
+    case "image/png": {
+      $im = imagepng($image, $file_path); //png file
+      break;
+    }
+
+    default: {
+      $im=false;
+      break;
+    }
+  }
+}
+
+function digital_core_assets_create_asset($file_data) {
+  global $user;
+
+  $type = 'image';
+  $mime = file_get_mimetype($file_data['file_name']);
+
+  if(strpos($mime, "application") === 0) {
+    $type = "document";
+  }
+  else if(strpos($mime, "audio") === 0) {
+    $type = "audio";
+  }
+  else if(strpos($mime, "video") === 0) {
+    $type = "video";
+  }
+
+  $file_obj = false;
+  $tmp_path = false;
+
+  //store the image from the file
+  if(array_key_exists("file_bytes", $file_data)) { //from base64 bytes
+     $file = array(
+           'uid' => $file_data['uid'],
+           'filename' => $file_data['file_name'],
+           'file' => $file_data['file_bytes'],
+           'filemime' => $mime,
+           'status' => 1,
+           'type' => $type,
+           'filepath' => 's3://' . $file_data['file_name'],
+       );
+
+    //validate the file before it goes into the file system
+    $msg = file_validate_extensions((object) $file, "jpg jpeg gif png txt doc xls pdf ppt pps odt ods odp tif mp3 xlsx rtf tiff");
+    if(is_array($msg) && count($msg) > 0) {
+      services_error("File type not allowed", 400);
+      return false;
+    }
+
+    $fid = _file_resource_create($file);
+
+    $file_obj = file_load($fid['fid']);
+
+    //doesnt save the uid above so reset it
+    $file_obj->uid = $file_data['uid'];
+
+    //make a local copy of the file so we can do the renditions fast
+    $tmp_path = file_unmanaged_copy($file_obj->uri, "temporary://" . $file_obj->filename);
+  }
+  else if(array_key_exists("file", $file_data)) { //plupload
+
+    foreach($file_data['pluploader'] as $f) {
+      if($f['name'] == $file_data['file_name']) {
+        $tmp_path = $f['tmppath'];
+      }
+    }
+
+    $file = (object) array(
+             'uid' => $user->uid,
+             'uri' => $tmp_path,
+             'filename' => $file_data['file_name'],
+             'filemime' => $mime,
+             'status' => 1,
+             'type' => $type
+         );
+
+    //copy the temp file over
+    $file_obj = file_copy($file, variable_get("digital_coreasset_protocol", "s3://") . $file_data['file_name']);
+  }
+  else { // just a local file
+    $file = (object) array(
+             'uid' => $user->uid,
+             'uri' => $file_data['file_path'],
+             'filename' => $file_data['file_name'],
+             'filemime' => $mime,
+             'status' => 1,
+             'type' => $type
+         );
+
+    //copy the temp file over
+    $file_obj = file_copy($file, variable_get("digital_core_asset_protocol", "s3://") . $file_data['file_name']);
+
+    //make a local copy of the file so we can do the renditions fast
+    $tmp_path = $file_data['file_path'];
+  }
+
+  if($file_obj) {
+
+    //set the internal flag
+    $file_obj->field_internal_only['und'][0]['value'] = (array_key_exists("internal_only", $file_data) ? $file_data['internal_only'] : 0);
+
+    //save the file extension, is this really needed?
+    $file_obj->field_file_extension['und'][0]['value'] = pathinfo($file_obj->filename, PATHINFO_EXTENSION);
+
+    //default the title to use the file name
+    $file_obj->field_title['und'][0]['value'] = $file_obj->filename;
+
+    //image files have some extra fields
+    if($type == "image") {
+
+      //color mode RGB or CMYK
+      $file_obj->field_color_mode['und'][0]['value'] = digital_core_assets_get_image_type($file_obj);
+    }
+
+    if($tmp_path) {
+
+      //generate the digital core thumbnail also
+      digital_core_assets_generate_digital_core_thumbnail($file_obj->filename, $tmp_path);
+
+      //file_unmanaged_delete($tmp_path);
+
+      //want to use the temp file as the file we scan for the defs its faster and more compatible with the module
+      //so need to trick it
+      $hybrid = null;
+      $hybrid = clone $file_obj;
+      $hybrid->uri = $tmp_path;
+      exif_custom_process_entity($hybrid);
+
+      //set the uri and name back and save the changes the exif module made
+      $hybrid->uri = $file_obj->uri;
+      $hybrid->filename = $file_obj->filename;
+
+      $file_obj = $hybrid;
+    }
+
+    $file = file_save($file_obj);
+
+    $styles = image_styles();
+
+    //create a copy of the style images now so they exist
+    //this is because the request for these images will be a direct to the file
+    //not thru drupal, due to their use outside of drupal
+    foreach($styles as $rendition => $style) {
+      //get the uri to the image
+      $file_uri = image_style_path($rendition, $file_obj->uri);
+
+      //forces the image cache to generate the image
+      image_style_create_derivative($style, $tmp_path, $file_uri);
+    }
+
+    return $file_obj;
+  }
+
+  return false;
+}
+
+//Get the image format from the file object that was supplied,
+function digital_core_assets_get_image_type($file) {
+  $type = "RGB";
+
+  if (isset($file->metadata['channels']) && $file->metadata['channels'] == 4) {
+    $type = "CMYK";
+  }
+
+  return $type;
+}
+
+//remove the image file from the system and ite associated products if there are any
+function digital_core_assets_remove_image($fid) {
+
+  //file usage wont be terribly accurate, will need to update this for each image field reference on products
+//  $file = file_load($fid);
+//  $usage = file_usage_list($file);
+
+  //get the nodes for each of the records that use this image by type
+  //do a direct update on them to remove it
+
+  $image_types = array("primary_image", "print_image", "nutritional_label_image",
+      "planogram_front_image", "planogram_side_image", "planogram_top_image");
+
+  foreach($image_types as $imgTyp) {
+    $data = db_select("field_data_field_" . $imgTyp)
+              ->fields("field_data_field_" . $imgTyp, array("entity_id"))
+              ->condition("field_" . $imgTyp . "_target_id", $fid)
+              ->execute()
+              ->fetchCol();
+
+    if($data) {
+      foreach($data as $nid) {
+        $node = node_load($nid);
+
+        //remove the image reference
+        $field = "field_{$imgTyp}";
+        $node->$field = array();
+
+        //save the node
+        node_save($node);
+      }
+    }
+  }
+
+  //get a list of the collections are are modifying
+  $nids = db_select("field_data_field_asset_collection_data")
+            ->fields("field_data_field_asset_collection_data", array("entity_id"))
+            ->condition("field_asset_collection_data_target_id", $fid)
+            ->execute()
+            ->fetchCol();
+
+  //remove from collecitons and bin
+  db_delete("field_data_field_asset_collection_data")
+    ->condition("field_asset_collection_data_target_id", $fid)
+    ->execute();
+
+  db_delete("field_revision_field_asset_collection_data")
+    ->condition("field_asset_collection_data_target_id", $fid)
+    ->execute();
+
+  foreach($nids as $nid) {
+    //kill the cache for these elements
+    db_delete("cache_field")
+      ->condition("cid", "field:node:{$nid}")
+      ->execute();
+  }
+
+
+
+  return file_delete_multiple(array($fid));
+}
+
+//need a thumbnail image that will always be available for display in the browse interface
+function digital_core_assets_get_asset_thumbnail_url($source) {
+
+  $image_protocol = variable_get("digital_core_asset_protocol", "s3://");
+
+  $uri = $image_protocol . "styles/digital_core_thumbnail/" . $source;
+
+  //can do a db_select on the amazons3 table to find it
+  $u = db_select("amazons3_file")
+          ->fields("amazons3_file")
+          ->condition("uri", $uri)
+          ->execute()
+          ->fetchField();
+
+  ///"HTTP/1.1 404 Not Found";
+
+  //check that the file actually exists
+  if($u) {
+      $url = file_create_url($uri);
+      $h = get_headers($url, 1);
+
+      if($h[0] == "HTTP/1.1 404 Not Found") {
+        $u = false;
+      }
+  }
+
+  //check if the thumbail actualy exists
+  if(!$u) {
+    //use the default image instead
+    $uri = drangular_get_path("unfiDigitalCoreApp") . "/images/default_file.png";
+  }
+
+  $url = file_create_url($uri);
+
+  if(strpos($url, 'http') === false) {
+    $url = "http:" . $url;
+  }
+
+  return $url;
+}
+
+function digital_core_assets_download_asset($fid, $rendition = false) {
+  $old_setting = $GLOBALS['conf']['amazons3_saveas'];
+  $GLOBALS['conf']['amazons3_saveas'] = '*';
+
+  $url = FALSE;
+
+  //download the file listed by the fid,
+  if ($file = file_load($fid)) {
+    $url = file_create_url($file->uri);
+  }
+
+  $GLOBALS['conf']['amazons3_saveas'] = $old_setting;
+
+  if ($url) {
+    header('Location: ' . $url);
+    exit();
+  }
+}
+
+function digital_core_assets_upload_asset($data) {
+
+  $file = array(
+           'uid' => 0,
+           'filename' => $data['file_name'],
+           'file' => $data['file_bytes'],
+           'filemime' => file_get_mimetype($data['file_name']),
+           'status' => 1,
+           'type' => $data['type'],
+           'filepath' => 's3://' . $data['file_name'],
+       );
+
+  $fid = _file_resource_create($file);
+
+  return $fid;
+}
+
+function digital_core_assets_get_file_rendition_urls($image_file) {
+  $styles = image_styles();
+
+  $image_files = array();
+  foreach($styles as $style_name => $data) {
+    $image_files[] = image_style_url($style_name, $image_file);
+  }
+
+  return $image_files;
+}
+
+function digital_core_assets_get_file_type($file) {
+  $type = 'image';
+  $mime = file_get_mimetype($file);
+
+  if(strpos($mime, "application") === 0) {
+    $type = "document";
+  }
+  else if(strpos($mime, "audio") === 0) {
+    $type = "audio";
+  }
+  else if(strpos($mime, "video") === 0) {
+    $type = "video";
+  }
+
+  return $type;
+}
+
+//generate a thumbnail image based on the supplied file
+function digital_core_assets_generate_digital_core_thumbnail($file_name, $file_path) {
+
+  $ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+
+  //only allow files that are of a type that can be generated
+//only certain image types can we make a thumb from
+  if(in_array($ext, array("jpg", "png", "gif", "jpeg", "bmp"))) {
+    $style = array();
+
+    $style['effects'] = array();
+    $effect = array();
+    $effect['effect callback'] = "image_scale_effect";
+    $effect['dimensions callback'] = "image_scale_dimensions";
+    $effect['form callback'] = "image_scale_form";
+    $effect['summary theme'] = "image_scale_summary";
+    $effect['module'] = "image";
+    $effect['name'] = "image_scale";
+    $effect['data'] = array('width' => 125, "height" => 125, "updscale" => 1);
+
+    $style['effects'][] = $effect;
+
+    //if not create one
+    //if there isnt a thumbnail already created for this asset make one
+    $destination = variable_get("digital_core_asset_protocol", "s3://") . "styles/digital_core_thumbnail" . "/" . $file_name;
+    image_style_create_derivative($style, $file_path, $destination);
+  }
+}
+
+function digital_core_assets_get_thumbnail_url($file_obj) {
+
+  $url = "";
+
+  switch($file_obj->type) {
+    case "document": {
+      switch($file_obj->filemime) {
+        case "application/pdf": {
+          $file = "pdf";
+          break;
+        }
+        case "application/msword": {
+          $file = "doc";
+          break;
+        }
+        case "application/vnd.ms-excel": {
+          $file = "xls";
+          break;
+        }
+        case "application/vnd.ms-powerpoint": {
+          $file = "pptx";
+          break;
+        }
+        case "application/zip": {
+          $file = "zip";
+          break;
+        }
+        case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+          $file = "xls";
+          break;
+        }
+        case "application/postscript": {
+          switch($file_obj->field_file_extension['und'][0]['value']) {
+            case "ai": {
+              $file = "ai";
+              break;
+            }
+            case "eps": {
+              $file = "eps";
+              break;
+            }
+            default: {
+            $file = "default_file";
+            break;
+            }
+          }
+          break;
+        }
+        default: {
+          $file = "default_file";
+          break;
+        }
+      }
+      break;
+    }
+    case "audio": {
+      $file = "audio";
+      break;
+    }
+    case "image": {
+
+      //only certain image types can we make a thumb from
+      if($file_obj->filemime == "image/jpeg" || $file_obj->filemime == "image/png" || $file_obj->filemime == "image/gif" || $file_obj->filemime == "image/bmp") {
+        $url = digital_core_assets_get_asset_thumbnail_url($file_obj->filename);
+
+        $file = false;
+      }
+      else {
+        switch($file_obj->filemime) {
+          case "image/tiff": {
+            $file = "tiff";
+            break;
+          }
+          case "image/x-photoshop": {
+            $file = "psd";
+            break;
+          }
+          default: {
+            $file = "default_file";
+            break;
+          }
+        }
+      }
+      break;
+    }
+    case "undefined": {
+      switch($file_obj->filemime) {
+        case "application/rtf": {
+          $file = "rtf";
+          break;
+        }
+        default: {
+          $file = "default_file";
+          break;
+        }
+      }
+      break;
+    }
+    default: {
+      $file = "default_file";
+      break;
+    }
+  }
+
+  if($file) {
+
+    $file_location = drangular_get_path("unfiDigitalCoreApp") . "/images/{$file}.png";
+
+    $url = file_create_url($file_location);
+  }
+
+  return $url;
+}

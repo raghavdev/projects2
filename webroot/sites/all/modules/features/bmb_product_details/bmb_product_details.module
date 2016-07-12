@@ -1,0 +1,310 @@
+<?php
+/**
+ * @file
+ * Code for the Blue Marble - Product Details feature.
+ */
+
+include_once 'bmb_product_details.features.inc';
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function bmb_product_details_form_field_ui_field_edit_form_alter(&$form, &$form_state, $form_id) {
+  $instance = $form['#instance'];
+  // Preserve custom settings for computing a field that is dependent on others
+  if (!empty($instance['widget']['computation_callbacks'])) {
+    $form['instance']['widget']['computation_callbacks'] = array(
+      '#type'  => 'value',
+      '#value' => $instance['widget']['computation_callbacks'],
+    );
+  }
+}
+
+/**
+ * Implements hook_entity_presave().
+ */
+function bmb_product_details_entity_presave($entity, $type) {
+  list($id, $revision_id, $bundle) = entity_extract_ids($type, $entity);
+  if ($type == 'node' && $bundle == 'product_details') {
+    _bmb_product_details_update_macola_only_fields($entity);
+    _bmb_product_details_compute_guaranteed_shelf_life($entity);
+    _bmb_product_details_compute_field_case_cube($entity);
+  }
+}
+
+function _bmb_product_details_compute_guaranteed_shelf_life($node) {
+  $sld = field_get_items('node', $node, 'field_shelf_life_days');
+
+  if(is_array($sld) && count($sld)) {
+    $field_name = 'field_guaranteed_shelf_life';
+    $field_calc = array(
+      'value' => ceil($sld[0]['value'] * 0.75),
+    );
+    $node->{$field_name}[LANGUAGE_NONE][0] = $field_calc;
+  }
+}
+
+/*
+ * Macola-Only field custom logic
+ */
+
+/**
+ * A single, wrapping function to call all default-setting functions for Macola-
+ * Only fields.
+ *
+ * @param stdClass $node
+ */
+function _bmb_product_details_update_macola_only_fields($node) {
+  _bmb_product_details_update_macola_only_field_taxable($node);
+  _bmb_product_details_update_macola_only_field_controlled($node);
+  _bmb_product_details_update_macola_only_field_inv_transaction_audit($node);
+  _bmb_product_details_update_macola_only_field_stocked($node);
+  _bmb_product_details_update_macola_only_field_cost_end_date($node);
+  _bmb_product_details_update_macola_only_field_purchasing_uom($node);
+  _bmb_product_details_update_macola_only_field_price_uom($node);
+  _bmb_product_details_update_macola_only_field_manufacturing_uom($node);
+  _bmb_product_details_update_macola_only_field_price_basis_code($node);
+  _bmb_product_details_update_macola_only_field_contract_number($node);
+  _bmb_product_details_update_macola_only_field_pur_or_mfg($node);
+  _bmb_product_details_update_macola_only_field_backorderable($node);
+}
+
+/**
+ * Sets default for field: Taxable.
+ *
+ * @param stdClass $node
+ */
+function _bmb_product_details_update_macola_only_field_taxable($node) {
+  $field_name = 'field_taxable';
+  $field_calc = array('value' => 1);
+  $node->{$field_name}[LANGUAGE_NONE][0] = $field_calc;
+}
+
+/**
+ * Sets default for field: Controlled.
+ *
+ * @param stdClass $node
+ */
+function _bmb_product_details_update_macola_only_field_controlled($node) {
+  $field_name = 'field_controlled';
+  $field_calc = array('value' => 1);
+  $node->{$field_name}[LANGUAGE_NONE][0] = $field_calc;
+}
+
+/**
+ * Sets default for field: Inventory Transaction Audit.
+ *
+ * @param stdClass $node
+ */
+function _bmb_product_details_update_macola_only_field_inv_transaction_audit($node) {
+  $field_name = 'field_inv_transaction_audit';
+  $field_calc = array('value' => 1);
+  $node->{$field_name}[LANGUAGE_NONE][0] = $field_calc;
+}
+
+/**
+ * Sets default for field: Stocked.
+ *
+ * @param stdClass $node
+ */
+function _bmb_product_details_update_macola_only_field_stocked($node) {
+  $field_name = 'field_stocked';
+  $field_calc = array('value' => 1);
+  $node->{$field_name}[LANGUAGE_NONE][0] = $field_calc;
+}
+
+/**
+ * Sets default for field: Cost End Date.
+ *
+ * @param stdClass $node
+ */
+function _bmb_product_details_update_macola_only_field_cost_end_date($node) {
+  $field_name = 'field_cost_end_date';
+  $field_calc = array(
+    'value' => '2025-12-31 00:00:00',
+    'timezone' => 'America/New_York',
+    'timezone_db' => 'America/New_York',
+    'date_type' => 'datetime',
+  );
+  $node->{$field_name}[LANGUAGE_NONE][0] = $field_calc;
+}
+
+/**
+ * Sets default for field: Purchasing Units.
+ *
+ * @param stdClass $node
+ */
+function _bmb_product_details_update_macola_only_field_purchasing_uom($node) {
+  $field_name     = 'field_purchasing_uom';
+  $ind_field_name = 'field_stocking_uom';
+  // Obtain default value from other, independent field
+  if (
+    isset($node->{$ind_field_name})
+    && isset($node->{$ind_field_name}[LANGUAGE_NONE][0])
+  ) {
+    $field_calc = $node->{$ind_field_name}[LANGUAGE_NONE][0];
+  }
+  else {
+    // If nothing is set for the independent field,
+    // then don't even assume this field
+    unset($node->{$field_name});
+    return;
+  }
+  $node->{$field_name}[LANGUAGE_NONE][0] = $field_calc;
+}
+
+/**
+ * Sets default for field: Selling Units.
+ *
+ * @param stdClass $node
+ */
+function _bmb_product_details_update_macola_only_field_price_uom($node) {
+  $field_name     = 'field_price_uom';
+  $ind_field_name = 'field_stocking_uom';
+  // Obtain default value from other, independent field
+  if (
+    isset($node->{$ind_field_name})
+    && isset($node->{$ind_field_name}[LANGUAGE_NONE][0])
+  ) {
+    $field_calc = $node->{$ind_field_name}[LANGUAGE_NONE][0];
+  }
+  else {
+    // If nothing is set for the independent field,
+    // then don't even assume this field
+    unset($node->{$field_name});
+    return;
+  }
+  $node->{$field_name}[LANGUAGE_NONE][0] = $field_calc;
+}
+
+/**
+ * Sets default for field: Manufacturing Units.
+ *
+ * @param stdClass $node
+ */
+function _bmb_product_details_update_macola_only_field_manufacturing_uom($node) {
+  $field_name     = 'field_manufacturing_uom';
+  $ind_field_name = 'field_stocking_uom';
+  // Obtain default value from other, independent field
+  if (
+    isset($node->{$ind_field_name})
+    && isset($node->{$ind_field_name}[LANGUAGE_NONE][0])
+  ) {
+    $field_calc = $node->{$ind_field_name}[LANGUAGE_NONE][0];
+  }
+  else {
+    // If nothing is set for the independent field,
+    // then don't even assume this field
+    unset($node->{$field_name});
+    return;
+  }
+  $node->{$field_name}[LANGUAGE_NONE][0] = $field_calc;
+}
+
+/**
+ * Sets default for field: Price Basis Code.
+ *
+ * @param stdClass $node
+ */
+function _bmb_product_details_update_macola_only_field_price_basis_code($node) {
+  $field_name = 'field_price_basis_code';
+  $field_calc = array('value' => 'P');
+  $node->{$field_name}[LANGUAGE_NONE][0] = $field_calc;
+}
+
+/**
+ * Sets default for field: Contract Number.
+ *
+ * @param stdClass $node
+ */
+function _bmb_product_details_update_macola_only_field_contract_number($node) {
+  $field_name = 'field_contract_number';
+  $field_calc = array('value' => date('Y', REQUEST_TIME));
+  $node->{$field_name}[LANGUAGE_NONE][0] = $field_calc;
+}
+
+/**
+ * Sets default for field: Manufacturing Method (pur_or_mfg).
+ *
+ * @param stdClass $node
+ */
+function _bmb_product_details_update_macola_only_field_pur_or_mfg($node) {
+  $field_name     = 'field_pur_or_mfg';
+  $ind_field_name = 'field_manufacturing_method';
+  // Obtain value from other, independent field to determine the default value
+  // Business logic:
+  if (
+    isset($node->{$ind_field_name})
+    && isset($node->{$ind_field_name}[LANGUAGE_NONE][0])
+  ) {
+    $field_calc = $node->{$ind_field_name}[LANGUAGE_NONE][0];
+  }
+  else {
+    // If nothing is set for the independent field,
+    // then don't even assume this field
+    unset($node->{$field_name});
+    return;
+  }
+  $node->{$field_name}[LANGUAGE_NONE][0] = $field_calc;
+}
+
+/**
+ * Sets default for field: Backorderable.
+ *
+ * @param stdClass $node
+ */
+function _bmb_product_details_update_macola_only_field_backorderable($node) {
+  $field_name     = 'field_backorderable';
+  $ind_field_name = 'field_po_req_fg';
+  // Obtain value from other, independent field to determine the default value
+  // Business logic: Backorderable = OE to PO
+  if (
+    isset($node->{$ind_field_name})
+    && isset($node->{$ind_field_name}[LANGUAGE_NONE][0])
+  ) {
+    $field_calc = $node->{$ind_field_name}[LANGUAGE_NONE][0];
+  }
+  else {
+    // If nothing is set for the independent field,
+    // then don't even assume this field
+    unset($node->{$field_name});
+    return;
+  }
+  $node->{$field_name}[LANGUAGE_NONE][0] = $field_calc;
+}
+
+/**
+ * Calculates the cubic feet of the Master Case.
+ */
+function _bmb_product_details_compute_field_case_cube($node) {
+  $field_name      = 'field_case_cube';
+  $ind_field_names = array(
+    'field_case_length',
+    'field_case_height',
+    'field_case_width',
+  );
+  // Obtain value from other, independent field to determine the default value
+  // Business logic: Master Case Length * Height * Width in FEET
+  $field_calc = NULL;
+  foreach ($ind_field_names as $ind_field_name) {
+    if (
+      isset($node->{$ind_field_name})
+      && isset($node->{$ind_field_name}[LANGUAGE_NONE][0]['value'])
+    ) {
+      if (!is_numeric($field_calc)) {
+        $field_calc = 1;
+      }
+      $field_calc *= $node->{$ind_field_name}[LANGUAGE_NONE][0]['value'];
+    }
+  }
+  if (is_null($field_calc)) {
+    // If nothing is set for the independent field,
+    // then don't even assume this field
+    unset($node->{$field_name});
+    return;
+  }
+  // Remember to convert to feet from inches
+  $node->{$field_name}[LANGUAGE_NONE][0] = array(
+    'value' => $field_calc / pow(12, 3),
+  );
+}

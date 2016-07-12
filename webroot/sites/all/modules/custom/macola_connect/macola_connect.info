@@ -1,0 +1,13 @@
+name = Macola Connect
+description = Logic for reading and writing data from Macola.
+package = Blue Marble
+configure = admin/config/bluemarble/macola
+core = 7.x
+
+dependencies[] = bluemarble
+dependencies[] = bluemarble_staging
+dependencies[] = sudo_workflow
+
+files[] = includes/MacolaConnector.php
+files[] = includes/MacolaDrupalImporter.php
+files[] = includes/MacolaResultSet.php

@@ -1,0 +1,7 @@
+<div ng-if="treeData.length" class="filter-field filter-field-multiselect filter-{{filterName}}">
+  <span ng-if="selectedNodes.length" ng-click="clearSelection()" class="button-icon button-close"></span>
+  <label ng-show="filterLabel">{{filterLabel}}</label>
+  <div class="treecontrol-wrapper">
+  <treecontrol class="tree-dark" tree-model="treeData" on-selection="showSelected(node)" selected-nodes="selectedNodes" options="treeConfig">{{node.label}}</treecontrol>
+</div>
+</div>

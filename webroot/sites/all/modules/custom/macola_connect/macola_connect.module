@@ -1,0 +1,1175 @@
+<?php
+/**
+ * @file
+ * Macola Connect module functions.
+ */
+
+/**
+ * Implements hook_cron().
+ */
+function macola_connect_cron() {
+  if (variable_get('macola_connect_read', TRUE)) {
+    $last_update = variable_get('macola_connect_last_update', 0);
+    $frequency = variable_get('macola_connect_update_frequency', 360) * 60;
+    if (REQUEST_TIME >= ($last_update + $frequency)) {
+      $import_types = array(
+        'categories',
+        'material_cost_types',
+        'warehouses',
+        'users',
+        'products',
+      );
+      foreach ($import_types as $type) {
+        macola_connect_import_worker($type);
+      }
+      variable_set('macola_connect_last_update', REQUEST_TIME);
+    }
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function macola_connect_menu() {
+  $items = array();
+
+  $items['admin/config/bluemarble/macola'] = array(
+    'title' => 'Macola Connect',
+    'description' => 'Configure the Macola connection settings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('macola_connect_admin_form'),
+    'access arguments' => array('administer macola connect'),
+    'file' => 'macola_connect.admin.inc',
+  );
+
+  $items['admin/config/bluemarble/macola/mapping'] = array(
+    'title' => 'Macola Field Mapping',
+    'description' => 'Configure the Macola field mappings.',
+    'page callback' => 'macola_connect_admin_field_mappings',
+    'access arguments' => array('administer macola connect'),
+    'file' => 'macola_connect.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function macola_connect_node_insert($node) {
+  if ($node->type == 'product_details') {
+    macola_connect_push_product($node);
+  }
+}
+
+/**
+ * Implements hook_node_update().
+ */
+function macola_connect_node_update($node) {
+  if ($node->type == 'product_details') {
+    macola_connect_push_product($node);
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function macola_connect_permission() {
+  $perms = array();
+
+  $perms['administer macola connect'] = array(
+    'title' => t('Administer Macola Connect'),
+    'description' => t('Configure the Macola connection settings.'),
+    'restrict access' => TRUE,
+  );
+
+  return $perms;
+}
+
+/**
+ * Helper for node insert/update.
+ */
+function macola_connect_push_product($node) {
+  if ($node->type == 'product_details' && variable_get('macola_connect_write', TRUE)) {
+    // Also no need to update a product when it is being updated from Macola
+    if (isset($node->macola_connect_import) && $node->macola_connect_import) {
+      return;
+    }
+
+    // Do not send products that are still in Development to Macola
+    $development = workflow_state_load_by_name('development', 1);
+
+    $current_state = FALSE;
+    if (isset($node->field_activity_state[LANGUAGE_NONE][0]['value'])) {
+      $current_state = $node->field_activity_state[LANGUAGE_NONE][0]['value'];
+    }
+
+    if ($current_state && $current_state != $development->sid) {
+      $api_url = variable_get('macola_connect_api_url', '');
+      $connector = new MacolaConnector($api_url);
+      $importer = new MacolaDrupalImporter($connector);
+
+      // If we do not have a Macola Id yet, create the product in Macola.
+      if (empty($node->field_macola_id[LANGUAGE_NONE][0]['value'])) {
+        $importer->createProduct($node);
+      }
+      else {
+        $importer->updateProduct($node);
+      }
+    }
+  }
+}
+
+/**
+ * Cron Queue Worker Callback: Import data from Macola.
+ */
+function macola_connect_import_worker($type) {
+  $api_url = variable_get('macola_connect_api_url', '');
+  $connector = new MacolaConnector($api_url);
+  $importer = new MacolaDrupalImporter($connector);
+
+  switch ($type) {
+    case 'categories':
+      $importer->importCategories();
+      break;
+
+    case 'material_cost_types':
+      $importer->importMaterialCostTypes();
+      break;
+
+    case 'warehouses':
+      $importer->importLocations();
+      break;
+
+    case 'users':
+      $importer->importUsers();
+      break;
+
+    case 'products':
+      $importer->queueProductUpdates();
+      break;
+
+    default:
+      watchdog('macola_connect', 'Unknown import type @type', array('@type' => $type));
+      break;
+  }
+}
+
+function macola_connect_background_process_sync_products() {
+  // Initialize the background process metadata
+  $bgp_handle = variable_get('macola_connect_background_process_sync_products_running_handle', FALSE);
+  if (empty($bgp_handle)) {
+    $bgp_handle = background_process_current_handle();
+    variable_set('macola_connect_background_process_sync_products_running_handle', $bgp_handle);
+    variable_set('macola_connect_background_process_sync_products_running_start', microtime(TRUE));
+    variable_set('macola_connect_background_process_sync_products_running_count', 0);
+  }
+  $count = variable_get('macola_connect_background_process_sync_products_running_count', 0);
+
+  // Query for products to handle
+  $query = db_select('macola_connect_products', 'mcp');
+  // To check for remaining count at the end of this iteration
+  $countQuery = $query->countQuery();
+  $query->fields('mcp', array('id', 'item_no'));
+  $query->range(0, variable_get('macola_connect_background_process_sync_products_limit', 10));
+  $result = $query->execute();
+  // Fetch products keyed by their Macola IDs
+  // Macola ID => Item Number
+  $product_ids = $result->fetchAllKeyed();
+
+  // Process the product data
+  $api_url = variable_get('macola_connect_api_url', '');
+  $connector = new MacolaConnector($api_url);
+  $importer = new MacolaDrupalImporter($connector);
+  foreach ($product_ids as $macola_id => $item_num) {
+    $importer->importProduct($item_num);
+  }
+
+  // Remove the returned products from the table
+  if (!empty($product_ids)) {
+    db_delete('macola_connect_products')
+      ->condition('id', array_keys($product_ids))
+      ->execute();
+  }
+  // Update the count of processed products
+  $count += count($product_ids);
+  variable_set('macola_connect_background_process_sync_products_running_count', $count);
+
+  // Check if this background process should continue
+  if ((int) $countQuery->execute()->fetchField() > 0) {
+    background_process_restart();
+  }
+  else {
+    $start    = variable_get('macola_connect_background_process_sync_products_running_start', microtime(TRUE));
+    $duration = microtime(TRUE) - $start;
+    $message  = 'Macola product data sync via background process completed. ';
+    $message .= 'Product count: @c. Running time: @t';
+    $msg_vars = array(
+      '@c' => $count,
+      '@t' => $duration,
+    );
+    watchdog('macola_connect', $message, $msg_vars);
+    variable_set('macola_connect_background_process_sync_products_running_handle', NULL);
+  }
+}
+
+/**
+ * Map activity codes between Macola and Drupal.
+ */
+function macola_connect_map_activity_code($value, $direction, $wrapper) {
+  // Array of Macola value => Drupal values
+  $map = array(
+    'F' => array('hold', 'review', 'approved'), // Forecasted
+    'O' => array('discontinued'), // Obsolete
+    'A' => array('active'), // Active
+  );
+
+  $states = workflow_state_load_multiple(1);
+  $state_ids_by_name = array();
+  foreach ($states as $state) {
+    $state_ids_by_name[$state->name] = $state->sid;
+  }
+
+  $ret = NULL;
+  switch ($direction) {
+    case 'import':
+      // Default to development
+      $current_state = 'development';
+
+      $sid = $wrapper->field_activity_state->value();
+      $states_by_id = array_flip($state_ids_by_name);
+      if (isset($states_by_id[$sid])) {
+        $current_state = $states_by_id[$sid];
+      }
+
+      // Since a single value from Macola can map to multiple states in Drupal,
+      // Only want to change the Drupal state if the Macola state changed.
+      if (isset($map[$value][0]) && !in_array($current_state, $map[$value])) {
+        $state_name = $map[$value][0];
+        $ret = $state_ids_by_name[$state_name];
+      }
+      else {
+        // Otherwise stick with the current state
+        $ret = $state_ids_by_name[$current_state];
+      }
+      break;
+
+    case 'export':
+      $state_names_by_id = array_flip($state_ids_by_name);
+      if (is_numeric($value) && isset($state_names_by_id[$value])) {
+        $state_name = $state_names_by_id[$value];
+      }
+      else {
+        $state_name = $value;
+      }
+      foreach ($map as $code => $state_names) {
+        if (in_array($state_name, $state_names)) {
+          $ret = $code;
+          break;
+        }
+      }
+      break;
+  }
+
+  return $ret;
+}
+
+/**
+ * Determines a Drupal entity based on a field value that matches Macola $value.
+ *
+ * @see _macola_connect_map_entity_worker().
+ *
+ * @param mixed $value
+ * @param string $direction
+ * @param stdClass $wrapper
+ * @param array $context
+ * @return mixed|null
+ */
+function macola_connect_map_entity($value, $direction, $wrapper, $context) {
+  $mapping = $context['mapping'];
+  if (
+    !isset($mapping->customProcessingArgs['entity_type'])
+    || !isset($mapping->customProcessingArgs['bundle'])
+  ) {
+    $message = 'Cannot map entity due to missing entity_type and/or bundle ';
+    $message .= 'in the customProcessingArgs.<br />';
+    $message .= '<pre>Value: @v<br />Direction: @d</pre>';
+    $msg_vars = array(
+      '@v' => print_r($value, TRUE),
+      '@d' => $direction,
+    );
+    watchdog('macola_connect', $message, $msg_vars, WATCHDOG_ERROR);
+    return NULL;
+  }
+  $args = $mapping->customProcessingArgs;
+  return _macola_connect_map_entity_worker($args['entity_type'], $args['bundle'], $value, $direction, $context);
+}
+
+/**
+ * Map booleans between Macola and Drupal.
+ */
+function macola_connect_map_boolean($value, $direction) {
+  $ret = NULL;
+  switch ($direction) {
+    case 'import':
+      $first = drupal_substr(drupal_strtoupper($value), 0, 1);
+      if ($first == 'Y') {
+        $ret = TRUE;
+      }
+      else if ($first == 'N') {
+        $ret = FALSE;
+      }
+      break;
+
+    case 'export':
+      if ($value) {
+        $ret = 'Y';
+      }
+      else {
+        $ret = 'N';
+      }
+      break;
+  }
+  return $ret;
+}
+
+/**
+ * Map a taxonomy term between Macola and Drupal.
+ */
+function _macola_connect_map_entity_worker($entity_type, $bundle, $value, $direction, $context = array()) {
+  $map = &drupal_static(__FUNCTION__);
+
+  // Assume the field name or use the specified name
+  $field_name = 'field_macola_name';
+  if (!empty($context['mapping']->customProcessingArgs['field_name'])) {
+    $field_name = $context['mapping']->customProcessingArgs['field_name'];
+  }
+
+  // Assume value's array key to compare
+  $value_key = 'value';
+  if (!empty($context['mapping']->customProcessingArgs['value_key'])) {
+    $value_key = $context['mapping']->customProcessingArgs['value_key'];
+  }
+
+  if (empty($map[$field_name][$entity_type][$bundle])) {
+    $instance = field_info_instance($entity_type, $field_name, $bundle);
+
+    if ($instance) {
+      $query = db_select('field_data_' . $field_name, 'fdf')
+        ->fields('fdf', array($field_name . '_' . $value_key, 'entity_id'))
+        ->condition('fdf.entity_type', $entity_type)
+        ->condition('fdf.bundle', $bundle)
+        ->condition('fdf.deleted', 0);
+
+      // Get the entity ID keyed by Macola name.
+      $map[$field_name][$entity_type][$bundle] = $query->execute()
+        ->fetchAllKeyed();
+    }
+    else {
+      $message  = 'Could not find field instance on which to map Macola values to local entities.';
+      $message .= '<br /><pre>Entity Type: @e<br />Bundle: @b<br />Field: @f<br />Value: @v</pre>';
+      $msg_vars = array(
+        '@e' => $entity_type,
+        '@b' => $bundle,
+        '@f' => $field_name,
+        '@v' => print_r($value, TRUE),
+      );
+      watchdog('macola_connect', $message, $msg_vars, WATCHDOG_ERROR);
+      $map[$field_name][$entity_type][$bundle] = array();
+    }
+  }
+
+  $bundle_map = $map[$field_name][$entity_type][$bundle];
+
+  $ret = NULL;
+  switch ($direction) {
+    case 'import':
+      if (isset($bundle_map[$value])) {
+        $ret = $bundle_map[$value];
+      }
+      break;
+
+    case 'export':
+      $names_by_id = array_flip($bundle_map);
+      if (is_array($value)) {
+        $temp = array();
+        foreach ($value as $id) {
+          if (isset($names_by_id[$id])) {
+            $temp[] = $names_by_id[$id];
+          }
+        }
+        $ret = implode(', ', $temp);
+      }
+      else if (isset($names_by_id[$value])) {
+        $ret = $names_by_id[$value];
+      }
+      break;
+  }
+
+  return $ret;
+}
+
+/**
+ * Map unit of measure between Macola and Drupal.
+ */
+function macola_connect_map_uom($value, $direction) {
+  if ($direction == 'import') {
+    return strtolower($value);
+  }
+  else {
+    return strtoupper($value);
+  }
+}
+
+/**
+ * Map dates between Macola and Drupal.
+ */
+function macola_connect_map_date($value, $direction) {
+  if ($direction == 'import') {
+    return strtotime($value);
+  }
+  else {
+    $date = new DateTime();
+
+    if (empty($value)) {
+      $date = $date->format('c');
+    } else {
+      // The date fields are mysql 'datetime' types, which record the hours as an offset from UTC.
+      // Attempts to consistently calculate the correct offset from UTC, especially if a product
+      // is edited by different users with different timezone settings, were unsucessful.
+      $date = gmdate('Y-m-d', $value) . "T00:00:00";
+    }
+
+    return $date;
+  }
+}
+
+/**
+ * Map dates between Macola and Drupal, using 'YYYYmmdd' format.
+ */
+function macola_connect_map_yyyymmdd_date($value, $direction) {
+  if ($direction == 'import') {
+    return strtotime($value);
+  }
+  else {
+    $date = new DateTime();
+    if (!empty($value)) {
+      $date->setTimestamp($value);
+    }
+    return $date->format('Ymd');
+  }
+}
+
+/**
+ * Map brand between Macola and Drupal.
+ */
+function macola_connect_map_brand($value, $direction) {
+  if ($direction == 'import') {
+    $nid = db_select('node', 'n')
+      ->condition('n.type', 'brand')
+      ->condition('n.title', $value)
+      ->fields('n', array('nid'))
+      ->execute()
+      ->fetchField();
+    // If the brand doesn't exist, create a node for it.
+    if (!$nid && trim($value) != '') {
+      $node = entity_create('node', array(
+        'type' => 'brand',
+        'title' => $value,
+        'status' => NODE_PUBLISHED,
+      ));
+      entity_save('node', $node);
+      if (isset($node->nid)) {
+        $nid = $node->nid;
+      }
+    }
+    return $nid;
+  }
+  else {
+    return db_select('node', 'n')
+      ->condition('n.type', 'brand')
+      ->condition('n.nid', $value)
+      ->fields('n', array('title'))
+      ->execute()
+      ->fetchField();
+  }
+}
+
+/**
+ * Map tie field between Macola and Drupal.
+ */
+function macola_connect_map_tie($value, $direction, $wrapper) {
+  if ($direction == 'import') {
+    if (strpos($value, '/') !== FALSE) {
+      list($tie, $high) = explode('/', $value);
+      return trim($tie);
+    }
+  }
+  else {
+    // This isn't a pretty way to do this, but its the quick solution.
+    $value .= '/' . $wrapper->field_high->value();
+    return $value;
+  }
+}
+
+/**
+ * Map high field between Macola and Drupal.
+ */
+function macola_connect_map_high($value, $direction, $wrapper) {
+  if ($direction == 'import') {
+    if (strpos($value, '/') !== FALSE) {
+      list($tie, $high) = explode('/', $value);
+      return trim($high);
+    }
+  }
+  else {
+    // This isn't a pretty way to do this, but its the quick solution.
+    $value = $wrapper->field_tie->value() . '/' . $value;
+    return $value;
+  }
+}
+
+/**
+ * Map UPC field between Macola and Drupal.
+ */
+function macola_connect_map_upc($value, $direction, $wrapper) {
+  if ($direction == 'import') {
+    // Add the check digit
+    return macola_connect_add_checkdigit($value);
+  }
+  else {
+    // Remove the check digit
+    return substr($value, 0, -1);
+  }
+}
+
+function macola_connect_add_checkdigit($digits) {
+  if (strlen($digits) >= 12 || strlen($digits) == 0) {
+    return $digits;
+  }
+
+  while (strlen($digits) < 11) {
+    $digits = "0" . $digits;
+  }
+
+  $even = $digits[1] + $digits[3] + $digits[5] + $digits[7] + $digits[9];
+  $odd = $digits[0] + $digits[2] + $digits[4] + $digits[6] + $digits[8] + $digits[10];
+  $odd = $odd * 3;
+  $total = $even + $odd;
+  $checksum = $total % 10;
+  if ($checksum != 0) {
+    $checksum = 10 - $checksum;
+  }
+  return $digits . $checksum;
+}
+
+/**
+ * Formats a numeric field for mapping.
+ *
+ * Can have different float precision per direction.
+ * @todo: handling for rounding method and left-hand padding(?)
+ */
+function macola_connect_map_number($value, $direction, $wrapper, $context) {
+  $mapping = NULL;
+  $args    = array();
+  if (isset($context['mapping'])) {
+    $mapping = $context['mapping'];
+    if (!empty($mapping->customProcessingArgs)) {
+      $args = $mapping->customProcessingArgs;
+    }
+  }
+
+  $precision = 2;
+  if (array_key_exists('decimal', $args)) {
+    $precision = $args['decimal'];
+  }
+  if (array_key_exists('decimal_' . $direction, $args)) {
+    $precision = $args['decimal_' . $direction];
+  }
+
+  if (is_null($precision)) {
+    return (float) $value;
+  }
+  return round($value, (int) $precision);
+}
+
+/**
+ * Maps a field collection field, primarily for fields to/from a separate end-
+ * point.
+ *
+ *
+ * This function and it's descendants have these following configurations that
+ * can be added to the `customProcessingArgs` field of the bluemarble_mapping
+ * DB table. Note that these names are keys of the array.
+ *
+ *
+ * identifiers_function
+ * - A function name in string form.
+ * - Used for extracting identifiers from $context, $wrapper, or $args for querying the Macola API.
+ * - Arguments:
+ *    $direction, string of either 'import' or 'export'
+ *    $wrapper, Entity Metadata Wrapper of the product_details node
+ *    $context, Array of context passed into the mapping function
+ *    $args, Just an extraction of $context['customProcessingArgs']
+ * - Returns an array of identifiers keyed by Macola API field names.
+ * - Called from macola_connect_map_field_collection().
+ * - Example can be found at _macola_connect_extract_item_num_from_map_context().
+ *
+ *
+ * import_query_function
+ * - A function name in string form.
+ * - Used for querying additional items from the Macola API for the product_details.
+ * - Arguments:
+ *    $identifiers, an array of identifiers keyed by Macola API field names
+ *    $importer, the MacolaDrupalImporter class instance
+ * - Returns an array of Macola objects.
+ * - Called from macola_connect_map_field_collection().
+ * - Example can be found at _macola_connect_map_query_product_vendor_prices().
+ *
+ *
+ * wrapper_default_identifier_field
+ * - A field name in string form.
+ * - Used to determine a default identifying field from the node wrapper. Defaults to 'field_item_num'
+ * - Example usage can be found in _macola_connect_extract_item_num_from_map_context().
+ *
+ *
+ * existing_model_function
+ * - A function name in string form.
+ * - Used to compare Drupal and Macola entities to determine if they match.
+ * - Arguments:
+ *    $item, Macola API entity in the form of stdClass
+ *    $fc_wrapper, EntityMetadataWrapper for an existing field collection item
+ *    $wrapper, EntityMetadataWrapper for the product_details node
+ *    $collection_field_name, string of the field collection's field name for context purposes
+ * - Returns boolean.
+ * - Called from _macola_connect_map_field_collection_item().
+ * - Example can be found at _macola_connect_map_vendor_product_pricing_find_existing_model().
+ *
+ *
+ * build_api_entity_function
+ * - A function name in string form.
+ * - Used to either pull an existing item from the Macola API or stub out a default.
+ * - Arguments:
+ *    $fc_wrapper, EntityMetadataWrapper for an existing field collection item
+ *    $wrapper, EntityMetadataWrapper for the product_details node
+ *    $importer, the MacolaDrupalImporter class instance
+ *    $collection_field_name, string of the field collection's field name for context purposes
+ * - Returns an object (stdClass) of an existing Macola object or a default.
+ * - Called from _macola_connect_map_field_collection_item().
+ * - Example can be found at _macola_connect_map_vendor_product_pricing_build_api_entity().
+ *
+ *
+ * send_api_entity_function
+ * - A function name in string form.
+ * - Used to perform the sending of the item to Macola by calling a specific endpoint method on the $importer.
+ * - Arguments:
+ *    $api_entity, Macola API entity in the form of stdClass
+ *    $importer, the MacolaDrupalImporter class instance
+ * - Returns boolean on success.
+ * - Called from _macola_connect_map_field_collection_item().
+ * - Example can be found at _macola_connect_map_vendor_product_pricing_send_api_entity().
+ */
+function macola_connect_map_field_collection($value, $direction, $wrapper, $context) {
+  $ret     = NULL;
+  $mapping = NULL;
+  $args    = array();
+  if (isset($context['mapping'])) {
+    $mapping = $context['mapping'];
+    if (!empty($mapping->customProcessingArgs)) {
+      $args = $mapping->customProcessingArgs;
+    }
+  }
+  // Gather identifiers that will be used for querying other Macola endpoints
+  if (
+    !empty($args['identifiers_function'])
+    && function_exists($args['identifiers_function'])
+  ) {
+    $identifiers = $args['identifiers_function']($direction, $wrapper, $context, $args);
+  }
+  else {
+    $identifiers = _macola_connect_extract_item_num_from_map_context($direction, $wrapper, $context, $args);
+  }
+  // Determine items based on the direction
+  switch ($direction) {
+    case 'import':
+      // During import, the Product (Macola entity) does not contain this data,
+      // so items must be imported from another endpoint. Which would unique per
+      // field collection, so having specific import functions is desired.
+      $macola_query_func = '_macola_connect_map_query_product_vendor_prices';
+      if (
+        isset($args['import_query_function'])
+        && function_exists($args['import_query_function'])
+      ) {
+        $macola_query_func = $args['import_query_function'];
+      }
+      $items = $macola_query_func($identifiers, $context['importer']);
+      break;
+
+    case 'export':
+      // During export, the value being passed in is assumed to be a multivalued
+      // field collection's list of entities.
+      $items = $value;
+      break;
+
+    default:
+      // TODO: error message
+      return $ret;
+  }
+  // Query for field_collection mappings
+  $fc_mappings = bluemarble_staging_field_mappings_load('macola_connect', $context['mapping']->toField);
+  foreach ($fc_mappings as &$fc_mapping) {
+    if (!empty($fc_mapping->customProcessingArgs)) {
+      $fc_mapping->customProcessingArgs = unserialize($fc_mapping->customProcessingArgs);
+    }
+    else {
+      $fc_mapping->customProcessingArgs = array();
+    }
+  }
+  // Load existing collections
+  $collections = array();
+  if (isset($wrapper->{$context['mapping']->toField})) {
+    $collections = $wrapper->{$context['mapping']->toField}->value();
+  }
+  // Loop through and process each value
+  foreach ($items as $delta => $item) {
+    _macola_connect_map_field_collection_item($item, $delta, $fc_mappings, $collections, $direction, $wrapper, $context, $args);
+  }
+  // Everything should have already have been processed
+  return NULL;
+}
+
+/**
+ * Helper function to extract an item number out of all the information given
+ * during an import or export.
+ *
+ * @param string $direction
+ * @param EntityMetadataWrapper $wrapper
+ * @param array $context
+ * @param array $processing_args
+ * @return array
+ */
+function _macola_connect_extract_item_num_from_map_context($direction, $wrapper, $context, $processing_args) {
+  $identifiers = array();
+  // To allow for future use with other entity types, allow customization of
+  // which field to use as the default item number.
+  $default_id_field = 'field_item_num';
+  if (isset($processing_args['wrapper_default_identifier_field'])) {
+    $default_id_field = $processing_args['wrapper_default_identifier_field'];
+  }
+  // Start with the default, if it's there
+  // Note: this also allows that if NO DEFAULT IS DESIRED, the option to put in
+  // a bunk/fake field to fail properly
+  if (isset($wrapper->{$default_id_field})) {
+    $identifiers['item_num'] = $wrapper->{$default_id_field}->value();
+  }
+
+  switch ($direction) {
+    case 'import':
+      // @todo: handling for arbitrary apiEntity property for the item_num
+      // During import, extract from the apiEntity as the wrapper may be a newly
+      // created node without this information
+      if (isset($context['apiEntity']->item_no)) {
+        $identifiers['item_num'] = $context['apiEntity']->item_no;
+      }
+      break;
+
+    case 'export':
+      // During export, simply use the wrapper's information
+      break;
+  }
+
+  return $identifiers;
+}
+
+/**
+ * Queries ProductVendorPrices for importing purposes.
+ *
+ * @param array $identifiers
+ * @param \MacolaDrupalImporter $importer
+ * @return \MacolaResultSet|null
+ */
+function _macola_connect_map_query_product_vendor_prices($identifiers, MacolaDrupalImporter $importer) {
+  if (!isset($identifiers['item_num']) || !is_string($identifiers['item_num'])) {
+    return NULL;
+  }
+  return $importer->getProductVendorPrices($identifiers['item_num']);
+}
+
+/**
+ * Processes individual item of a field collection.
+ *
+ * @param array|stdClass $item
+ *   array if from Macola API, stdClass if from Drupal
+ * @param mixed $delta
+ *   just in case, though might not be needed
+ * @param array $mappings
+ *   field mappings for within the field collection
+ * @param array $collections
+ *   array of existing field collection items for a field
+ * @param string $direction
+ *   import or export
+ * @param entityMetadataWrapper $wrapper
+ *   wrapper for the product_details node
+ * @param array $context
+ *   array of context
+ * @param array $args
+ *   original custom processing arguments from the parent field collection
+ */
+function _macola_connect_map_field_collection_item($item, $delta, $mappings, $collections, $direction, $wrapper, $context, $args) {
+  if (!is_array($collections)) {
+    // TODO: error message
+    $collections = array();
+  }
+  // For building the entity and for context
+  $collection_field_name = $context['mapping']->toField;
+  // Determine a function to compare entities
+  $exist_function = '_macola_connect_map_vendor_product_pricing_find_existing_model';
+  if (
+    isset($args['existing_model_function'])
+    && function_exists($args['existing_model_function'])
+  ) {
+    $exist_function = $args['existing_model_function'];
+  }
+
+  switch ($direction) {
+    case 'import':
+      $collection = NULL;
+      $fc_delta   = NULL;
+      // Warning: not going to be performant
+      // Loop through existing collection items to find matching
+      foreach ($collections as $temp) {
+        $temp_wrapper = entity_metadata_wrapper('field_collection_item', $temp);
+        if ($exist_function($item, $temp_wrapper, $wrapper, $collection_field_name)) {
+          $collection = $temp;
+          break;
+        }
+      }
+      // Create a new collection item if not found
+      if (empty($collection)) {
+        $collection = entity_create('field_collection_item', array('field_name' => $collection_field_name));
+        $collection->setHostEntity('node', $wrapper->raw());
+      }
+      // ==== v v v v ==== v v v v ==== v v v v ==== v v v v ==== v v v v ====
+      // Between these lines is essentially a copy&paste of
+      // \MacolaDrupalImporter->updateProductFromMacola()
+      $fc_wrapper = entity_metadata_wrapper('field_collection_item', $collection);
+
+      // TODO: update found field collection item
+      foreach ($mappings as $mapping) {
+        $fromField = $mapping->fromField;
+        $toField   = $mapping->toField;
+        $fromAlt   = $mapping->fromAlt;
+
+        $value = NULL;
+        if (isset($item->{$fromField})) {
+          $value = $item->{$fromField};
+        }
+        elseif (isset($item->{$fromAlt})) {
+          $value = $item->{$fromAlt};
+        }
+
+        $function = $mapping->customProcessing;
+        if (function_exists($function)) {
+          $context = array(
+            'mapping'   => $mapping,
+            'apiEntity' => $item,
+            'importer'  => $context['importer'],
+          );
+          $value   = $function($value, 'import', $fc_wrapper, $context);
+        }
+
+        if ($value) {
+          try {
+            $fc_wrapper->{$toField}->set($value);
+          } catch (Exception $e) {
+            $message  = 'Failed to set value for @f (Macola ID: @m, Item No.: @i, Field Collection: @c). <br /> Value = <pre>@v</pre>';
+            $msg_vars = array(
+              '@f' => $toField,
+              '@m' => $context['apiEntity']->id,
+              '@i' => $context['apiEntity']->item_no,
+              '@c' => $collection_field_name,
+              '@v' => print_r($value, TRUE),
+            );
+            watchdog('macola_connect', $message, $msg_vars, WATCHDOG_ERROR);
+            watchdog_exception('macola_connect', $e);
+            if (in_array($fromField, array('id', 'item_no'))) {
+              throw $e;
+            }
+          }
+        }
+      }
+
+      // Saving already adds it to the parent, so return nothing
+      $fc_wrapper->save();
+      // Between these lines is essentially a copy&paste of
+      // \MacolaDrupalImporter->updateProductFromMacola()
+      // ==== ^ ^ ^ ^ ==== ^ ^ ^ ^ ==== ^ ^ ^ ^ ==== ^ ^ ^ ^ ==== ^ ^ ^ ^ ====
+      break;
+
+    case 'export':
+      $build_function = '_macola_connect_map_vendor_product_pricing_build_api_entity';
+      if (
+        !empty($args['build_api_entity_function'])
+        && function_exists($args['build_api_entity_function'])
+      ) {
+        $build_function = $args['build_api_entity_function'];
+      }
+
+      $send_function = '_macola_connect_map_vendor_product_pricing_send_api_entity';
+      if (
+        !empty($args['send_api_entity_function'])
+        && function_exists($args['send_api_entity_function'])
+      ) {
+        $send_function = $args['send_api_entity_function'];
+      }
+
+      if (!is_object($item) && is_numeric($item)) {
+        $item = entity_load_single('field_collection_item', $item);
+      }
+
+      $fc_wrapper = entity_metadata_wrapper('field_collection_item', $item);
+      $api_entity = (object) $build_function($fc_wrapper, $wrapper, $context['importer'], $collection_field_name);
+
+      foreach ($mappings as $mapping) {
+        $fromField = $mapping->fromField;
+        $toField = $mapping->toField;
+
+        $value = NULL;
+        if (isset($fc_wrapper->{$toField})) {
+          $value = $fc_wrapper->{$toField}->value(array('identifier' => TRUE));
+        }
+
+        $function = $mapping->customProcessing;
+        if (function_exists($function)) {
+          $fc_context = array(
+            'mapping'               => $mapping,
+            'node'                  => $wrapper->raw(),
+            'importer'              => $context['importer'],
+            'field_collection_item' => $item,
+          );
+          $value      = $function($value, 'export', $fc_wrapper, $fc_context);
+        }
+
+        // TODO: what should happen on NULL value?
+        $api_entity->{$fromField} = $value;
+      }
+
+      // TODO: response handling? seemed to be empty
+      $send_function($api_entity, $context['importer']);
+
+      break;
+  }
+}
+
+/**
+ * Determines if the Macola object and the field collection item matches.
+ */
+function _macola_connect_map_vendor_product_pricing_find_existing_model($api_entity, $fc_wrapper, $parent_wrapper, $field_name) {
+  if (
+    empty($api_entity->item_no)
+    || empty($api_entity->vend_no)
+  ) {
+    return FALSE;
+  }
+
+  if (
+    empty($parent_wrapper->field_item_num)
+    || empty($parent_wrapper->field_item_num->value())
+  ) {
+    return FALSE;
+  }
+
+  if (
+    empty($fc_wrapper->field_vendors)
+    || empty($fc_wrapper->field_vendors->value())
+  ) {
+    return FALSE;
+  }
+
+  $vendor = $fc_wrapper->field_vendors->value();
+  if (
+    empty($vendor->field_macola_name[LANGUAGE_NONE][0]['value'])
+  ) {
+    return FALSE;
+  }
+
+  $drupal_item_num = $parent_wrapper->field_item_num->value();
+  $drupal_vend_num = $vendor->field_macola_name[LANGUAGE_NONE][0]['value'];
+
+  if (
+    $api_entity->item_no == $drupal_item_num
+    && $api_entity->vend_no == $drupal_vend_num
+  ) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * Gets existing ProductVendorPrice object or builds a default object.
+ */
+function _macola_connect_map_vendor_product_pricing_build_api_entity($fc_wrapper, $wrapper, $importer, $collection_field_name) {
+  $item_num = NULL;
+  if (isset($wrapper->field_item_num)) {
+    $item_num = $wrapper->field_item_num->value();
+  }
+
+  $vend_num = NULL;
+  if (isset($fc_wrapper->field_vendors)) {
+    $vendor = $fc_wrapper->field_vendors->value();
+    if (!empty($vendor->field_macola_name[LANGUAGE_NONE][0]['value'])) {
+      $vend_num = $vendor->field_macola_name[LANGUAGE_NONE][0]['value'];
+    }
+  }
+
+  if (!empty($item_num) && !empty($vend_num)) {
+    $api_entity = $importer->getProductVendorPrice($item_num, $vend_num);
+  }
+
+  if (!empty($api_entity)) {
+    return $api_entity;
+  }
+
+  // If we reach this point, create a new one with the following defaults.
+  return (object) array(
+    'id'               => NULL,
+    'item_no'          => $item_num,
+    'vend_no'          => $vend_num,
+    'vend_item_no'     => NULL,
+    'contract_frm_dt'  => NULL,
+    'ap_terms_cd'      => NULL,
+    'neg_price_1'      => 0,
+    'contract_no'      => "",
+    'contract_thru_dt' => NULL,
+    'curr_cd'          => "USD",
+    'item_filler'      => "",
+    'tolerance_cd'     => "",
+    'neg_uom_type'     => "",
+    'neg_uom_1'        => "",
+  );
+}
+
+/**
+ * Sends the data to the `ProductVendorPrices/Create` or
+ * `ProductVendorPrices/Update` Macola API endpoints.
+ */
+function _macola_connect_map_vendor_product_pricing_send_api_entity($api_entity, $importer) {
+  if (empty($api_entity->item_no) || empty($api_entity->vend_no)) {
+    return FALSE;
+  }
+  if (empty($api_entity->id)) {
+    return $importer->createProductVendorPrice($api_entity);
+  } else {
+    return $importer->updateProductVendorPrice($api_entity);
+  }
+}
+
+/**
+ * Mapping function to use another Drupal field for the based on the proxy
+ * field's value.
+ *
+ * The proxy field is to provide the field name for getting / setting the value.
+ */
+function macola_connect_map_proxy_field_value($value, $direction, $wrapper, $context) {
+  $ret     = NULL;
+  $mapping = $context['mapping'];
+  $args    = $mapping->customProcessingArgs;
+
+  switch ($direction) {
+    case 'import':
+      $proxy_field = $mapping->toField;
+      // Determine the value field's name
+      if (isset($wrapper->{$proxy_field})) {
+        $field_name = $wrapper->{$proxy_field}->value();
+      }
+      if (empty($field_name) && !empty($args['default_field_name'])) {
+        $field_name = $args['default_field_name'];
+      }
+
+      if (empty($field_name) || !isset($wrapper->{$field_name})) {
+        break;
+      }
+      // If another processing/sanitizing function is needed run that
+      if (
+        !empty($args['processing_function'])
+        && function_exists($args['processing_function'])
+      ) {
+        $function  = $args['processing_function'];
+        $func_args = !empty($args['processing_args']) ?: array();
+        // Adjust context for correct field name and new processing info
+        $sub_context                                  = $context;
+        $sub_context['mapping']->toField              = $field_name;
+        $sub_context['mapping']->customProcessing     = $function;
+        $sub_context['mapping']->customProcessingArgs = $func_args;
+        // Process
+        $value = $function($value, $direction, $wrapper, $sub_context);
+      }
+
+      // Since the mapping is dynamic, the field will have to be saved here
+      if ($value) {
+        try {
+          $wrapper->{$field_name}->set($value);
+        } catch (Exception $e) {
+          $message  = 'Failed to set value for @f (Macola ID: @m, Item No.: @i, Proxy Field: @p). <br /> Value = <pre>@v</pre>';
+          $msg_vars = array(
+            '@f' => $field_name,
+            '@m' => $context['apiEntity']->id,
+            '@i' => $context['apiEntity']->item_no,
+            '@p' => $mapping->toField,
+            '@v' => print_r($value, TRUE),
+          );
+          watchdog('macola_connect', $message, $msg_vars, WATCHDOG_ERROR);
+          watchdog_exception('macola_connect', $e);
+          if (in_array($field_name, array('id', 'item_no'))) {
+            throw $e;
+          }
+        }
+      }
+
+      // Always return NULL on import so the proxy field doesn't lose the
+      // selected field
+      break;
+
+    case 'export':
+      // In this case, $value should be the field name, if that or the default
+      // is empty do nothing, 'cause we know nothing
+      if (empty($value) && empty($args['default_field_name'])) {
+        break;
+      }
+      $field_name = $value;
+      if (empty($field_name)) {
+        $field_name = $args['default_field_name'];
+      }
+
+      // Determine the value
+      if (isset($wrapper->{$field_name})) {
+        $ret = $wrapper->{$field_name}->value(array('identifier' => TRUE));
+      }
+      elseif (isset($args['default_value'])) {
+        $ret = $args['default_value'];
+      }
+      else {
+        $ret = NULL;
+      }
+      // If another processing/sanitizing function is needed run that
+      if (
+        !empty($args['processing_function'])
+        && function_exists($args['processing_function'])
+      ) {
+        $function  = $args['processing_function'];
+        $func_args = !empty($args['processing_args']) ?: array();
+        // Adjust context for correct field name and new processing info
+        $sub_context                                  = $context;
+        $sub_context['mapping']->toField              = $field_name;
+        $sub_context['mapping']->customProcessing     = $function;
+        $sub_context['mapping']->customProcessingArgs = $func_args;
+        // Process
+        $ret = $function($ret, $direction, $wrapper, $sub_context);
+      }
+
+      break;
+  }
+
+  // Should be NULL if importing and the other field's value if exporting
+  return $ret;
+}

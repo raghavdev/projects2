@@ -1,0 +1,957 @@
+<?php
+
+function content_uri_menu() {
+  $items = array();
+
+  //admin url
+  $items['admin/structure/content_uri'] = array(
+    'title' => t('Content URI'),
+    'description' => "Admin of JSON content URI feeds. Used by the angular app to gain knowledge about the drupal settings.",
+    'access arguments' => array('administer content uri'),
+    'page callback' => 'content_uri_admin',
+    'access callback' => 'user_access',
+    'type' => MENU_NORMAL_ITEM
+  );
+
+  $items['admin/structure/content_uri/add'] = array(
+    'access arguments' => array('add content uri addresses'),
+    'page callback' => 'content_uri_admin_add',
+    'access callback' => 'user_access',
+    'type' => MENU_NORMAL_ITEM
+  );
+
+  $items['admin/structure/content_uri/edit/%'] = array(
+    'access arguments' => array('edit content uri addresses'),
+    'page arguments' => array(4),
+    'page callback' => 'content_uri_admin_add',
+    'access callback' => 'user_access',
+    'type' => MENU_NORMAL_ITEM
+  );
+
+  $items['admin/structure/content_uri/delete/%'] = array(
+    'access arguments' => array('delete content uri addresses'),
+    'page arguments' => array(4),
+    'page callback' => 'content_uri_admin_delete',
+    'access callback' => 'user_access',
+    'type' => MENU_NORMAL_ITEM
+  );
+
+  //build out the uri addresses for the JSON
+  $urlData = db_select("content_uri")
+              ->fields("content_uri")
+              ->execute()
+              ->fetchAll();
+
+  if($urlData) {
+    foreach($urlData as $url) {
+      $items[$url->url] = array(
+        'access callback' => "user_access",
+        'access arguments' => array('access content uri endpoints'),
+        'page callback' => 'content_uri_get_json',
+        'type' => MENU_CALLBACK
+      );
+    }
+  }
+
+  return $items;
+}
+
+
+/**
+ * Implements hook_permission().
+ */
+function content_uri_permission() {
+  return array(
+    'administer content uri' =>  array(
+      'title' => t('Administer Content URI Admin'),
+      'restrict access' => TRUE,
+    ),
+    'add content uri addresses' =>  array(
+      'title' => t('Add Content URI Address'),
+      'restrict access' => TRUE,
+    ),
+    'edit content uri addresses' =>  array(
+      'title' => t('Edit Content URI Address'),
+      'restrict access' => TRUE,
+    ),
+    'delete content uri addresses' =>  array(
+      'title' => t('Delete Content URI Address'),
+      'restrict access' => TRUE,
+    ),
+    'access content uri endpoints' => array(
+      'title' => t('Delete Content URI Address'),
+      'restrict access' => TRUE,
+    ),
+    'access content uri endpoints' => array(
+      'title' => t('access content uri endpoints'),
+      'restrict access' => TRUE,
+    )
+  );
+}
+
+/*
+ * Admin Page
+ */
+////////////////
+function content_uri_admin () {
+  return drupal_get_form("content_uri_admin_form");
+}
+
+function content_uri_admin_form($form, $form_state) {
+  $form = array();
+
+  $form['uri_table'] = array (
+    '#type' => 'fieldset',
+    '#theme' => 'content_uri_table',
+    '#tree' => TRUE,
+  );
+
+  $records = db_select("content_uri")
+              ->fields("content_uri")
+              ->execute()
+              ->fetchAll();
+
+  foreach($records as $record) {
+
+    $contentData = unserialize($record->contentData);
+
+    $form['uri_table']['url'][$record->id] = array(
+      '#markup' => l($record->url, "{$record->url}"),
+    );
+
+    $exposedContent = '';
+    foreach($contentData as $section => $data) {
+
+      if(!empty($data)) {
+        $exposedContent .= "<h2>{$section}</h2>";
+
+        if(is_array($data)) {
+          foreach($data as $name => $enabled) {
+            if($enabled == 1) {
+              if($section == "taxonomy") {
+                $taxonomy = taxonomy_vocabulary_load($name);
+                $exposedContent .= $taxonomy->name . "<br>";
+              }
+              if($section == "user_roles") {
+                $user_role = user_role_load($name);
+                $exposedContent .= $user_role->name . "<br>";
+              }
+              else {
+                $exposedContent .= $name . "<br>";
+              }
+            }
+          }
+        }
+      }
+    }
+
+    $form['uri_table']['content'][$record->id] = array(
+      '#markup' => $exposedContent
+    );
+
+    $form['uri_table']['actions'][$record->id]['edit'] = array(
+      '#type' => 'link',
+      '#title' => 'Edit URI',
+      '#href' => "admin/structure/content_uri/edit/{$record->id}",
+    );
+
+    $form['uri_table']['actions'][$record->id]['delete'] = array(
+      '#options' => array("query" => array('token' => drupal_get_token("admin/structure/content_uri/delete/{$record->id}"))),
+      '#type' => 'link',
+      '#title' => 'Delete URI',
+      '#href' => "admin/structure/content_uri/delete/{$record->id}",
+    );
+  }
+
+  $form['add_uri'] = array(
+    '#type' => 'link',
+    '#title' => 'Add new URI',
+    '#href' => "admin/structure/content_uri/add",
+  );
+
+  return $form;
+}
+
+
+function content_uri_theme($existing, $type, $theme, $path) {
+  $theme_hooks = array(
+    'content_uri_table' => array(
+      'render element' => 'form',
+     )
+  );
+
+  return $theme_hooks;
+}
+
+function theme_content_uri_table($variables) {
+
+  $form = $variables['form'];
+
+  $header = array(t('URL'), t('Exposed Content'), t('Actions'));
+
+  $rows = array();
+
+  foreach (element_children($form['url']) as $key) {
+
+    $record = array();
+    $record[] = drupal_render($form['url'][$key]);
+    $record[] = drupal_render($form['content'][$key]);
+    $record[] = drupal_render($form['actions'][$key]);
+    $rows[] = $record;
+  }
+
+  $output = theme('table', array(
+      'header' => $header,
+      'rows' => $rows
+  ));
+
+  return $output;
+}
+
+function content_uri_admin_add($id = '') {
+  return drupal_get_form("content_uri_admin_add_form", $id);
+}
+
+function content_uri_admin_add_form($form, $form_state, $id) {
+  global $conf;
+
+  $form = array();
+
+  $url = '';
+  $contentData = array();
+
+  //open up as an edit
+  if($id !== '') {
+
+    $data = db_select("content_uri")
+              ->fields("content_uri")
+              ->condition("id", $id)
+              ->execute()
+              ->fetchAssoc();
+
+    if($data) {
+      $url = $data['url'];
+      $contentData = unserialize($data['contentData']);
+    }
+  }
+
+  $form['url'] = array(
+    '#type' => 'textfield',
+    '#description' => t("URL of the exposed data"),
+    '#default_value' => $url,
+    '#required' => FALSE,
+    '#maxlength' => 100,
+    '#size' => 100,
+  );
+
+  $form['user_content'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('User Content'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#tree' => TRUE,
+  );
+
+  $form['user_content']['current_user'] = array(
+    '#type' =>'checkbox',
+    '#title' => t('Current Logged in User'),
+    '#default_value' => (array_key_exists('user_content', $contentData)
+            && array_key_exists('current_user', $contentData['user_content'])
+            && ($contentData['user_content']['current_user'] == 1) ? true : false)
+  );
+
+  $form['user_roles'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('User Roles'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#tree' => TRUE,
+  );
+
+  $roles = user_roles();
+
+  foreach($roles as $role_id => $role) {
+
+    $form['user_roles'][$role_id] = array(
+      '#type' =>'checkbox',
+      '#title' => check_plain($role),
+      '#default_value' => (array_key_exists('user_roles', $contentData)
+              && array_key_exists($role_id, $contentData['user_roles'])
+              && ($contentData['user_roles'][$role_id] == 1) ? true : false)
+    );
+  }
+
+  $form['user_content']['current_user_permissions'] = array(
+    '#type' =>'checkbox',
+    '#title' => t('Current Logged in User Permissions'),
+    '#default_value' => (array_key_exists('user_content', $contentData)
+            && array_key_exists('current_user_permissions', $contentData['user_content'])
+            && ($contentData['user_content']['current_user_permissions'] == 1) ? true : false)
+  );
+
+  $form['taxonomy'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Taxonomy'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#tree' => TRUE,
+  );
+
+  $taxonomyTerms = taxonomy_get_vocabularies();
+
+  foreach($taxonomyTerms as $vid => $def) {
+    $form['taxonomy'][$vid] = array(
+      '#type' =>'checkbox',
+      '#title' => check_plain($def->name),
+      '#default_value' => (array_key_exists('taxonomy', $contentData)
+              && array_key_exists($vid, $contentData['taxonomy'])
+              && ($contentData['taxonomy'][$vid] == 1) ? true : false)
+    );
+  }
+
+  $form['menu'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Menus'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#tree' => TRUE,
+  );
+
+  $menus = menu_get_menus();
+
+  foreach($menus as $menu_name => $label) {
+    $form['menu'][$menu_name] = array(
+      '#type' =>'checkbox',
+      '#title' => check_plain($label),
+      '#default_value' => (array_key_exists('menu', $contentData)
+              && array_key_exists($menu_name, $contentData['menu'])
+              && ($contentData['menu'][$menu_name] == 1) ? true : false)
+    );
+  }
+
+//  $form['blocks'] = array(
+//    '#type' => 'fieldset',
+//    '#title' => t('Blocks'),
+//    '#collapsible' => TRUE,
+//    '#collapsed' => FALSE,
+//    '#tree' => TRUE,
+//  );
+
+  $form['system_variables'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('System Variable Values'),
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE,
+    '#tree' => TRUE,
+  );
+
+  foreach($conf as $key => $value) {
+    $form['system_variables'][$key] = array(
+      '#type' =>'checkbox',
+      '#title' => check_plain($key),
+      '#default_value' => (array_key_exists('system_variables', $contentData)
+              && array_key_exists($key, $contentData['system_variables'])
+              && ($contentData['system_variables'][$key] == 1) ? true : false)
+    );
+  }
+
+//  $menus = menu_get_menus();
+//
+//  foreach($menus as $menu_name => $label) {
+//    $form['menu'][$menu_name] = array(
+//      '#type' =>'checkbox',
+//      '#title' => t($label),
+//      '#default_value' => (array_key_exists('menu', $contentData)
+//              && array_key_exists($menu_name, $contentData['menu'])
+//              && ($contentData['menu'][$menu_name] == 1) ? true : false)
+//    );
+//  }
+
+  $form['file_types'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('File Types'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#tree' => TRUE,
+  );
+
+  //couldnt find a better method for finding the specific file types
+  $file_types = db_select("field_config_instance")
+                  ->fields("field_config_instance", array('bundle'))
+                  ->condition("entity_type", "file")
+                  ->condition('deleted', 0)
+                  ->distinct()
+                  ->execute()
+                  ->fetchCol();
+
+  foreach($file_types as $file_type) {
+     $form['file_types'][$file_type] = array(
+      '#type' =>'checkbox',
+      '#title' => check_plain($file_type),
+      '#default_value' => (array_key_exists('file_types', $contentData)
+              && array_key_exists($file_type, $contentData['file_types'])
+              && ($contentData['file_types'][$file_type] == 1) ? true : false)
+    );
+  }
+
+
+  $form['content_types'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Content Type Structure'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#tree' => TRUE,
+  );
+
+  $types = node_type_get_types();
+
+  foreach($types as $type => $data) {
+    $form['content_types'][$type] = array(
+      '#type' =>'checkbox',
+      '#title' => check_plain($type),
+      '#default_value' => (array_key_exists('content_types', $contentData)
+              && array_key_exists($type, $contentData['content_types'])
+              && ($contentData['content_types'][$type] == 1) ? true : false)
+    );
+  }
+
+  if (module_exists('field_collection')) {
+    $entity_info = entity_get_info('field_collection_item');
+    if (isset($entity_info['bundles'])) {
+      $form['field_collections'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Field Collections'),
+        '#collapsible' => TRUE,
+        '#collapsed' => FALSE,
+        '#tree' => TRUE,
+      );
+      foreach ($entity_info['bundles'] as $field_name => $bundle_info) {
+        $form['field_collections'][$field_name] = array(
+          '#type' => 'checkbox',
+          '#title' => check_plain($bundle_info['label']),
+          '#default_value' => (array_key_exists('field_collections', $contentData)
+            && array_key_exists($field_name, $contentData['field_collections'])
+            && ($contentData['field_collections'][$field_name] == 1) ? true: false)
+        );
+      }
+    }
+  }
+
+  if (module_exists('workflow')) {
+    $form['workflow'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Workflows'),
+      '#weight' => 5,
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+      '#tree' => TRUE,
+    );
+
+    $workflows = workflow_load_multiple();
+    foreach ($workflows as $workflow) {
+      $form['workflow'][$workflow->name] = array(
+        '#type' => 'checkbox',
+        '#title' => check_plain($workflow->label),
+        '#default_value' => (array_key_exists('workflow', $contentData)
+          && array_key_exists($workflow->name, $contentData['workflow'])
+          && ($contentData['workflow'][$workflow->name] == 1) ? TRUE : FALSE),
+      );
+    }
+  }
+
+  //call the hook to find what modules have exposed some content
+  //format:
+  //content_name => callbackurl for how it renders this content
+  $data = module_invoke_all('content_uri_expose_content');
+
+  if(sizeof($data) > 0) {
+    //if there is custom content expose this
+    $form['custom_content'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Other Content'),
+      '#weight' => 5,
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+      '#tree' => TRUE,
+    );
+
+    foreach($data as $name => $contentdef) {
+      $form['custom_content'][$name] = array(
+        '#type' =>'checkbox',
+        '#title' => check_plain($name),
+        '#default_value' => (array_key_exists('custom_content', $contentData)
+                && array_key_exists($name, $contentData['custom_content'])
+                && ($contentData['custom_content'][$name] == 1) ? true : false)
+      );
+    }
+  }
+
+  $form['clean_fields'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use clean field names'),
+    '#default_value' => (array_key_exists('clean_fields', $contentData)
+            && ($contentData['clean_fields'] == 1) ? true : false)
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Save'),
+    '#weight' => 99,
+  );
+  return $form;
+}
+
+function content_uri_admin_add_form_submit($form, $form_state) {
+
+  $id = $form_state['build_info']['args'][0];
+
+  $url = check_plain($form_state['values']['url']);
+
+  foreach($form_state['values'] as $section => $data) {
+    if(is_array($data)) {
+      foreach($data as $key => $enabled) {
+        if($enabled === 0) {
+          unset($form_state['values'][$section][$key]);
+        }
+      }
+    }
+  }
+
+  unset($form_state['values']['form_build_id']);
+  unset($form_state['values']['submit']);
+  unset($form_state['values']['form_token']);
+  unset($form_state['values']['form_id']);
+  unset($form_state['values']['op']);
+  unset($form_state['values']['url']);
+
+  $contentData = serialize($form_state['values']);
+
+  //update the record
+  if($id) {
+    db_update("content_uri")
+      ->condition("id", $id)
+      ->fields(array("url" => $url, "contentData" => $contentData))
+      ->execute();
+  }
+  else {
+    //save the new one
+    db_insert("content_uri")
+      ->fields(array("url" => $url, "contentData" => $contentData))
+      ->execute();
+  }
+
+  //force a cache clear to enable the menu link
+  cache_clear_all();
+
+  menu_rebuild();
+
+  drupal_set_message(t("URI Saved"));
+
+  drupal_goto("admin/structure/content_uri");
+}
+
+//get a list of the user defined content thats exposed
+function content_uri_get_user_defined_content() {
+
+}
+
+////////////////
+
+//Process Functions
+////////////////
+
+function content_uri_admin_delete($id) {
+  if (!isset($_GET['token']) || !drupal_valid_token($_GET['token'], "admin/structure/content_uri/delete/{$id}")) {
+    return MENU_ACCESS_DENIED;
+  }
+
+  db_delete('content_uri')
+    ->condition("id", $id)
+    ->execute();
+
+  drupal_set_message(t("URI has been deleted."));
+  drupal_goto("admin/structure/content_uri");
+}
+
+function content_uri_get_json() {
+
+  global $conf;
+
+  $json_data = array();
+
+  //get the info for this url from the database based on the current url
+
+  $exposedData = db_select("content_uri")
+                    ->fields("content_uri", array("contentData"))
+                    ->condition("url", current_path())
+                    ->execute()
+                    ->fetchField();
+
+  if(!$exposedData) {
+    return;
+  }
+
+  //unserialize the stored info about this url
+  $exposedData = unserialize($exposedData);
+
+  $clean_fields = false;
+
+  if(array_key_exists("clean_fields", $exposedData)) {
+    if($exposedData['clean_fields'] == 1) {
+      $clean_fields = true;
+    }
+  }
+
+  if(array_key_exists("user_content", $exposedData) &&
+          array_key_exists("current_user", $exposedData['user_content']) &&
+          $exposedData['user_content']['current_user'] === 1) {
+    $json_data['current_user'] = get_object_vars(content_uri_get_current_user());
+  }
+
+  if(array_key_exists("user_content", $exposedData) &&
+          array_key_exists("current_user_permissions", $exposedData['user_content']) &&
+          $exposedData['user_content']['current_user_permissions'] === 1) {
+    $json_data['current_user_permissions'] = content_uri_get_current_user_permissions();
+  }
+
+  //get the info about the custom data
+  $customData = module_invoke_all('content_uri_expose_content');
+
+  if(array_key_exists('content_types', $exposedData)) {
+    foreach($exposedData['content_types'] as $type => $enabled) {
+      if($enabled === 1) {
+
+        // Provide the name of the primary key.
+        $json_data['content_types'][$type]['identifier'] = 'nid';
+
+        $field_data = content_uri_get_content_type($type);
+
+        if($clean_fields) {
+          $field_data = content_uri_clean_fields($field_data);
+        }
+
+        // Add the title to the list of fields.
+        $node_type = node_type_load($type);
+        if ($node_type) {
+          $field_data['title'] = array(
+            'default_value' => null,
+            'description' => '',
+            'label' => $node_type->title_label,
+            'required' => TRUE,
+            'entity_type' => 'node',
+            'bundle' => $type,
+          );
+        }
+
+        $json_data['content_types'][$type]['fields'] = $field_data;
+
+        if(module_exists("field_group")) {
+
+          //get a list of groups associated with the type
+
+          $groupData = field_group_info_groups('node', $type);
+
+          if($clean_fields) {
+            $groupData = content_uri_clean_fields($groupData);
+          }
+
+          if(sizeof($groupData) > 0) {
+            $json_data['content_types'][$type]['groups'] = content_uri_process_field_groups($groupData['form']);
+          }
+        }
+      }
+    }
+  }
+
+  if(array_key_exists("custom_content", $exposedData)) {
+    foreach($exposedData['custom_content'] as $type => $enabled) {
+      if($enabled == 1) {
+        $newData = $customData[$type]();
+        $json_data[$type] = $newData;
+      }
+    }
+  }
+
+  if(array_key_exists("file_types", $exposedData)) {
+    foreach($exposedData['file_types'] as $type => $enabled) {
+      if($enabled == 1) {
+        // Provide the name of the primary key.
+        $json_data['file_types'][$type]['identifier'] = 'fid';
+
+        //get a list of the fields that are exposed by this type
+        $data = db_select("field_config_instance")
+                  ->fields("field_config_instance", array("field_id", "data"))
+                  ->condition("entity_type", "file")
+                  ->condition("bundle", $type)
+                  ->condition('deleted', 0)
+                  ->execute()
+                  ->fetchAll();
+
+        $fields = array();
+
+        foreach($data as $record) {
+          $record->data = unserialize($record->data);
+
+          if($clean_fields) {
+            $record->data = content_uri_clean_fields($record->data);
+          }
+
+          $record->data['field_id'] = $record->field_id;
+
+          $fields[] = $record->data;
+        }
+
+//        $newData = $customData[$type]();
+        $json_data['file_types'][$type] = (array) $fields;
+      }
+    }
+  }
+
+  if(array_key_exists("taxonomy", $exposedData)) {
+    foreach($exposedData['taxonomy'] as $vid => $enabled) {
+      if($enabled == 1) {
+        // Provide the name of the primary key.
+        $json_data['taxonomy'][$vid]['identifier'] = 'tid';
+
+        $taxonomy = taxonomy_vocabulary_load($vid);
+        if ($taxonomy) {
+          $json_data['taxonomy'][$taxonomy->machine_name] = content_uri_get_taxonomy($vid);
+        }
+      }
+    }
+  }
+
+  if(array_key_exists("menu", $exposedData)) {
+    foreach($exposedData['menu'] as $menu_name => $enabled) {
+      if($enabled == 1) {
+        $menu = menu_load($menu_name);
+        if ($menu) {
+          $json_data['menu'][$menu_name] = menu_tree_all_data($menu_name);
+        }
+      }
+    }
+  }
+
+  if(array_key_exists("system_variables", $exposedData)) {
+    foreach($exposedData['system_variables'] as $key => $enabled) {
+      if($enabled == 1) {
+        $json_data['system_variables'][$key] = $conf[$key];
+      }
+    }
+  }
+
+  if(array_key_exists("user_roles", $exposedData)) {
+    foreach($exposedData['user_roles'] as $key => $enabled) {
+      if($enabled == 1) {
+        $role = user_role_load($key);
+        if ($role) {
+          $json_data['user_roles'][$key] = $role;
+        }
+      }
+    }
+  }
+
+  if (array_key_exists('workflow', $exposedData) && module_exists('workflow')) {
+    $names = array();
+    foreach ($exposedData['workflow'] as $key => $enabled) {
+      if ($enabled == 1) {
+        $names[] = $key;
+      }
+    }
+    if (!empty($names)) {
+      $workflows = workflow_load_multiple_by_name($names);
+      foreach ($workflows as $workflow) {
+        $json_data['workflows'][$workflow->wid] = $workflow;
+      }
+    }
+  }
+
+  if (array_key_exists('field_collections', $exposedData) && module_exists('field_collection')) {
+    foreach ($exposedData['field_collections'] as $field_name => $enabled) {
+      if ($enabled == 1) {
+
+        $json_data['field_collections'][$field_name]['identifier'] = 'item_id';
+
+        $field_data = content_uri_get_content_type($field_name, 'field_collection_item');
+
+        if ($clean_fields) {
+          $field_data = content_uri_clean_fields($field_data);
+        }
+
+        $json_data['field_collections'][$field_name]['fields'] = $field_data;
+      }
+    }
+
+    if (!empty($json_data['field_collections'])) {
+      $json_data['field_collections'] = content_uri_clean_fields($json_data['field_collections']);
+    }
+  }
+
+  //implement a hook to allow the data to be modified by a module
+  $adjustment = module_invoke_all('content_uri_adjust_content', $json_data);
+
+  if(!empty($adjustment)) {
+    $json_data = $adjustment;
+  }
+
+  drupal_json_output($json_data);
+
+  exit;
+}
+
+function content_uri_get_current_user() {
+  global $user;
+
+  return $user;
+}
+
+function content_uri_get_current_user_permissions() {
+  global $user;
+  $allowed = array();
+
+  $perms = user_role_permissions($user->roles);
+
+  //flatten out the permissions data
+  foreach($perms as $id => $permissionArray) {
+
+    foreach($permissionArray as $permission => $m) {
+      $allowed[] = $permission;
+    }
+  }
+
+  return array_unique($allowed);
+}
+
+//TODO expand on this to show more info about the field
+//and support field groups
+function content_uri_get_content_type($bundle, $entity_type = 'node') {
+
+  //$fieldData = array();
+
+  $fields = field_info_instances($entity_type, $bundle);
+//doesnt include the field data, which may be useful, so add that
+  foreach ( $fields as $name => $data ) {
+    $fieldData = db_select("field_config")
+      ->fields("field_config", array("cardinality", "data"))
+      ->condition("field_name", $name)
+      ->condition('deleted', 0)
+      ->execute()
+      ->fetchAssoc();
+
+    if($fieldData) {
+      $fieldData += unserialize(($fieldData['data']));
+      unset($fieldData['data']);
+      $fieldData['cardinality'] = (int) $fieldData['cardinality'];
+
+      //remove storage, that wont be useful
+      if(array_key_exists("storage", $fieldData)) {
+        unset($fieldData['storage']);
+      }
+
+      $fields[$name]['config'] = $fieldData;
+    }
+  }
+  if (empty($fields)) {
+      return;
+  }
+
+  //if field group module exits, filter the field group data into the exported
+
+  //the field_group module is enabled use it
+//  if(module_exists("field_group")) {
+//
+//    //get a list of fields associated with the type
+//
+//    $groupData = field_group_info_groups($entity_type, $bundle);
+//
+//    if(sizeof($groupData)) {
+//      content_uri_process_field_groups($fields, $groupData['form']);
+//      print_r($fields);
+//
+//    }
+//  }
+//
+//  exit;
+//
+
+//  foreach ( $fields as $fieldName => $data ) {
+//    $fieldData[$fieldName] = $data['label'];
+//  }
+
+  //call a hook to allow adjustment of this databefore passing on to the output
+
+  return $fields;
+}
+
+function content_uri_process_field_groups($groupData) {
+  //flatten the data
+  $data = array();
+
+  foreach($groupData as $name => $group) {
+    $data[$name] = get_object_vars($group);
+  }
+
+  return $data;
+}
+
+//function content_uri_process_field_groups(&$fields, $groupData, $group = null) {
+//
+//  //print_r($groupData);
+//
+//  if($group != null) {
+//    if(array_key_exists($group, $fields)) {
+//      $groupData[]
+//    }
+//    else {
+//      foreach($group->children as $child) {
+//        content_uri_process_field_groups(&$fields, $groupData, $child);
+//      }
+//
+//      $groupData[$child->parent_name]->children[$child->group_name] = $child;
+//    }
+//  }
+//  else {
+//    foreach($groupData as $name => $group) {
+//      if($group->parent_name == '') {
+//        foreach($group->children as $child) {
+//          content_uri_process_field_groups(&$fields, $groupData, $child);
+//
+//
+//        }
+//
+//        $fields[$name] = get_object_vars($group);
+//      }
+//    }
+//  }
+//}
+
+function content_uri_get_taxonomy($vid) {
+
+  $taxonomyData = array();
+
+  //flatten the tree a little
+  $tree = taxonomy_get_tree($vid, 0, NULL, TRUE);
+
+  foreach($tree as $term) {
+    if(is_object($term)) {
+      $taxonomyData[] = get_object_vars($term);
+    }
+  }
+
+  return $taxonomyData;
+}
+
+//process a block of fields, flattening them out
+function content_uri_clean_fields($field_data) {
+  $new_data = array();
+
+  foreach($field_data as $field => $value) {
+    if(strpos($field, "field_") === 0) {
+      $field = preg_replace("/^field_/", "", $field);
+    }
+
+    $new_data[$field] = $value;
+  }
+
+  return $new_data;
+}

@@ -1,0 +1,108 @@
+#digital-core-menu {
+  @extend %ul-reset;
+  height: $main-menu-height;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  position: fixed;
+  z-index: 10;
+  background: $p900;
+  background-position: 4px 8px;
+  border-bottom: 1px solid $black;
+  li {
+    float: left;
+    padding: 0;
+  }
+  a {
+    color: $white;
+    display: inline-block;
+    @extend %bold-font;
+    text-decoration: none;
+    padding: 0 $spacing-large;
+    line-height: calc(#{$main-menu-height} - 1px);
+  }
+  a.active {
+    padding-top: 4px;
+    line-height: calc(#{$main-menu-height} - 7px);
+    text-decoration: none;
+    color: $white;
+    border-bottom: 2px solid $color-action-primary;
+  }
+  a:hover {
+    background: lighten($p900, 7%);
+  }
+  // Hide logo for now
+  .first {
+    display: none;
+  }
+  .first a {
+    width: 45px;
+    font-size: 0px;
+    background-image: url("/sites/all/angularjs_apps/unfiDigitalCoreApp/images/logo-icon.png");
+    background-color: transparent;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+    &.active,
+    &:hover {
+      background-color: transparent;
+      border: none;
+    }
+  }
+}
+.cmp a {
+  font-size: $font-size-small;
+}
+.cmpdate {
+  margin-left: 25px;
+}
+.cmp-popout {
+  position: absolute;
+  z-index: 100;
+  background-color: $white;
+  border: 1px solid $g500;
+  top: 24px;
+  left: 192px;
+  padding: 13px 50px 15px 30px;
+  width: 100%;
+  -moz-box-shadow:    24px 19px 32px -18px #ccc;
+  -webkit-box-shadow: 24px 19px 32px -18px #ccc;
+  box-shadow:         24px 19px 32px -18px #ccc;
+  > div {
+    b {
+      font-size: 15px;
+    }
+  }
+  .form-select {
+    min-width: 60px;
+    background-image: none;
+    //get back native select arrows that Ember got rid of
+    -webkit-appearance: menulist;
+    -moz-appearance: menulist;
+  }
+  #btn {
+    height: 30px;
+    width: 100px;
+    border-radius: 4px;
+  }
+  a {
+    position: relative;
+    left: 10px;
+    font-size: 13px;
+    text-decoration: underline;
+    color: $a400;
+  }
+  > div:nth-child(2) {
+    position: relative;
+    left: 15px;
+    > div {
+      padding: 3px 0 3px 0;
+    }
+    > div:nth-child(2) {
+      > div {
+        position: relative;
+        left: 25px;
+      }
+    }
+  }
+}

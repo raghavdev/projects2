@@ -1,0 +1,15 @@
+<?php
+
+/**
+ * @file
+ * Adds the required JS and CSS when the administration menu is being displayed.
+ */
+
+/**
+ * Implements hook_admin_menu_output_alter().
+ */
+function admin_menu_auto_hide_page_alter(&$page) {
+  if (isset($page['page_bottom']['admin_menu'])) {
+    drupal_add_js(drupal_get_path('module', 'admin_menu_auto_hide') . '/admin_menu_auto_hide.js');
+  }
+}

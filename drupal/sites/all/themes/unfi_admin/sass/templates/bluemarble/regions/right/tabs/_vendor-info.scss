@@ -1,0 +1,22 @@
+.field-collection {
+  width: 100%;
+  margin: $spacing-large 0;
+  section {
+    border: 1px solid $a200;
+    padding: $spacing-small;
+    margin-bottom: $spacing-xsmall;
+  }
+  .form-field {
+    // Overrides. Ugh.
+    .md-select-label,
+    md-input-container.md-default-theme .md-input,
+    md-autocomplete input {
+      font-size: .8em;
+    }
+    // Overrides. Ugh.
+    border-bottom: none;
+    .field-description {
+      display: none;
+    }
+  }
+}

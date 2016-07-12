@@ -1,0 +1,9 @@
+// Asset tab
+.asset-detail-title {
+  header h1 {
+    margin-top: 0;
+  }
+  ul {
+    @extend %ul-reset;
+  }
+}

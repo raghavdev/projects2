@@ -1,0 +1,171 @@
+<?php
+
+function buw_assets_bulk_upload_wizard_get_asset_info () {
+
+  $options = array('internal_only' => array(
+      '#type' => 'checkbox',
+      '#title' => 'Internal Only',
+      '#default_value' => TRUE,
+    )
+  );
+
+  return array("assets" => array(
+      "options" => $options,
+      "type" => "Non Product Assets",
+      "uploader" => "plupload",
+      "analysis_table_theme_callback" => "buw_assets_analysis_table",
+      "analysis_results_callback" => "buw_assets_results_analysis",
+      "analysis_callback" => "buw_assets_analysis",
+      "apply_callback" => "buw_assets_apply",
+      "cleanup_callback" => "buw_assets_cleanup",
+   ));
+}
+
+function buw_assets_apply($file_info, $job_id, $asset_info, $options, $context) {
+  global $user;
+
+  //if i dont it will overwrite the file with ""
+  unset($options['file']);
+  $file_info['file_name'] = $file_info['file']['name'];
+  $file_info = array_merge($file_info, $options);
+
+  digital_core_assets_create_asset($file_info);
+
+  //have to just pass this thru
+  $context['results']['job_id'] = $job_id;
+}
+
+function buw_assets_analysis($file, $asset_info) {
+  $id = false;
+
+  //take the file name off the path
+  $pathinfo = pathinfo($file['name']);
+
+  $filename = $pathinfo['filename'];
+
+  $status = "ok";
+  $message = "";
+
+  //check if this file will overwrite an existing one
+  $existing = db_select('file_managed')
+                ->fields("file_managed", array())
+                ->condition("filename", $filename)
+                ->execute()
+                ->fetchAll();
+
+  if(count($existing) > 0) {
+    $status = "Warning";
+    $message = "Existing image will be replaced";
+  }
+
+  //not sure what to error on
+
+  return array(
+      "file" => $file,
+      "id" => $id,
+      "status" => $status,
+      "message" => $message
+  );
+}
+
+function buw_assets_results_analysis($analysis_results) {
+  $structure = array();
+
+  $error_count = 0;
+  $warning_count = 0;
+  $ok_count = 0;
+
+  foreach($analysis_results as $idx => $result) {
+
+    $result = unserialize($result);
+
+    if(is_numeric($idx)) {
+      $structure['table']['analysis_table']['filename'][$result['file']['name']] = array(
+        "#markup" => $result['file']['name']
+      );
+
+      $structure['table']['analysis_table']['status'][$result['file']['name']] = array(
+        "#markup" => $result['status']
+      );
+
+      $structure['table']['analysis_table']['message'][$result['file']['name']] = array(
+        "#markup" => $result['message']
+      );
+
+      if(strtolower($result['status']) == "error") {
+        $error_count++;
+      }
+      else if(strtolower($result['status']) == "warning") {
+        $warning_count++;
+      }
+      else {
+        $ok_count++;
+      }
+    }
+  }
+
+  $structure['summary']['analysis_result_block'] = array (
+    '#type' => 'fieldset',
+  );
+
+  $structure['summary']['analysis_result_block']['number_uploads'] = array(
+    "#markup" => "<div><b>Number of Uploads:</b> " . count($analysis_results) . "</div>",
+  );
+
+  $structure['summary']['analysis_result_block']['validated_uploads'] = array(
+    "#markup" => "<div><b>Validated Uploads:</b> {$ok_count} </div>",
+  );
+
+  $structure['summary']['analysis_result_block']['errors'] = array(
+    "#markup" => "<div><b>Errors:</b> {$error_count} </div>",
+  );
+
+  $structure['summary']['analysis_result_block']['warnings'] = array(
+    "#markup" => "<div><b>Warnings:</b> {$warning_count} </div>",
+  );
+
+  return $structure;
+}
+
+
+function theme_buw_assets_analysis_table($variables) {
+
+  $form = $variables['form'];
+
+  $header = array(t('Filename'), t('Status'), t('Message'));
+
+  $rows = array();
+
+  foreach (element_children($form['analysis_table']['filename']) as $key) {
+
+    $record = array();
+    $record[] = drupal_render($form['analysis_table']['filename'][$key]);
+    $record[] = drupal_render($form['analysis_table']['status'][$key]);
+    $record[] = drupal_render($form['analysis_table']['message'][$key]);
+
+    $rows[] = $record;
+  }
+
+  $output = theme('table', array(
+      'header' => $header,
+      'rows' => $rows
+  ));
+
+  return $output;
+}
+
+function buw_assets_theme($existing, $type, $theme, $path) {
+
+  $theme_hooks = array(
+    'buw_assets_analysis_table' => array(
+      'render element' => 'form',
+      'file' => 'buw_assets.module'
+     )
+  );
+
+  return $theme_hooks;
+}
+
+function buw_assets_cleanup() {
+  //none
+}

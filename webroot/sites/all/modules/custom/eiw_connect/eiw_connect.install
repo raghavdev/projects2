@@ -1,0 +1,1272 @@
+<?php
+
+//There is a nearly certain chance these will change based on the data provided. Dont take as final.
+
+/**
+ * Implements hook_schema().
+ */
+function eiw_connect_schema() {
+  $schema = array();
+
+  //mapping table
+  //digital_core_mapping
+  $schema['digital_core_mapping'] = array(
+    'description' => 'Mapping of staging data to its final location',
+    'fields' => array(
+      'source' => array(
+        'description' => 'Source of the data being mapped',
+        'type'        => 'varchar',
+        'length'      => 30,
+        'not null'    => FALSE,
+      ),
+      'destination' => array(
+        'description' => 'Where the data is being mapped to',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'dataType' => array(
+        'description' => 'staging table the data is coming from',
+        'type'        => 'varchar',
+        'length'      => 30,
+        'not null'    => FALSE,
+      ),
+      'fromField' => array(
+        'description' => 'From field',
+        'type'        => 'varchar',
+        'length'      => 30,
+        'not null'    => FALSE,
+      ),
+      'toField' => array(
+        'description' => 'To Field',
+        'type'        => 'varchar',
+        'length'      => 30,
+        'not null'    => FALSE,
+      ),
+      'fromAlt' => array(
+        'description' => 'if from is empty use this field as from',
+        'type'        => 'varchar',
+        'length'      => 30,
+        'not null'    => FALSE,
+      ),
+      'primary_key' => array(
+        'description' => 'field that will be primary key',
+        'type'        => 'int',
+        'length'      => 1,
+        'not null'    => FALSE,
+      ),
+    )
+  );
+
+  //digital_core_field_group_mapping
+  $schema['digital_core_field_group_mapping'] = array(
+    'description' => 'Mapping of the static fields to field groups',
+    'fields' => array(
+      'dataType' => array(
+        'description' => 'Brand ID',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'fromField' => array(
+        'description' => 'Brand Name',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'toField' => array(
+        'description' => 'Active',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+    )
+  );
+
+  //staging tables
+  $schema['eiw_brand'] = array(
+    'description' => 'EIW Brand Staging Table',
+    'fields' => array(
+      'BrandSid' => array(
+        'description' => 'Brand SID',
+        'type'        => 'INT',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'DataextrctSid' => array(
+        'description' => 'Data extract Sid',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'BrandLongNm' => array(
+        'description' => 'Brand Long Name',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'BrandShortNm' => array(
+        'description' => 'Brand Short Name',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'ParentBrandLongNm' => array(
+        'description' => 'Parent Brand Long Name',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'ParentBrandShortNm' => array(
+        'description' => 'Parent Brand Short Name',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'ChangeInd' => array(
+        'description' => 'Change Indicator',
+        'type'        => 'char',
+        'length'      => 1,
+        'not null'    => FALSE,
+      ),
+      'jobExecSid' => array(
+        'description' => 'Job exec ID',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+    )
+  );
+
+  //staging tables
+  $schema['eiw_distncenter'] = array(
+    'description' => 'EIW distncenter Table',
+    'fields' => array(
+      'DistnCenterLocationSid' => array(
+        'description' => 'DistnCenterLocationSid',
+        'type'        => 'INT',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'DataextrctSid' => array(
+        'description' => 'Data extract Sid',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'DistnCenterLocationNm' => array(
+        'description' => 'DistnCenterLocationNm',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'DistnCenterLocationNum' => array(
+        'description' => 'DistnCenterLocationNum',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'OwningOrgztnAliasNm' => array(
+        'description' => 'OwningOrgztnAliasNm',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'ShipToAddressLine1Txt' => array(
+        'description' => 'ShipToAddressLine1Txt',
+        'type'        => 'varchar',
+        'length'      => 1000,
+        'not null'    => FALSE,
+      ),
+      'ShipToAddressLine2Txt' => array(
+        'description' => 'ShipToAddressLine2Txt',
+        'type'        => 'varchar',
+        'length'      => 1000,
+        'not null'    => FALSE,
+      ),
+      'ShipToAddressLine3Txt' => array(
+        'description' => 'ShipToAddressLine3Txt',
+        'type'        => 'varchar',
+        'length'      => 1000,
+        'not null'    => FALSE,
+      ),
+      'ShipToCityNm' => array(
+        'description' => 'ShipToCityNm',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'ShipToStateShortNm' => array(
+        'description' => 'ShipToStateShortNm',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'ShipToPostalCdNum' => array(
+        'description' => 'ShipToPostalCdNum',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'ChangeInd' => array(
+        'description' => 'Change Indicator',
+        'type'        => 'char',
+        'length'      => 1,
+        'not null'    => FALSE,
+      ),
+      'jobExecSid' => array(
+        'description' => 'Job exec ID',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+    )
+  );
+
+  //staging tables
+  $schema['eiw_distncenterproduct'] = array(
+    'description' => 'EIW eiw_distncenterproduct Table',
+    'fields' => array(
+      'DistnCenterLocationSid' => array(
+        'description' => 'DistnCenterLocationSid',
+        'type'        => 'INT',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'ProductSid' => array(
+        'description' => 'ProductSid',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'DataextrctSid' => array(
+        'description' => 'Data extract Sid',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'ProductAvlbltyDesc' => array(
+        'description' => 'ProductAvlbltyDesc',
+        'type'        => 'varchar',
+        'length'      => 250,
+        'not null'    => FALSE,
+      ),
+      'ProductAvlbltyStatusDesc' => array(
+        'description' => 'ProductAvlbltyStatusDesc',
+        'type'        => 'varchar',
+        'length'      => 250,
+        'not null'    => FALSE,
+      ),
+      'VendoracctSid' => array(
+        'description' => 'VendoracctSid',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'ChangeInd' => array(
+        'description' => 'Change Indicator',
+        'type'        => 'char',
+        'length'      => 1,
+        'not null'    => FALSE,
+      ),
+      'jobExecSid' => array(
+        'description' => 'Job exec ID',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+    )
+  );
+
+  $schema['eiw_rcm_category'] = array(
+    'description' => 'EIW RCM Category Staging Table',
+    'fields' => array(
+      'RetailCatLinkSid' => array(
+        'description' => 'Retail Cat Link Sid',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'RetailDeptNm' => array(
+        'description' => 'Retail Dept Name',
+        'type'        => 'varchar',
+        'length'      => 1000,
+        'not null'    => FALSE,
+      ),
+      'RetailCatNm' => array(
+        'description' => 'Retail Category Name',
+        'type'        => 'varchar',
+        'length'      => 1000,
+        'not null'    => FALSE,
+      ),
+      'RetailSegmentNm' => array(
+        'description' => 'Retail Segment Name',
+        'type'        => 'int',
+        'length'      => 1000,
+        'not null'    => FALSE,
+      ),
+      'RetailSubSegmentNm' => array(
+        'description' => 'Retail Sub Segment Name',
+        'type'        => 'varchar',
+        'length'      => 1000,
+        'not null'    => FALSE,
+      ),
+      'CatProfileNm' => array(
+        'description' => 'Category Profile Name',
+        'type'        => 'varchar',
+        'length'      => 1000,
+        'not null'    => FALSE,
+      ),
+       'ChangeInd' => array(
+        'description' => 'Change indicator',
+        'type'        => 'char',
+        'length'      => 1,
+        'not null'    => FALSE,
+      ),
+       'JobExecSid' => array(
+        'description' => 'Job Exec Sid',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'DataextrctSid' => array(
+          'description' => 'Data extrct Sid',
+          'type'        => 'int',
+          'length'      => 11,
+          'not null'    => FALSE,
+      ),
+    )
+  );
+
+  //mapping table
+  $schema['eiw_product'] = array(
+    'description' => 'EIW Product Staging Table',
+    'fields' => array(
+      'ProductSid' => array(
+        'description' => 'Product Sid',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'DataextrctSid' => array(
+        'description' => 'Data Extract SID',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'EntrpseItemNum' => array(
+        'description' => 'Enterprise Item Number',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'RetailCatLinkSid' => array(
+        'description' => 'Retail Category SID',
+        'type'        => 'int',
+        'length'      => 10,
+        'not null'    => FALSE,
+      ),
+      'BrandSid' => array(
+        'description' => 'BrandSid',
+        'type'        => 'int',
+        'length'      => 10,
+        'not null'    => FALSE,
+      ),
+      'UpcscanCd' => array(
+        'description' => 'Upcscan Cd',
+        'type'        => 'varchar',
+        'length'      => 15,
+        'not null'    => FALSE,
+      ),
+      'WestProductNum' => array(
+        'description' => 'West Product Number',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'WestProductDesc' => array(
+        'description' => 'West Product Description',
+        'type'        => 'varchar',
+        'length'      => 250,
+        'not null'    => FALSE,
+      ),
+      'EastProductNum' => array(
+        'description' => 'East Product Number',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'EastProductDesc' => array(
+        'description' => 'East Product Description',
+        'type'        => 'varchar',
+        'length'      => 250,
+        'not null'    => FALSE,
+      ),
+      'ItemDeptNm' => array(
+        'description' => 'Item Dept Name',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'PackComponentQty' => array(
+        'description' => 'Pack Component Qty',
+        'type'        => 'float',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'CaseComponentQty' => array(
+        'description' => 'Case Component Qty',
+        'type'        => 'float',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'BaseItemSizeMeas' => array(
+        'description' => 'Base Item Size Measurement',
+        'type'        => 'float',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'SrcItemSizeTxt' => array(
+        'description' => 'Src Item Size Txt',
+        'type'        => 'text',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'ItemAdverstisingTxt' => array(
+        'description' => 'Item Advertising Text',
+        'type'        => 'varchar',
+        'length'      => 1500,
+        'not null'    => FALSE,
+      ),
+      'SrcItemAdverstisingTxt' => array(
+        'description' => 'Src Item Adverstising Txt',
+        'type'        => 'varchar',
+        'length'      => 1500,
+        'not null'    => FALSE,
+      ),
+      'ProductCreateDt' => array(
+        'description' => 'Product Create Date',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'ChangeInd' => array(
+        'description' => 'Change Indicator',
+        'type'        => 'char',
+        'length'      => 1,
+        'not null'    => FALSE,
+      ),
+      'jobExecSid' => array(
+        'description' => 'Job Exec Sid',
+        'type'        => 'int',
+        'length'      => 10,
+        'not null'    => FALSE,
+      )
+    )
+  );
+
+  $schema['eiw_productextdata'] = array(
+    'description' => 'EIW Product Ext Data Staging Table',
+    'fields' => array(
+      'DataextrctSid' => array(
+        'description' => 'Data Extract SID',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => TRUE,
+      ),
+      'ChangeInd' => array(
+        'description' => 'Change Indicator',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => TRUE,
+      ),
+      'JobExecSid' => array(
+        'description' => 'JobExecSid ',
+        'type'        => 'int',
+        'length'      => 10,
+        'not null'    => TRUE,
+      ),
+      'EastProductNum' => array(
+        'description' => 'East Product Number',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'WestProductNum' => array(
+        'description' => 'West Product Number',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'SellingUnit' => array(
+        'description' => 'Selling Unit',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'Organic' => array(
+        'description' => 'Organic',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'GlutenFree' => array(
+        'description' => 'Gluten Free',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'DairyFree' => array(
+        'description' => 'Dairy Free',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'YeastFree' => array(
+        'description' => 'Yeast Free',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'WheatFree' => array(
+        'description' => 'Wheat Free',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'Vegan' => array(
+        'description' => 'Vegan',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'Kosher' => array(
+        'description' => 'Kosher',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'FairTrade' => array(
+        'description' => 'Fair Trade',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'GMOFree' => array(
+        'description' => 'GMO free',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'Pack' => array(
+        'description' => 'Pack',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'Size' => array(
+        'description' => 'Size',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'CaseQuantity' => array(
+        'description' => 'CaseQuantity',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      )
+    )
+  );
+
+  $schema['eiw_productinventoryextdata'] = array(
+    'description' => 'eiw_productinventoryextdata',
+    'fields' => array(
+      'DataextrctSid' => array(
+        'description' => 'Data Extract SID',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => TRUE,
+      ),
+      'ChangeInd' => array(
+        'description' => 'Change Indicator',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => TRUE,
+      ),
+      'JobExecSid' => array(
+        'description' => 'JobExecSid ',
+        'type'        => 'int',
+        'length'      => 10,
+        'not null'    => TRUE,
+      ),
+      'EastProductNum' => array(
+        'description' => 'East Product Number',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'WestProductNum' => array(
+        'description' => 'West Product Number',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'WarehouseNum' => array(
+        'description' => 'WarehouseNum',
+        'type'        => 'int',
+        'length'      => 19,
+        'not null'    => FALSE,
+      ),
+      'WarehouseShortName' => array(
+        'description' => 'WarehouseShortName',
+        'type'        => 'varchar',
+        'length'      => 5,
+        'not null'    => FALSE,
+      ),
+      'QtyOnHand' => array(
+        'description' => 'QtyOnHand',
+        'type'        => 'decimal',
+        'length'      => 21,10,
+        'not null'    => FALSE,
+      ),
+      'MinOrderQty' => array(
+        'description' => 'MinOrderQty',
+        'type'        => 'decimal',
+        'length'      => 18,10,
+        'not null'    => FALSE,
+      ),
+      'SRP' => array(
+        'description' => 'SRP',
+        'type'        => 'decimal',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'BaseWhls' => array(
+        'description' => 'BaseWhls',
+        'type'        => 'decimal',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'Discountable' => array(
+        'description' => 'Discountable',
+        'type'        => 'int',
+        'length'      => 10,
+        'not null'    => FALSE,
+      ),
+      'QtyCommitted' => array(
+        'description' => 'qty_commited',
+        'type'        => 'decimal',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+    )
+  );
+
+  $schema['eiw_nationalwarehouses'] = array(
+    'description' => 'eiw_nationalwarehouses',
+    'fields' => array(
+      'DataextrctSid' => array(
+        'description' => 'Data Extract SID',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => TRUE,
+      ),
+      'ChangeInd' => array(
+        'description' => 'Change Indicator',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => TRUE,
+      ),
+      'JobExecSid' => array(
+        'description' => 'JobExecSid',
+        'type'        => 'int',
+        'length'      => 10,
+        'not null'    => TRUE,
+      ),
+      'DivisionCode' => array(
+        'description' => 'DivisionCode',
+        'type'        => 'char',
+        'length'      => 1,
+        'not null'    => TRUE,
+      ),
+      'WarehouseNumber' => array(
+        'description' => 'WarehouseNumber',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => TRUE,
+      ),
+      'City' => array(
+        'description' => 'City',
+        'type'        => 'varchar',
+        'length'      => 25,
+        'not null'    => TRUE,
+      ),
+      'State' => array(
+        'description' => 'state',
+        'type'        => 'char',
+        'length'      => 2,
+        'not null'    => TRUE,
+      ),
+      'ShortName' => array(
+        'description' => 'ShortName',
+        'type'        => 'varchar',
+        'length'      => 5,
+        'not null'    => TRUE,
+      ),
+      'Description' => array(
+        'description' => 'description',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => TRUE,
+      ),
+      'UbsDc' => array(
+        'description' => 'ubsdc',
+        'type'        => 'int',
+        'length'      => 10,
+        'not null'    => TRUE,
+      ),
+      'IsActive' => array(
+        'description' => 'isactive',
+        'type'        => 'char',
+        'length'      => 1,
+        'not null'    => TRUE,
+      ),
+      'ReportingDivision' => array(
+        'description' => 'ReportingDivision',
+        'type'        => 'char',
+        'length'      => 1,
+        'not null'    => TRUE,
+      ),
+    )
+  );
+
+  //TODO fill out more
+  $schema['digital_core_data_products'] = array(
+    'description' => 'EIW Product Staging Table',
+    'fields' => array(
+      'ProductSid' => array(
+        'description' => 'Product SID',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'RetailCatLinkSid' => array(
+        'description' => 'RetailCatLinkSid',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'BrandSid' => array(
+        'description' => 'BrandSid',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+       'ein' => array(
+        'description' => 'Enterprise Idenification Number (EIN)',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'upc' => array(
+        'description' => 'UPC Code',
+        'type'        => 'varchar',
+        'length'      => 15,
+        'not null'    => FALSE,
+      ),
+      'upc_case' => array(
+        'description' => 'Case UPC code',
+        'type'        => 'varchar',
+        'length'      => 15,
+        'not null'    => FALSE,
+      ),
+      'east_product_id' => array(
+        'description' => 'East product id',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'west_product_id' => array(
+        'description' => 'West Product id',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'item_type' => array(
+        'description' => 'Item Type',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'item_size' => array(
+        'description' => 'Item Size',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'source_created' => array(
+        'description' => 'Source Created date',
+        'type'        => 'varchar',
+        'length'      => 30,
+        'not null'    => FALSE,
+      ),
+      'product_name' => array(
+        'description' => 'Product name',
+        'type'        => 'varchar',
+        'length'      => 250,
+        'not null'    => FALSE,
+      ),
+      'west_product_desc' => array(
+        'description' => 'West Product Description',
+        'type'        => 'varchar',
+        'length'      => 250,
+        'not null'    => FALSE,
+      ),
+      'item_dept_name' => array(
+        'description' => 'Item Department Name',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'pack_component_qty' => array(
+        'description' => 'Pack Component Qty',
+        'type'        => 'float',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'case_component_qty' => array(
+        'description' => 'Case component QTY',
+        'type'        => 'float',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'base_item_size_measurement' => array(
+        'description' => 'Base Item Size Measurement',
+        'type'        => 'float',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'item_advertising_text' => array(
+        'description' => 'Item Advertising Text',
+        'type'        => 'varchar',
+        'length'      => 1500,
+        'not null'    => FALSE,
+      ),
+      'src_item_advertising_text' => array(
+        'description' => 'SRC Item advertising Text',
+        'type'        => 'varchar',
+        'length'      => 1000,
+        'not null'    => FALSE,
+      ),
+      'MinOrderQty' => array(
+        'description' => 'Min Order QTY',
+        'type'        => 'int',
+        'length'      => 10,
+        'not null'    => FALSE,
+      ),
+      'TotalQtyOnHand' => array(
+        'description' => 'Total QTY on hand',
+        'type'        => 'int',
+        'length'      => 10,
+        'not null'    => FALSE,
+      ),
+      'SellingUnit' => array(
+        'description' => 'Selling Unit',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'SRP' => array(
+        'description' => 'SRP',
+        'type'        => 'float',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'PriceAfterDisc' => array(
+        'description' => 'Price after discount',
+        'type'        => 'float',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'NetMargin' => array(
+        'description' => 'Net Margin',
+        'type'        => 'float',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'WhlsPriceAfterDisc' => array(
+        'description' => 'Whole Sale Price after discount',
+        'type'        => 'float',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'WhlsNetMargin' => array(
+        'description' => 'wholesale net margin',
+        'type'        => 'float',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'PromoDisc' => array(
+        'description' => 'Promo Discount',
+        'type'        => 'float',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'BaseWhls' => array(
+        'description' => 'Base Wholesale',
+        'type'        => 'float',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'Dicountable' => array(
+        'description' => 'Discountable',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'Organic' => array(
+        'description' => 'Organic',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'GlutenFree' => array(
+        'description' => 'Gluten Free',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'DairyFree' => array(
+        'description' => 'Dairy Free',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'YeastFree' => array(
+        'description' => 'Yeast Free',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'WheatFree' => array(
+        'description' => 'Wheat Free',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'Vegan' => array(
+        'description' => 'Vegan',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'Kosher' => array(
+        'description' => 'Kosher',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'FairTrade' => array(
+        'description' => 'Fair Trade',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'GMOFree' => array(
+        'description' => 'GMO free',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'Pack' => array(
+        'description' => 'Pack',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      ),
+      'Size' => array(
+        'description' => 'Size',
+        'type'        => 'char',
+        'length'      => 3,
+        'not null'    => FALSE,
+      )
+    ),
+  );
+
+  $schema['digital_core_data_distcenter'] = array(
+    'description' => 'digital_core_data_distcenter',
+    'fields' => array(
+       'DistnCenterLocationSid' => array(
+        'description' => 'LocationSID',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'Location_Name' => array(
+        'description' => 'Location_Name',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'Location_Number' => array(
+        'description' => 'Location_Number',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'Owning_Organization_Alias_Name' => array(
+        'description' => 'Owning_Organization_Alias_Name',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'Shipto_line1' => array(
+        'description' => 'Shipto_line1',
+        'type'        => 'varchar',
+        'length'      => 1000,
+        'not null'    => FALSE,
+      ),
+      'Shipto_line2' => array(
+        'description' => 'Shipto_line2',
+        'type'        => 'varchar',
+        'length'      => 1000,
+        'not null'    => FALSE,
+      ),
+      'Shipto_line3' => array(
+        'description' => 'Shipto_line3',
+        'type'        => 'varchar',
+        'length'      => 1000,
+        'not null'    => FALSE,
+      ),
+      'Shipto_city' => array(
+        'description' => 'Shipto_city',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'shipto_state' => array(
+        'description' => 'shipto_state',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'shipto_postal' => array(
+        'description' => 'shipto_postal',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+    ),
+  );
+
+  $schema['digital_core_data_distcenter_product'] = array(
+    'description' => 'digital_core_data_distcenter_product',
+    'fields' => array(
+       'DistnCenterLocationSid' => array(
+        'description' => 'LocationSID',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'ProductSid' => array(
+        'description' => 'productSID',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'avail_desc' => array(
+        'description' => 'avail_desc',
+        'type'        => 'varchar',
+        'length'      => 250,
+        'not null'    => FALSE,
+      ),
+      'avail_status' => array(
+        'description' => 'avail_status',
+        'type'        => 'varchar',
+        'length'      => 250,
+        'not null'    => FALSE,
+      ),
+      'vendor_acct_sid' => array(
+        'description' => 'vendor_acct_sid',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+    ),
+  );
+
+  $schema['digital_core_data_productinventory_ext'] = array(
+    'description' => 'digital_core_data_productinventory_ext',
+    'fields' => array(
+      'east_product_id' => array(
+        'description' => 'East Product Number',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'west_product_id' => array(
+        'description' => 'West Product Number',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => FALSE,
+      ),
+      'warehouse_number' => array(
+        'description' => 'WarehouseNum',
+        'type'        => 'int',
+        'length'      => 19,
+        'not null'    => FALSE,
+      ),
+      'warehouse_short_name' => array(
+        'description' => 'WarehouseShortName',
+        'type'        => 'varchar',
+        'length'      => 5,
+        'not null'    => FALSE,
+      ),
+      'qty_on_hand' => array(
+        'description' => 'QtyOnHand',
+        'type'        => 'decimal',
+        'length'      => 21,10,
+        'not null'    => FALSE,
+      ),
+      'min_order_qty' => array(
+        'description' => 'MinOrderQty',
+        'type'        => 'decimal',
+        'length'      => 18,10,
+        'not null'    => FALSE,
+      ),
+      'srp' => array(
+        'description' => 'SRP',
+        'type'        => 'decimal',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'base_wholesale' => array(
+        'description' => 'BaseWhls',
+        'type'        => 'decimal',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+      'discountable' => array(
+        'description' => 'Discountable',
+        'type'        => 'int',
+        'length'      => 10,
+        'not null'    => FALSE,
+      ),
+      'qty_commited' => array(
+        'description' => 'qty_commited',
+        'type'        => 'decimal',
+        'length'      => 18,4,
+        'not null'    => FALSE,
+      ),
+    )
+  );
+
+  $schema['digital_core_data_rcm_categories'] = array(
+    'description' => 'digital_core_data_rcm_categories',
+    'fields' => array(
+      'RetailCatLinkSid' => array(
+        'description' => 'RetailCatLinkSid',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => TRUE,
+      ),
+      'department_name' => array(
+        'description' => 'department name',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => TRUE,
+      ),
+      'category_name' => array(
+        'description' => 'category name',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => TRUE,
+      ),
+      'segment_name' => array(
+        'description' => 'segment name',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => TRUE,
+      ),
+      'subsegment_name' => array(
+        'description' => 'subsegment name',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => TRUE,
+      ),
+      'profile_name' => array(
+        'description' => 'profile name',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => TRUE,
+      ),
+    ),
+  );
+
+  $schema['digital_core_data_national_warehouses'] = array(
+    'description' => 'digital_core_data_national_warehouses',
+    'fields' => array(
+      'division_code' => array(
+        'description' => 'DivisionCode',
+        'type'        => 'char',
+        'length'      => 1,
+        'not null'    => TRUE,
+      ),
+      'warehouse_number' => array(
+        'description' => 'WarehouseNumber',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => TRUE,
+      ),
+      'city' => array(
+        'description' => 'City',
+        'type'        => 'varchar',
+        'length'      => 25,
+        'not null'    => TRUE,
+      ),
+      'state' => array(
+        'description' => 'state',
+        'type'        => 'char',
+        'length'      => 2,
+        'not null'    => TRUE,
+      ),
+      'shortname' => array(
+        'description' => 'ShortName',
+        'type'        => 'varchar',
+        'length'      => 5,
+        'not null'    => TRUE,
+      ),
+      'description' => array(
+        'description' => 'description',
+        'type'        => 'varchar',
+        'length'      => 50,
+        'not null'    => TRUE,
+      ),
+      'ubsdc' => array(
+        'description' => 'ubsdc',
+        'type'        => 'int',
+        'length'      => 10,
+        'not null'    => TRUE,
+      ),
+      'is_active' => array(
+        'description' => 'isactive',
+        'type'        => 'char',
+        'length'      => 1,
+        'not null'    => TRUE,
+      ),
+      'reporting_division' => array(
+        'description' => 'ReportingDivision',
+        'type'        => 'char',
+        'length'      => 1,
+        'not null'    => TRUE,
+      ),
+    )
+  );
+
+  ////////////////
+
+  //insert the default mapping for the columns
+
+  return $schema;
+}

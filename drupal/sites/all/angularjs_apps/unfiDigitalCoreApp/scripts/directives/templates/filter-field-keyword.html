@@ -1,0 +1,10 @@
+<div class="filter-field filter-field-keyword filter-{{filterName}}">
+  <div class="search-form">
+    <form>
+      <span ng-if="input.keyphrase.length" ng-click="clearSelection()" class="button-icon button-close"></span>
+      <input type="text" value="" ng-model="input.keyphrase" placeholder="{{filterLabel}}">
+      {{keyphrase}}
+      <input type="submit" name="" border="0" value="Search" ng-click="findMatches()" class="search-form__submit button-icon button-{{filterField}}">
+    </form>
+  </div>
+</div>

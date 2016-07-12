@@ -1,0 +1,697 @@
+<?php
+
+/**
+ * Implements hook_permission().
+ */
+function asset_migrate_permission() {
+  return array(
+    'access asset migrate admin' => array(
+      'title' => t('Access Asset Migrate Admin Page'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function asset_migrate_menu() {
+  $items = array();
+
+  $items['admin/config/media/asset_migrate'] = array(
+    'title'            => 'Asset Migrate',
+    'description'      => '',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('asset_migrate_admin'),
+    'access arguments' => array('access asset migrate admin'),
+  );
+
+  return $items;
+}
+
+function asset_migrate_admin($form, &$form_state) {
+  $form['source'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Source'),
+    '#default_value' => 's3://IMAGES/',
+  );
+
+  $form['onlystage'] = array(
+    '#type'  => 'checkbox',
+    '#title' => t('Only Stage the list of files, do not process them.'),
+  );
+
+  $form['nostage'] = array(
+    '#type'  => 'checkbox',
+    '#title' => t('Process the already staged files.'),
+  );
+
+  $form['nosave'] = array(
+    '#type'  => 'checkbox',
+    '#title' => t('Do not save the file entry during processing.'),
+  );
+
+  $form['nothumbs'] = array(
+    '#type'  => 'checkbox',
+    '#title' => t('Do not create thumbnails.'),
+  );
+
+  $form['actions'] = array('#type' => 'actions');
+
+  $form['actions']['submit'] = array(
+    '#type'  => 'submit',
+    '#value' => t('Migrate'),
+  );
+
+  return $form;
+}
+
+function asset_migrate_admin_submit($form, &$form_state) {
+  $source = $form_state['values']['source'];
+  $onlystage = $form_state['values']['onlystage'];
+  $nostage = $form_state['values']['nostage'];
+  $nosave = $form_state['values']['nosave'];
+  $nothumbs = $form_state['values']['nothumbs'];
+  $save = empty($nosave);
+
+  $batch = array(
+    'operations' => array(),
+    'finished'   => 'asset_migrate_batch_finished',
+    'title'      => t('Processing Example Batch'),
+  );
+
+  if (!$nostage) {
+    $batch['operations'][] = array(
+      'asset_migrate_batch_stage_file_list',
+      array($source)
+    );
+  }
+
+  if (!$onlystage) {
+    $batch['operations'][] = array('asset_migrate_batch_manage_files', array($save));
+    $batch['operations'][] = array('asset_migrate_batch_link_files', array());
+
+    if (!$nothumbs) {
+      $batch['operations'][] = array('asset_migrate_batch_create_image_thumbnails', array());
+    }
+  }
+
+  batch_set($batch);
+}
+
+/*
+ * ----
+ */
+
+function asset_migrate_batch_stage_file_list($source, &$context) {
+  if (!isset($context['sandbox']['progress'])) {
+    if (!is_dir($source)) {
+      throw new Exception(t('Source, @s, is not a valid directory.', array(
+        '@s' => (string) $source,
+      )));
+    }
+
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['limit']    = 10;
+    $context['sandbox']['total']    = 1;
+    $context['sandbox']['subdirs']  = array($source);
+    $context['sandbox']['currdir']  = array();
+
+    $context['results']['stage_count'] = 0;
+
+    db_truncate('asset_migrate_stage_files')->execute();
+  }
+
+  $sandbox = &$context['sandbox'];
+
+  if (!empty($sandbox['currdir'])) {
+    $count = _asset_migrate_batch_pop_staging_files($sandbox);
+    $context['results']['stage_count'] += $count;
+  } elseif (!empty($sandbox['subdirs'])) {
+    _asset_migrate_batch_pop_staging_directory($sandbox);
+  }
+
+  if (empty($sandbox['currdir']) && empty($sandbox['subdirs'])) {
+    $context['finished'] = 1;
+  }
+  else {
+    $context['finished'] = $sandbox['progress'] / $sandbox['total'];
+  }
+}
+
+function _asset_migrate_batch_pop_staging_directory(&$sandbox) {
+  $directory = array_shift($sandbox['subdirs']);
+
+  $sandbox['progress']++;
+
+  if (drupal_substr($directory, -1, 1) == '/') {
+    $path_base = $directory;
+  }
+  else {
+    $path_base = $directory . '/';
+  }
+
+  if ($handle = opendir($directory)) {
+    while (FALSE !== ($filename = readdir($handle))) {
+      if (in_array($filename, array('.', '..'))) {
+        continue;
+      }
+      if (is_dir($path_base . $filename)) {
+        $sandbox['subdirs'][] = $path_base . $filename;
+      }
+      else {
+        $sandbox['currdir'][$path_base][] = $filename;
+      }
+      $sandbox['total']++;
+    }
+    closedir($handle);
+  }
+}
+
+function _asset_migrate_batch_pop_staging_files(&$sandbox) {
+  $files = array();
+
+  $path_base = key($sandbox['currdir']);
+
+  while (count($files) <= $sandbox['limit'] && !empty($sandbox['currdir'][$path_base])) {
+    $files[] = $path_base . array_shift($sandbox['currdir'][$path_base]);
+    $sandbox['progress']++;
+  }
+
+  if (empty($sandbox['currdir'][$path_base])) {
+    unset($sandbox['currdir'][$path_base]);
+  }
+
+  // First, filter files that already exist in the database
+  if (!empty($files)) {
+    $query = db_select('file_managed', 'fm');
+    $query->fields('fm', array('uri'));
+    $query->condition('fm.uri', $files);
+    $result = $query->execute();
+    $existing = $result->fetchCol();
+    $files = array_diff($files, $existing);
+  }
+
+  // Next, store the existing files as already managed
+  if (!empty($existing)) {
+    $query = db_insert('asset_migrate_stage_files');
+    $query->fields(array('file_path', 'state'));
+    foreach ($existing as $file_path) {
+      $query->values(array(
+        'file_path' => $file_path,
+        'state'     => 'manage',
+      ));
+    }
+    $query->execute();
+  }
+
+  // Now, store the files
+  if (!empty($files)) {
+    $query = db_insert('asset_migrate_stage_files');
+    $query->fields(array('file_path', 'state'));
+    foreach ($files as $file_path) {
+      $query->values(array(
+        'file_path' => $file_path,
+        'state'     => 'stage',
+      ));
+    }
+    $query->execute();
+
+    return count($files);
+  }
+  return 0;
+}
+
+/*
+ * ----
+ */
+
+function asset_migrate_batch_manage_files($save, &$context) {
+  if (!isset($context['sandbox']['progress'])) {
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['limit']    = 10;
+    $context['sandbox']['total']    = db_select('asset_migrate_stage_files', 'sf')
+      ->condition('sf.state', 'stage')
+      ->countQuery()->execute()->fetchField();
+
+    $context['results']['manage_count'] = 0;
+  }
+  $sandbox = &$context['sandbox'];
+
+  $query = db_select('asset_migrate_stage_files', 'sf');
+  $query->fields('sf', array('file_path'));
+  $query->condition('sf.state', 'stage');
+  $query->range(0, $sandbox['limit']);
+
+  $result = $query->execute();
+
+  $paths    = array();
+  $invalids = array();
+  while (($file_path = $result->fetchField())) {
+
+    if (_asset_migrate_validate_file($file_path)) {
+      $file            = new stdClass();
+      $file->uid       = 0;
+      $file->filename  = drupal_basename($file_path);
+      $file->uri       = $file_path;
+      $file->filemime  = file_get_mimetype($file_path);
+      $file->size      = filesize($file_path);
+      $file->status    = FILE_STATUS_PERMANENT;
+      $file->timestamp = REQUEST_TIME;
+      if ($save) {
+        file_save($file); // @todo could do error warning on if saved or not
+        $context['results']['manage_count']++;
+        drupal_set_message(t('Saved file: @f', array('@f' => $file_path)));
+      }
+      $paths[] = $file_path;
+    }
+    else {
+      drupal_set_message(t('Invalid file: @f', array('@f' => $file_path)));
+      $invalids[] = $file_path;
+    }
+
+    $sandbox['progress']++;
+  }
+
+  if (!empty($paths)) {
+    db_update('asset_migrate_stage_files')
+      ->fields(array('state' => 'manage'))
+      ->condition('file_path', $paths)
+      ->condition('state', 'stage')
+      ->execute();
+  }
+
+  if (!empty($invalids)) {
+    db_update('asset_migrate_stage_files')
+      ->fields(array('state' => 'delete'))
+      ->condition('file_path', $invalids)
+      ->condition('state', 'stage')
+      ->execute();
+  }
+
+  if (!empty($sandbox['total'])) {
+    $context['finished'] = $sandbox['progress'] / $sandbox['total'];
+  }
+
+  if ($context['finished'] >= 1) {
+    db_delete('asset_migrate_stage_files')
+      ->condition('state', 'delete')
+      ->execute();
+  }
+}
+
+function _asset_migrate_validate_file($uri) {
+  $allowed_extensions = array( // @todo: this could be made configurable
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'tiff',
+    'bmp',
+  );
+
+  $regex = '/\.(' . implode('|', $allowed_extensions) . ')$/i';
+  if (!preg_match($regex, $uri)) {
+    return FALSE;
+  }
+  return TRUE;
+}
+
+/*
+ * ----
+ */
+
+function asset_migrate_batch_link_files(&$context) {
+  if (!isset($context['sandbox']['progress'])) {
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['limit']    = 10;
+    $context['sandbox']['total']    = db_select('asset_migrate_stage_files', 'sf')
+      ->condition('sf.state', 'manage')
+      ->countQuery()->execute()->fetchField();
+
+    $context['results']['link_count'] = 0;
+  }
+  $sandbox = &$context['sandbox'];
+
+  $query = db_select('asset_migrate_stage_files', 'sf');
+  $query->join('file_managed', 'fm', 'sf.file_path=fm.uri');
+  $query->fields('sf', array('file_path'));
+  $query->fields('fm', array('fid'));
+  $query->condition('sf.state', 'manage');
+  $query->range(0, $sandbox['limit']);
+
+  $result = $query->execute();
+
+  while (($row = $result->fetchAssoc())) {
+    $file_path = $row['file_path'];
+    $file_id   = $row['fid'];
+    $filename  = drupal_basename($file_path);
+    $matches   = array();
+    $node_ids  = array();
+
+    if (preg_match('/^([A-Z]+)_(\d+)/', $filename, $matches)) {
+      $query_link = db_select('field_data_field_item_num', 'itm');
+      $query_link->join('field_data_field_brand', 'bref', 'bref.entity_id=itm.entity_id');
+      $query_link->join('node', 'n', 'n.nid=bref.field_brand_target_id');
+      $query_link->join('asset_migrate_brand_aliases', 'ba', 'ba.name=n.title');
+      $query_link->fields('itm', array('entity_id'));
+      $query_link->condition('ba.alias', $matches[1]);
+      $query_link->condition('itm.field_item_num_value', '%' . $matches[2], 'LIKE'); // @todo could be regex via ->where()
+      $result_link = $query_link->execute();
+
+      while (($node_id = $result_link->fetchField())) {
+        $node_ids[$node_id] = $node_id;
+      }
+    }
+
+    if (!empty($node_ids)) {
+      $file = file_load($file_id);
+      $nodes = node_load_multiple($node_ids);
+
+      foreach ($nodes as $node_id => $node) {
+        if (
+          empty($node->field_primary_image[LANGUAGE_NONE][0])
+          || $node->field_primary_image[LANGUAGE_NONE][0]['fid'] != $file_id
+        ) {
+          $node->field_primary_image[LANGUAGE_NONE][0]['fid'] = $file_id;
+          node_save($node);
+          file_usage_add($file, 'file', 'node', $node_id);
+          $context['results']['link_count']++;
+        }
+      }
+    }
+
+    $sandbox['progress']++;
+    $file_paths[] = $file_path;
+  }
+
+  if (!empty($file_paths)) {
+    db_update('asset_migrate_stage_files')
+      ->fields(array('state' => 'link'))
+      ->condition('file_path', $file_paths)
+      ->condition('state', 'manage')
+      ->execute();
+  }
+
+  if (!empty($sandbox['total'])) {
+    $context['finished'] = $sandbox['progress'] / $sandbox['total'];
+  }
+}
+
+/*
+ * ----
+ */
+
+function asset_migrate_batch_create_image_thumbnails(&$context) {
+  if (!isset($context['sandbox']['progress'])) {
+    $context['sandbox']['styles']   = array('thumbnail');
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['limit']    = 1;
+    $context['sandbox']['total']    = db_select('asset_migrate_stage_files', 'sf')
+      ->condition('sf.state', 'link')
+      ->countQuery()->execute()->fetchField();
+
+    $context['results']['style_count'] = 0;
+  }
+  $sandbox = &$context['sandbox'];
+
+  $query = db_select('asset_migrate_stage_files', 'sf');
+  $query->fields('sf', array('file_path'));
+  $query->condition('sf.state', 'link');
+  $query->orderBy('sf.file_path');
+  $query->range(0, $sandbox['limit']);
+
+  $result = $query->execute();
+
+  $file_paths = array();
+  while (($file_path = $result->fetchField())) {
+    foreach ($sandbox['styles'] as $image_style_name) {
+      $url = image_style_url($image_style_name, $file_path);
+      $response = drupal_http_request($url);
+      if ($response->code != 200) {
+        $context['message'] = t('Failed to create: @f, code: @c', array('@f' => $url, '@c' => $response->code));
+        watchdog('assset_migrate', 'Failed to create: @f, code: @c', array('@f' => $url, '@c' => $response->code), WATCHDOG_WARNING);
+      }
+      else {
+        $context['message'] = t('Created: @f', array('@f' => $url));
+        $context['results']['style_count']++;
+      }
+    }
+
+    $sandbox['progress']++;
+    $file_paths[] = $file_path;
+  }
+
+  if (!empty($file_paths)) {
+    db_update('asset_migrate_stage_files')
+      ->fields(array('state' => 'style'))
+      ->condition('file_path', $file_paths)
+      ->condition('state', 'link')
+      ->execute();
+  }
+
+  if (!empty($sandbox['total'])) {
+    $context['finished'] = $sandbox['progress'] / $sandbox['total'];
+  }
+}
+
+/*
+ * ----
+ */
+
+function asset_migrate_batch_finished($success, $results, $operations = array()) {
+  if ($success) {
+    if (isset($results['stage_count'])) {
+      drupal_set_message(t('Staged @c file(s)', array('@c' => $results['stage_count'])));
+    }
+    if (isset($results['manage_count'])) {
+      drupal_set_message(t('Managed @c file(s)', array('@c' => $results['manage_count'])));
+    }
+    if (isset($results['link_count'])) {
+      drupal_set_message(t('Linked @c products(s)', array('@c' => $results['link_count'])));
+    }
+    if (isset($results['style_count'])) {
+      drupal_set_message(t('Image Styled @c products(s)', array('@c' => $results['link_count'])));
+    }
+  }
+  else {
+    // An error occurred.
+    // $operations contains the operations that remained unprocessed.
+    $error_operation = reset($operations);
+    $message = t('An error occurred while processing %error_operation with arguments: @arguments', array('%error_operation' => $error_operation[0], '@arguments' => print_r($error_operation[1], TRUE)));
+    drupal_set_message($message, 'error');
+  }
+}
+
+/*
+ * Deprecated code
+ *
+function asset_migrate_menu() {
+  $items = array();
+
+  //process page
+  $items["asset_migrate"] = array(
+    'title' => "Asset Migrate",
+    'description' => "",
+    'page callback' => 'asset_migrate_migrate',
+    'type' => MENU_CALLBACK,
+    'access callback' => true
+  );
+
+  $items["asset_migrate_test"] = array(
+    'title' => "Asset Migrate",
+    'description' => "",
+    'page callback' => 'asset_migrate_migrate_test',
+    'type' => MENU_CALLBACK,
+    'access callback' => true
+  );
+
+  return $items;
+}
+
+function asset_migrate_migrate_test() {
+
+  $file['file_name'] = "010485cc.jpg";
+  $fid = 17;
+
+  if(preg_match(('/([0-9]*)cc/'), $file['file_name'], $matches) ){
+    //$matches[1] - the east id
+
+    $query = db_select("digital_core_data_products")
+              ->fields("p", array('entity_id'));
+    $query->innerJoin("field_data_field_productsid", 'p', 'p.field_productsid_value = digital_core_data_products.productsid');
+    $query->condition("digital_core_data_products.east_product_id", $matches[1]);
+    $nid = $query->execute()->fetchField();
+
+    if($nid) {
+      //direct update the product for speed
+      digital_core_data_update_direct("node", "product_details", $nid, array("field_primary_image" => $fid));
+
+      $x = "";
+    }
+  }
+  else {
+   $x = "";
+  }
+}
+
+function asset_migrate_migrate() {
+
+  $directories = asset_migrate_crawl_directory("/Users/pbliss/Sites/virtual/www.unfi.dev/drupal/sites/all/modules/custom/asset_migrate/Images", "*.*");
+
+  //$i = 0;
+  foreach($directories as $filePath) {
+    //if($i < 10) {
+
+      if(basename($filePath) != 'Thumbs.db') {
+
+        $file_info = array();
+        $file_info['file_path'] = $filePath;
+        $file_info['file_name'] = basename($filePath);
+
+        //digital_core_assets_create_asset($file_info);
+
+        $operations[] = array("ag_process", array($file_info));
+      }
+   //}
+   //$i++;
+  }
+
+  batch_set(array(
+    'title' => t('Asset Migrate'),
+    'operations' => $operations,
+    'finished' => 'asset_migrate_process_finish', // Finished batch callback.
+  ));
+
+  batch_process('node/1');
+}
+
+function ag_process($file, $context) {
+
+  if($file['file_name'] == ".DS_Store") {
+    return;
+  }
+
+  $f = digital_core_assets_create_asset($file);
+
+  //$f = file_load(359);
+
+//  $fid = db_select("file_managed")
+//          ->fields("file_managed", array("fid"))
+//          ->condition("filename", $file['file_name'])
+//          ->execute()
+//          ->fetchField();
+
+
+
+  if(!$f) {
+    return "";
+  }
+
+  //$f = file_load($fid);
+
+  $pathdata = explode('/', $file['file_path']);
+
+  $pathdata = array_splice($pathdata, 13, count($pathdata) - 13);
+
+  if(count($pathdata) > 1) {
+
+    //remove the file from the list
+    unset($pathdata[count($pathdata) - 1]);
+
+    //check if the path exists
+    $tid = asset_migrate_get_term_id($pathdata, 0);
+
+    if($tid) {
+      //assign the asset to the category
+      $f->field_asset_category['und'][0]['tid'] = $tid;
+      file_save($f);
+    }
+  }
+
+  //relate the product to the image
+  //the eastid is the name of the file, drop off the ccw.jpg or the cc
+
+  //ccw = original
+  //cc = print
+   if(preg_match(('/([0-9]*)cc/'), $file['file_name'], $matches) ){
+    //$matches[1] - the east id
+
+    $query = db_select("digital_core_data_products")
+              ->fields("p", array('entity_id'));
+    $query->innerJoin("field_data_field_productsid", 'p', 'p.field_productsid_value = digital_core_data_products.productsid');
+    $query->condition("digital_core_data_products.east_product_id", $matches[1]);
+    $nid = $query->execute()->fetchField();
+
+    if($nid) {
+      //direct update the product for speed
+      digital_core_data_update_direct("node", "product_details", $nid, array("field_primary_image" => $f->fid), false);
+    }
+  }
+}
+
+function asset_migrate_get_term_id($term_list, $last_parent) {
+  try {
+  //work out the taxonomy tree from the path
+    foreach($term_list as $t) {
+      $term = taxonomy_get_term_by_name($t, 'categories');
+
+      if(is_array($term)) {
+        $term = array_shift($term);
+      }
+
+      if($term) {
+
+        $parent = db_select("taxonomy_term_hierarchy")
+          ->fields("taxonomy_term_hierarchy", array("parent"))
+          ->condition("tid", $term->tid)
+          ->execute()
+          ->fetchField();
+
+        $x = array_shift($term_list);
+
+        if(is_object($last_parent) && $parent != $last_parent->tid) {
+          $term = new stdClass();
+          $term->name = $t;
+          $term->parent = $last_parent->tid;
+          $term->vid = 7;
+          taxonomy_term_save($term);
+
+          return $term->tid;
+        }
+
+        if(count($term_list) > 0) {
+          return asset_migrate_get_term_id($term_list, $term);
+        }
+        else {
+          return $term->tid;
+        }
+      }
+      else {
+        //create the term and move on
+        $term = new stdClass();
+        $term->name = $t;
+        $term->parent = $last_parent->tid;
+        $term->vid = 7;
+        taxonomy_term_save($term);
+
+        unset($term_list[0]);
+
+        if(count($term_list) > 0) {
+          asset_migrate_get_term_id($term_list, $term);
+        }
+        else {
+          return $term->tid;
+        }
+      }
+      return false;
+    }
+  }
+  catch(Exception $ex) {
+    return false;
+  }
+}
+
+function asset_migrate_process_finish($success, $results, $operations) {
+  $x = "";
+}
+ */

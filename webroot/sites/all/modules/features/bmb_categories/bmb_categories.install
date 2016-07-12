@@ -1,0 +1,35 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function bmb_categories_install() {
+  db_update('taxonomy_vocabulary')
+    ->fields(array(
+      'name'         => 'Category',
+      'machine_name' => 'category',
+    ))
+    ->condition('machine_name', 'categories')
+    ->execute();
+
+  db_update('taxonomy_vocabulary')
+    ->fields(array(
+      'name'         => 'Web Category',
+      'machine_name' => 'web_category',
+    ))
+    ->condition('machine_name', 'web_categories')
+    ->execute();
+}
+
+/**
+ * Remove standalone sub taxonomies.
+ */
+function bmb_categories_update_7002() {
+  $query = db_select('taxonomy_vocabulary', 'tv');
+  $query->fields('tv', array('vid'));
+  $query->condition('tv.machine_name', array('bmb_sub_category', 'spins_sub_category'));
+  $result = $query->execute();
+  while (($vocab_id = $result->fetchField())) {
+    taxonomy_vocabulary_delete($vocab_id);
+  }
+}

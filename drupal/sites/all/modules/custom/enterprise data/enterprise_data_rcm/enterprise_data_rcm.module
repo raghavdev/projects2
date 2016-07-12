@@ -1,0 +1,525 @@
+<?php
+
+include_once 'enterprise_data_rcm.features.inc';
+
+/**
+ * Implements hook_menu().
+ *
+ */
+function enterprise_data_rcm_menu() {
+
+  $items = array();
+
+  $items['admin/enterprisedata/rcm/hierarchy/item/move'] = array(
+    'page callback' => 'enterprise_data_item_category_move',
+    'access arguments' => array('administer rcm hierarchy'),
+    //'page arguments' => array(6, 7),
+    'type' => MENU_CALLBACK
+  );
+
+  //autocomplete for item names
+  $items['admin/enterprisedata/rcm/hierarchy/item/autocomplete'] = array(
+    'title' => 'Item Title autocomplete',
+    'page callback' => 'enterprise_data_item_autocomplete',
+    'access arguments' => array('administer rcm hierarchy'),
+    'type' => MENU_CALLBACK
+  );
+
+  $items['admin/enterprisedata/rcm'] = array(
+    'title' => "RCM Admin",
+    'page callback' => 'system_admin_menu_block_page',
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+    'access arguments' => array('administer rcm hierarchy'),
+  );
+
+  // Create an administration block for the module and any submodules.
+  $items['admin/enterprisedata/rcm/hierarchy'] = array(
+    'type' => MENU_LOCAL_TASK,
+    'title' => 'RCM Hierachy',
+    'description' => 'RCM Hierarchy',
+    'page callback' => "drupal_get_form",
+    'access arguments' => array('administer rcm hierarchy'),
+    'page arguments' => array("enterprise_data_rcm_hierarchy_page_form"),
+    'access callback' => 'user_access',
+    'file' => 'includes/enterprise_data_rcm_hierarchy.inc',
+    'weight' => 0
+  );
+
+  $items['admin/enterprisedata/rcm/hierarchy/edit/%'] = array(
+    'type' => MENU_CALLBACK,
+    'title' => 'RCM Hierachy',
+    'description' => 'RCM Hierarchy',
+    'page callback' => "drupal_get_form",
+    'access arguments' => array('administer rcm hierarchy'),
+    'page arguments' => array("enterprise_data_rcm_hierarchy_edit_page_form", 5),
+    'access callback' => 'user_access',
+    'file' => 'includes/enterprise_data_rcm_hierarchy.inc',
+    'weight' => 0
+  );
+
+//   $items['admin/enterprisedata/rcm/items/all'] = array(
+//    'type' => MENU_DEFAULT_LOCAL_TASK,
+//    'title' => "All Items",
+//    //'page callback' => "enterprise_data_rcm_items_form",
+//    //'access callback' => true,
+//    //'file' => 'includes/enterprise_data_rcm_items.inc',
+//    'weight' => 0
+//  );
+
+  $items['admin/enterprisedata/rcm/hierarchy/data/%/%'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => "enterprise_data_rcm_hierarchy_generate_level",
+    'access callback' => true,
+    'file' => 'includes/enterprise_data_rcm_hierarchy.inc',
+    'page arguments' => array(5, 6),
+  );
+
+  $items['admin/enterprisedata/rcm/pending'] = array(
+    'type' => MENU_LOCAL_TASK,
+    'title' => t('Pending'),
+    'page callback' => "drupal_get_form",
+    'access callback' => 'user_access',
+    'page arguments' => array("enterprise_data_rcm_pending_form"),
+    'access arguments' => array('administer rcm hierarchy pending'),
+    'file' => 'includes/enterprise_data_rcm_pending.inc',
+    'weight' => 2
+  );
+
+
+  $items['admin/enterprisedata/rcm/item/edit/%'] = array(
+    'type' => MENU_CALLBACK,
+    'page callback' => "drupal_get_form",
+    'access callback' => 'user_access',
+    'page arguments' => array("enterprise_data_rcm_edit_form", 5),
+    'access arguments' => array('administer rcm hierarchy'),
+  );
+
+  return $items;
+}
+
+//facilitate the movement of items between categories in bulk
+//do this with the delete and move selected options
+function enterprise_data_item_category_move() {
+
+  if(array_key_exists("from", $_POST) && array_key_exists("to", $_POST) && array_key_exists("items", $_POST)) {
+
+    //swap the assignments
+    if($_POST['items'] == "all") {
+      //simple swap
+      db_update("field_data_field_rcm_hierarchy")
+        ->fields(array("field_rcm_hierarchy_target_id" => $_POST['to']))
+        ->condition("field_rcm_hierarchy_target_id", $_POST['from'])
+        ->execute();
+    }
+    else {
+      $items = explode(",", $_POST['items']);
+
+      foreach($items as $item) {
+        db_update("field_data_field_rcm_hierarchy")
+          ->fields(array("field_rcm_hierarchy_target_id" => $_POST['to']))
+          ->condition("entity_id", $item)
+          ->execute();
+      }
+    }
+  }
+}
+
+function enterprise_data_item_autocomplete($string) {
+
+  $matches = array();
+  $result = db_select('node')
+    ->fields('node', array('title', 'nid'))
+    ->condition('title', '%' . db_like($string) . '%', 'LIKE')
+    ->condition("type", "product_details")
+    ->execute();
+
+  // save the query to matches
+  foreach ($result as $row) {
+    $matches[$row->nid] = check_plain($row->title);
+  }
+
+  // Return the result to the form in json
+  drupal_json_output($matches);
+
+  exit();
+}
+
+//item edit dialog form
+function enterprise_data_rcm_edit_form($form, $state, $nid) {
+
+  module_load_include('inc', 'digital_core_data', 'digital_core_data_products');
+
+  $item = digital_core_data_products_read(array("nid" => $nid));
+
+  if($item['count'] > 0) {
+
+    $item = $item['results'][0];
+
+    $form = array();
+
+    $form['title'] = array(
+        '#markup' => "<div>{$item['title']}</div>"
+    );
+    if(array_key_exists('brand', $item)) {
+      $form['brand'] = array(
+        '#markup' => "<div>{$item['brand']['title']}</div>"
+      );
+    }
+    else {
+      $form['brand'] = array("#markup" => "");
+    }
+
+    $form['size'] = array(
+        "#markup" => $item['item_size']
+    );
+
+    $form['upc'] = array(
+        "#markup" => $item['upc']
+    );
+
+    $form['nid'] = array('#type' => 'hidden', '#value' => $nid);
+
+    $flavor_vocab = taxonomy_vocabulary_machine_name_load("flavor");
+
+    $form['flavor'] = array(
+      '#type' => 'textfield',
+      '#title' => 'Flavor',
+      '#default_value' => (array_key_exists("flavor", $item) ? $item['flavor'] : ""),
+      '#autocomplete_path' => 'taxonomy/autocomplete/field_flavor'
+    );
+
+    $type_vocab = taxonomy_vocabulary_machine_name_load("type");
+
+    $form['product_type'] = array(
+      '#type' => 'textfield',
+      '#title' => 'Type',
+      '#default_value' => (array_key_exists("item_type", $item) ? $item['item_type'] : ""),
+      '#autocomplete_path' => 'taxonomy/autocomplete/field_product_type'
+    );
+
+    $form_vocab = taxonomy_vocabulary_machine_name_load("form");
+
+    $form['form'] = array(
+      '#type' => 'textfield',
+      '#title' => 'Form',
+      '#default_value' => (array_key_exists("form", $item) ? $item['form'] : ""),
+      '#autocomplete_path' => 'taxonomy/autocomplete/field_form'
+    );
+
+    $ethnicity_vocab = taxonomy_vocabulary_machine_name_load("ethnicity");
+
+    $form['ethnicity'] = array(
+      '#type' => 'textfield',
+      '#title' => 'Ethnicity',
+      '#default_value' => (array_key_exists("ethnicity", $item) ? $item['ethnicity'] : ""),
+      '#autocomplete_path' => 'taxonomy/autocomplete/field_ethnicity'
+    );
+
+    $departments = array("", "None");
+    $departments = array_replace($departments, db_select("node")
+                    ->fields("node", array("nid", "title"))
+                    ->condition("type", "rcm_hierarchy")
+                    ->execute()
+                    ->fetchAllKeyed());
+
+    $form['rcm_hierarchy'] = array(
+       '#type' => 'select',
+       '#title' => t('RCM Department'),
+       '#options' => $departments,
+       '#default_value' => (array_key_exists("rcm_hierarchy", $item) ? $item['rcm_hierarchy'] : ""),
+    );
+
+    $form['save'] = array(
+        '#type' => 'submit',
+        '#value' => 'Save',
+        '#attributes' => array("id" => 'save-button')
+    );
+
+    $form['cancel'] = array(
+        '#type' => 'button',
+        '#value' => 'Cancel',
+        '#attributes' => array("id" => 'cancel-button')
+    );
+
+    //render the dialog content and then stop drupal from adding its menu stuff
+    //echo render($form);
+    //exit;
+
+    return $form;
+  }
+  return false;
+}
+
+function enterprise_data_rcm_edit_form_submit($form, &$form_state) {
+
+  $data = array(
+      "rcm_hierarchy" => $form_state['values']['rcm_hierarchy']
+  );
+
+  //convert the taxonomy terms into tid values
+  if($form_state['values']['flavor'] && $form_state['values']['flavor'] != "") {
+    $data['flavor'] = enterprise_data_rcm_get_term_ids($form_state['values']['flavor'], "flavor");
+  }
+
+  if($form_state['values']['form'] && $form_state['values']['form'] != "") {
+    $data['form'] = enterprise_data_rcm_get_term_ids($form_state['values']['form'], "form");
+  }
+
+  if($form_state['values']['product_type'] && $form_state['values']['product_type'] != "") {
+    $data['product_type'] = enterprise_data_rcm_get_term_ids($form_state['values']['product_type'], "type");
+  }
+
+  if($form_state['values']['ethnicity'] && $form_state['values']['ethnicity'] != "") {
+    $data['ethnicity'] = enterprise_data_rcm_get_term_ids($form_state['values']['ethnicity'], "ethnicity");
+  }
+
+  digital_core_data_products_update($form_state['values']['nid'], $data);
+}
+
+function enterprise_data_rcm_get_term_ids($values, $vocab) {
+
+  if(strpos($values, ",") === false) {
+    $data[0] = array($values);
+  }
+  else {
+    $data = explode(",", $values);
+  }
+
+  $term_data = array();
+  foreach($data as $t) {
+
+    //get the term
+    $term = taxonomy_get_term_by_name(trim($t), $vocab);
+
+    if($term) {
+      $term_data[] = array_shift(array_keys($term));
+    }
+  }
+
+  return $term_data;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function enterprise_data_rcm_permission() {
+  return array(
+    'administer rcm hierarchy' => array(
+      'title' => 'administer rcm hierarchy',
+    ),
+    'administer rcm hierarchy items' => array(
+      'title' => 'administer rcm hierarchy items',
+    ),
+    'administer rcm hierarchy pending' => array(
+      'title' => 'administer rcm hierarchy pending',
+    )
+  );
+}
+
+/**
+ * Implements hook_preprocess_views_view_table().
+ */
+function enterprise_data_rcm_preprocess_views_view_table(&$variables) {
+  $allowed_views = array('rcm_item_assignment');
+  if (in_array($variables['view']->name, $allowed_views)) {
+
+    $variables['header']['nothing_1'] = '<input type="checkbox" id="item-select-all" name="field_active[und]" value="all" class="form-checkbox item-selectcheck">';
+
+    foreach ($variables['rows'] as $key => &$row) {
+      $row['nothing_1'] = '<input type="checkbox" id="item-select" name="field_active[und]" value="'.$row['nothing_1'].'" class="form-checkbox item-selectcheck">';
+    }
+  }
+}
+
+/**
+ * Implements hook_preprocess_views_view_summary().
+ */
+function enterprise_data_rcm_preprocess_views_view_summary(&$variables) {
+  $allowed_views = array('rcm_hierarchy_items', 'rcm_hierarchy_unassigned');
+  $allowed_displays = array('rcm_items_glossary', 'rcm_hierarchy_unassigned_glossary');
+
+  if (
+    !empty($variables['view']->name)
+    && !empty($variables['view']->current_display)
+    && in_array($variables['view']->name, $allowed_views)
+    && in_array($variables['view']->current_display, $allowed_displays)
+  ) {
+    $old_keys = array();
+    $new_keys = array('&', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+      'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+      'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
+    $old_rows = $variables['rows'];
+    $new_rows = array();
+
+    foreach ($old_rows as $key => $row) {
+      if (isset($row->link)) {
+        $old_keys[$row->link] = $key;
+      }
+    }
+
+    foreach ($new_keys as $key => $char) {
+      $char = check_plain($char);
+      if (isset($old_keys[$char])) {
+        $new_rows[$key] = $old_rows[$old_keys[$char]];
+      }
+      else {
+        $new_rows[$key] = new StdClass();
+        $new_rows[$key]->title = $char;
+        $new_rows[$key]->field_field_master_case_upc = array();
+        $new_rows[$key]->field_field_fieldproductsid = array();
+        $new_rows[$key]->field_field_unit_weight = array();
+        $new_rows[$key]->num_records = 0;
+        $new_rows[$key]->link = $char;
+        $new_rows[$key]->count = 0;
+      }
+    }
+
+    $variables['rows'] = $new_rows;
+  }
+}
+
+function enterprise_data_rcm_views_query_alter(&$view, &$query) {
+
+  // Page Glossaries
+  /////////////////////////////////////////////////////////
+
+  $allowed_views = array('rcm_hierarchy_items', 'rcm_hierarchy_unassigned');
+  $allowed_displays = array('rcm_items_glossary', 'rcm_hierarchy_unassigned_glossary');
+  $fields = array(
+    'rcm_hierarchy_items' => array(
+      'truncated' => 'title_truncated',
+      'db_column' => 'title',
+    ),
+  );
+
+  if (
+    !empty($view->name)
+    && !empty($view->current_display)
+    && in_array($view->name, $allowed_views)
+  ) {
+    // Glossary character links
+    if (in_array($view->current_display, $allowed_displays)) {
+      // Replace field_short_brand_name_value_truncated so that we group all special characters
+      if (isset($query->fields[$fields[$view->name]['truncated']])) {
+        $substring = $query->fields[$fields[$view->name]['truncated']]['field'];
+        $query->fields[$fields[$view->name]['truncated']]['field'] = "(CASE WHEN " . $substring . " IN ('0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z') THEN " . $substring . " ELSE '&' END)";
+      }
+    }
+
+    // Page view
+    if (
+      strpos($view->current_display, '_page')
+      && !empty($view->args)
+      && $view->args[0] == '&'
+    ) {
+      // Replace condition when &
+      $placeholders = array_keys($query->where[0]['conditions'][0]['value']);
+      $query->where[0]['conditions'][0]['field'] = "SUBSTRING(" . $fields[$view->name]['db_column'] . ", 1, 1) NOT IN (" . $placeholders[0] . ")";
+      $query->where[0]['conditions'][0]['value'][$placeholders[0]] = array(
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+        'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z');
+    }
+  }
+}
+
+/*
+* hook_views_pre_view
+* @param type $view
+* @param type $display_id
+* @param type $args
+*/
+function enterprise_data_rcm_views_pre_view(&$view, &$display_id, &$args) {
+  if ($view->name == 'rcm_hierarchy_items' || $view->name == 'rcm_hierarchy_unassigned' || $view->name == "rcm_item_assignment") {
+    $filters = $view->display_handler->get_option('filters');
+
+    //pull up the current list of brands
+    $brands = db_select("node")
+                ->fields("node", array("title", 'nid'))
+                //->condition("type", "enterprise_brand")
+                ->condition("type", "brand")
+                ->execute()
+                ->fetchAll();
+
+    foreach($brands as $brand) {
+      $filters['field_enterprise_brand_target_id']['group_info']['group_items'][] = array("operator" => "=",
+                                                                                          "title" => $brand->title,
+                                                                                          "value" => array(
+                                                                                                            "max" => "",
+                                                                                                            "min" => "",
+                                                                                                            "value" => $brand->nid
+                                                                                          ));
+    }
+
+    $view->display_handler->override_option('filters', $filters);
+
+    //include the javascript for the dialog
+  }
+
+  if($view->name == "rcm_item_assignment") {
+    //add the contextual filter to the view
+    $path = current_path();
+
+    $path_pieces = explode("/", $path);
+
+    $args[] = $path_pieces[5];
+  }
+}
+
+/*
+ * Implements hook_form_alter
+ */
+function enterprise_data_rcm_form_alter(&$form, &$form_state, $form_id) {
+   switch ($form_id) {
+    case 'views_exposed_form': {
+      if ($form['#id'] == 'views-exposed-form-rcm-hierarchy-items-rcm-hierarchy-items-page') {
+        // Add a button
+        $form['assign_selected']['#type'] = 'button';
+        $form['assign_selected']['#value'] = t('Assign Selected');
+        $form['assign_selected']['#weight'] = -50;
+        $form['assign_selected']['#submit'] = array('my_module_button_handler');
+
+        drupal_add_library('system', 'ui.dialog');
+
+        $form['#attached']['js'] = array(
+          drupal_get_path('module', 'enterprise_data_rcm') . '/rcmEdit.js',
+          "misc/autocomplete.js"
+        );
+
+        $form['edit-dialog'] = array(
+            "#markup" => '<div id="dialog" title="Edit Item Details"><div id="dialog-content"></div></div>'
+        );
+      }
+      break;
+    }
+  }
+}
+
+//
+/*
+ * implements hook_node_presave($node)
+ *
+ */
+function enterprise_data_rcm_node_presave($node) {
+
+  //ensure that the level attached to the node is +1 of its parent
+  if($node->type == "rcm_hierarchy") {
+
+    $node->field_level['und'][0]['value'] = 1;
+
+    //if there is a parent
+    if(array_key_exists("und", $node->field_parent)) {
+      $parentlevel = db_select("field_data_field_level")
+                      ->fields("field_data_field_level", array("field_level_value"))
+                      ->condition("entity_id", $node->field_parent['und'][0]['target_id'])
+                      ->execute()
+                      ->fetchField();
+
+      if($parentlevel) {
+        $node->field_level['und'][0]['value'] = $parentlevel++;
+      }
+    }
+  }
+}
+

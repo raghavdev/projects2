@@ -1,0 +1,96 @@
+<?php
+
+function buw_hg_pricing_bulk_upload_wizard_get_asset_info () {
+
+  $options = array('pricing_type' => array(
+      '#type' => "select",
+      '#title' => "Pricing Type",
+      '#options' => array(
+        'etailer' => "ETailer Pricing",
+        'wholesale' => "Wholesale Pricing",
+      ),
+      '#default_value' => "etailer"
+    )
+  );
+
+  return array("hg_pricing" => array(
+      "options" => $options,
+      "type" => "Honest Green Pricing Data",
+      "uploader" => "file",
+      "analysis_callback" => false,
+      "process_callback" => "buw_hg_pricing_process_data"
+   ));
+}
+
+function buw_hg_pricing_process_data($data, $hasheader, $values) {
+
+  $operations = array();
+  $header = false;
+  foreach($data[0] as $row) {
+    //skip the header row
+    if ($hasheader && !$header) {
+      $header = true;
+      continue;
+    }
+
+    $operations[] = array("buw_hg_pricing_apply",
+        array($row, $values['pricing_type']));
+  }
+
+  batch_set(array(
+          'title' => t('Processing'),
+          'operations' => $operations,
+          'finished' => 'buw_hg_pricing_finished', // Finished batch callback.
+      )
+  );
+}
+
+function buw_hg_pricing_finished ($success, $results, $operations) {
+  if($success) {
+    drupal_set_message(t("Batch Processed Successfully"));
+  }
+  else {
+    drupal_set_message(t("Error Processing Batch"));
+  }
+
+  drupal_goto("bulk_upload");
+}
+
+function buw_hg_pricing_apply($product_data, $type) {
+
+  //they attached the check digit to the id, remove it
+  $id = substr($product_data[0], 0, strlen($product_data[0]) - 1);
+
+  $q = db_update("digital_core_data_productinventory_ext");
+
+  $f = array("srp" => ($product_data[14] != "" ? $product_data[14] : 0),
+        "promo_disc" => ($product_data[9] != "" ? $product_data[9] : 0));
+
+  if($type == "etailer") {
+      $f["price_after_disc"] = ($product_data[11] != "" ? $product_data[11] : 0);
+  }
+  else {
+    $f["whls_price_after_disc"] = ($product_data[11] != "" ? $product_data[11] : 0);
+  }
+
+  $q->fields($f);
+  $q->condition("east_product_id =>", $id)
+    ->execute();
+}
+//
+////Clean up any temp files
+//function buw_hg_pricing_cleanup($job_id) {
+//  //need to remove the excel file from the system
+//  $options = db_select("bulk_upload_wizard_jobs")
+//                ->condition("job_id", $job_id)
+//                ->fields("bulk_upload_wizard_jobs", array("job_record"))
+//                ->condition("record_type", "options")
+//                ->execute()
+//                ->fetchField();
+//
+//  $fid = unserialize($options);
+//
+//  $file = file_load($fid);
+//
+//  file_delete($file);
+//}

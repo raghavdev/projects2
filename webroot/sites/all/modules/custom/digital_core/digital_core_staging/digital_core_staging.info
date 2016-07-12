@@ -1,0 +1,8 @@
+name = Digital Core Staging
+description = Digital Core staging integration.
+package = Digital Core
+core = 7.x
+files[] = field_mapping.inc
+files[] = digital_core_staging_field_mapping.inc
+dependencies[] = digital_core
+dependencies[] = digital_core_data

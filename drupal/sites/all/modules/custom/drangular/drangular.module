@@ -1,0 +1,638 @@
+<?php
+
+/*
+ * TODO
+ *
+ * -Moving apps to the new location
+ * -Permissions
+ *
+ */
+
+
+/**
+ * Gets the path of an angular app.
+ *
+ * Adapted from the libraries module
+ *
+ * @param $name
+ *   The machine name of a library to return the path for.
+ * @param $base_path
+ *   Whether to prefix the resulting path with base_path().
+ *
+ * @return
+ *   The path to the specified library or FALSE if the library wasn't found.
+ *
+ * @ingroup libraries
+ */
+function drangular_get_path($name, $base_path = FALSE) {
+  $drangular_apps = &drupal_static(__FUNCTION__);
+
+  if (!isset($drangular_apps)) {
+    $drangular_apps = drangular_get_drangular_apps();
+  }
+
+  $path = ($base_path ? base_path() : '');
+  if (!isset($drangular_apps[$name])) {
+    return FALSE;
+  }
+  else {
+    $path .= $drangular_apps[$name];
+  }
+
+  return $path;
+}
+
+/**
+ * Returns an array of angular_apps directories.
+ *
+ * Returns an array of angular_apps directories from the all-sites directory
+ * (i.e. sites/all/angular_apps/), the profiles directory, and site-specific
+ * directory (i.e. sites/somesite/angular_apps/). The returned array will be keyed
+ * by the angular_app name. Site-specific angular_apps are prioritized over angular_apps
+ * in the default directories. That is, if a angular_app with the same name appears
+ * in both the site-wide directory and site-specific directory, only the
+ * site-specific version will be listed.
+ *
+ * Adapted from the libraries module
+ *
+ * @return
+ *   A list of angular_apps directories.
+ *
+ * @ingroup angular_apps
+ */
+function drangular_get_drangular_apps() {
+  $searchdir = array();
+  $profile = drupal_get_path('profile', drupal_get_profile());
+  $config = conf_path();
+
+  // Similar to 'modules' and 'themes' directories in the root directory,
+  // certain distributions may want to place libraries into a 'libraries'
+  // directory in Drupal's root directory.
+  $searchdir[] = 'angularjs_apps';
+
+  // Similar to 'modules' and 'themes' directories inside an installation
+  // profile, installation profiles may want to place libraries into a
+  // 'libraries' directory.
+  $searchdir[] = "$profile/angularjs_apps";
+
+  // Always search sites/all/libraries.
+  $searchdir[] = 'sites/all/angularjs_apps';
+
+  // Also search sites/<domain>/*.
+  $searchdir[] = "$config/angularjs_apps";
+
+  // Retrieve list of directories.
+  $directories = array();
+  $nomask = array('CVS');
+  foreach ($searchdir as $dir) {
+    if (is_dir($dir) && $handle = opendir($dir)) {
+      while (FALSE !== ($file = readdir($handle))) {
+        if (!in_array($file, $nomask) && $file[0] != '.') {
+          if (is_dir("$dir/$file")) {
+            $directories[$file] = "$dir/$file";
+          }
+        }
+      }
+      closedir($handle);
+    }
+  }
+
+  return $directories;
+}
+
+/**
+ * Implements hook_menu().
+ * Sets up the page where the app can be seen from
+ */
+function drangular_menu() {
+
+  //get all of the menu paths
+  $apps = drangular_get_apps("*");
+
+  $items = array();
+
+  //Administration of the drangular settings
+  $items["admin/config/development/drangular"] = array(
+    'title' => "Drangular Admin",
+    'description' => "Drangular settings",
+    'page callback' => 'drangular_admin_page',
+    'file' => 'admin.inc',
+    'access callback' => 'user_access',
+    'access arguments' => array('administer drangular'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items["admin/config/development/drangular/add"] = array(
+    'title' => "Drangular Add App",
+    'description' => "Add new Angular app definition",
+    'page callback' => 'drangular_add_page',
+    'file' => 'admin.inc',
+    'access callback' => 'user_access',
+    'access arguments' => array('add drangular app'),
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items["admin/config/development/drangular/edit/%"] = array(
+    'title' => "Drangular Edit App",
+    'description' => "Edit angular app definition",
+    'page arguments' => array(5),
+    'page callback' => 'drangular_edit_page',
+    'file' => 'admin.inc',
+    'access callback' => 'user_access',
+    'access arguments' => array('edit drangular app'),
+    'type' => MENU_CALLBACK,
+  );
+
+  //////
+  $items["admin/config/development/drangular/edit/%/paths/add"] = array(
+    'title' => "Add App Path",
+    'description' => "Add app path definitions",
+    'page arguments' => array(5),
+    'page callback' => 'drangular_edit_paths_add',
+    'file' => 'admin.inc',
+    'access callback' => 'user_access',
+    'access arguments' => array('add drangular app path'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items["admin/config/development/drangular/edit/%/paths/edit/%"] = array(
+    'title' => "Edit Path",
+    'description' => "Edit angular app definition",
+    'page arguments' => array(5, 8),
+    'page callback' => 'drangular_edit_path',
+    'file' => 'admin.inc',
+    'access callback' => 'user_access',
+    'access arguments' => array('edit drangular app path'),
+    'type' => MENU_CALLBACK,
+  );
+
+   $items["admin/config/development/drangular/edit/%/paths/delete/%"] = array(
+    'page arguments' => array(5, 8),
+    'page callback' => 'drangular_delete_path',
+    'file' => 'admin.inc',
+    'access callback' => 'user_access',
+    'access arguments' => array('delete drangular app path'),
+    'type' => MENU_CALLBACK,
+  );
+  //////////
+
+  $items["admin/config/development/drangular/clear/%"] = array(
+    'page arguments' => array(5),
+    'page callback' => 'drangular_clear_page',
+    'file' => 'admin.inc',
+    'access callback' => 'user_access',
+    'access arguments' => array('clear drangular cache'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items["admin/config/development/drangular/clear/%/%"] = array(
+    'page arguments' => array(5, 6),
+    'page callback' => 'drangular_clear_cache',
+    'file' => 'admin.inc',
+    'access callback' => 'user_access',
+    'access arguments' => array('clear drangular cache'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items["admin/config/development/drangular/edit-cache/%"] = array(
+    'page arguments' => array(5),
+    'page callback' => 'drangular_edit_cache_page',
+    'file' => 'admin.inc',
+    'access callback' => 'user_access',
+    'access arguments' => array('edit drangular cache'),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items["admin/config/development/drangular/active_toggle/%/%"] = array(
+    'page arguments' => array(5, 6),
+    'page callback' => 'drangular_toggle_status',
+    'access callback' => 'user_access',
+    'access arguments' => array('edit drangular app status'),
+    'type' => MENU_CALLBACK,
+  );
+
+  foreach($apps as $app) {
+    foreach($app->paths as $path) {
+      if($path->path != "" && $path->create_link == 1) {
+        $items[$path->path] = array(
+          'title' => $path->title,
+          'description' => $path->description,
+          'page callback' => 'drangular_page',
+          'access callback' => 'user_access',
+          'access arguments' => array($path->permissions),
+          'type' => MENU_NORMAL_ITEM,
+        );
+      }
+    }
+  }
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function drangular_permission() {
+  $permissions = array(
+    'administer drangular' =>  array(
+      'title' => t('Administer Drangular Admin'),
+      'restrict access' => TRUE,
+    ),
+    'add drangular app' =>  array(
+      'title' => t('Add Drangular App'),
+      'restrict access' => TRUE,
+    ),
+    'edit drangular app' =>  array(
+      'title' => t('Edit Drangular App'),
+      'restrict access' => TRUE,
+    ),
+    'delete drangular app' =>  array(
+      'title' => t('Delete Drangular App'),
+      'restrict access' => TRUE,
+    ),
+    'add drangular app path' =>  array(
+      'title' => t('Add Drangular app Path'),
+      'restrict access' => TRUE,
+    ),
+    'edit drangular app path' =>  array(
+      'title' => t('Edit drangular app Path'),
+      'restrict access' => TRUE,
+    ),
+    'delete drangular app path' =>  array(
+      'title' => t('Delete drangular app path'),
+      'restrict access' => TRUE,
+    ),
+    'clear drangular cache' =>  array(
+      'title' => t('Clear drangular App File List'),
+      'restrict access' => TRUE,
+    ),
+    'edit drangular cache' =>  array(
+      'title' => t('Edit drangular App File List'),
+      'restrict access' => TRUE,
+    ),
+    'edit drangular app status' => array(
+      'title' => t('Edit Drangular App status'),
+      'restrict_access' => TRUE,
+    )
+  );
+
+  $perms = db_select("drangular_apps_paths")
+            ->fields("drangular_apps_paths", array("permissions"))
+            ->execute()
+            ->fetchCol();
+
+  foreach($perms as $perm) {
+    $permissions[$perm] = array(
+      'title' => $perm,
+      'restrict_access' => TRUE
+    );
+  }
+
+  return $permissions;
+}
+
+//required for a page to appear in the menu, without it
+//acts like a MENU_CALLBACK
+function drangular_page() {
+  return '';
+}
+
+/**
+ * Implements hook_preprocess_page()
+ */
+function drangular_preprocess_page(&$vars) {
+
+  //get the apps that are valid for the current page
+  $apps = drangular_get_apps(current_path());
+
+  $basePath = url('', array('absolute' => TRUE));
+
+  //initialize each of the defined apps
+  foreach($apps as $app) {
+
+    //add the app path settings
+    $js_settings = array(
+      $app->app_name => array(
+        'modulePath' => $basePath . 'sites/all/angularjs_apps/' . $app->app_name . "/"
+      )
+    );
+
+    drupal_add_js($js_settings, 'setting');
+
+    //check the script cache, if its X age old, get a new list
+    $scripts = drangular_get_files($app, "scripts", "*.js");
+
+    if($scripts) {
+      foreach($scripts as $script) {
+        drupal_add_js($script, array("scope" => (isset($app->script_load_scope) ? $app->script_load_scope : "header")));
+      }
+    }
+
+    //add the css
+    $styles = drangular_get_files($app, "styles", "*.css");
+
+    if($styles) {
+      foreach($styles as $style) {
+        drupal_add_css($style);
+      }
+    }
+
+    //init angular
+    angularjs_init_application($app->app_name);
+
+    //set the template if it is used on this app for the current path
+    foreach($app->paths as $path) {
+      //if this is a single page app, there is a default template that we use
+      if($path->template != "" && $path->create_link == 1) {
+        if(current_path() == $path->path) {
+
+          //TEMP?? turn off caching for now
+          drupal_add_http_header('content-control', 'no-cache');
+
+          drupal_add_http_header("Cache-Control", "no-cache");
+
+          if($path->template == "default") {
+            $vars['theme_hook_suggestions'][0] = 'page__drangular__browse';
+          }
+          else {
+            $vars['theme_hook_suggestions'][0] = $path->template;
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_preprocess()
+ */
+function drangular_preprocess(&$variables, $hook) {
+
+  //TODO open up to attaching other places
+
+  //get the apps that are valid for the current page
+  $apps = drangular_get_apps(current_path());
+
+  foreach($apps as $app) {
+    $variables['attributes_array']['ng-app'] = $app->app_name;
+
+    //ie8 support
+    $variables['attributes_array']['id'] = "ng-app";
+  }
+}
+
+function drangular_get_apps($path, $app_name = null) {
+  //TODO should really enable an app that uses a certain path to be allowed on that page
+  //the path is a menu callback
+  //page is just saying that the app is loaded on that page
+  //may want to rethink this bit and combine them
+
+  //current_path()
+  //select * from drangular_apps_pages
+  //  inner join `drangular_apps` on drangular_apps_pages.app_name = drangular_apps.`app_name`
+  //  where drangular_apps_pages.`path` = "*" OR drangular_apps_pages.`page_path` = "";
+  //TODO determine how to handle the relation of current page to allowed page,
+  //strip the params from the url for the comparision
+  $query = db_select("drangular_apps", "da")
+            ->distinct();
+
+  if($path != "*") {
+    $query->condition(db_or()->condition("dp.path", "*")->condition("dp.path", "{$path}"));
+  }
+
+  if($app_name != null ) {
+    $query->condition("da.app_name", $app_name);
+  }
+
+  $query->leftJoin("drangular_apps_paths", "dp", "da.app_name = dp.app_name");
+  $query->fields("da", array());
+  $apps = $query->execute()
+          ->fetchAll();
+
+  $app_list = array();
+
+  if(count($apps) > 0) {
+    //get the paths attached to the apps
+    foreach($apps as $app) {
+      $app->paths = db_select("drangular_apps_paths", 'p')
+                      ->condition("app_name", $app->app_name)
+                      ->fields("p", array())
+                      ->execute()
+                      ->fetchAll();
+
+      $app_list[$app->app_name] = $app;
+    }
+  }
+
+  return $app_list;
+}
+
+/*
+ * Gets the list of scripts that are used by this app
+ * will cache the scripts list to the database to prevent excess disk IO and
+ * having to crawl the directory to find them
+ */
+function drangular_get_files($app, $type, $filter) {
+
+  if(is_object($app)) {
+    $app = get_object_vars($app);
+  }
+
+  return unserialize($app[$type . '_cache']);
+}
+
+function drangular_rebuild_cache($app_name, $type, $filter) {
+
+  $subfolder = db_select("drangular_apps")
+                    ->fields("drangular_apps", array($type . '_folder'))
+                    ->condition("app_name", $app_name)
+                    ->execute()
+                    ->fetchField();
+
+  //traverse the scripts folder find the js files and add them
+  $folder = drangular_get_path($app_name) . "/" . $subfolder;
+
+  $files = drangular_crawl_directory($folder, $filter);
+
+  //update the cache
+  db_update("drangular_apps")
+    ->fields(array($type . "_cache" => serialize($files)))
+    ->condition("app_name", $app_name)
+    ->execute();
+}
+
+function drangular_crawl_directory($directory, $filter) {
+  $files = array();
+
+  $entries = scandir($directory);
+  foreach($entries as $entry) {
+    if ($entry != "." && $entry != "..") {
+      //drangular_crawl_directory
+      if(is_dir($directory . "/" . $entry)) {
+        $files = array_merge($files, drangular_crawl_directory($directory . "/" . $entry, $filter));
+      }
+      else {
+        if(fnmatch($filter, $entry)) {
+          $files[] = $directory . "/" . $entry;
+        }
+      }
+    }
+  }
+
+  return $files;
+}
+
+/**
+ * Implements hook_theme_registry_alter()
+ * Expose the themes folder as a path to the template used for the anular app
+ */
+function drangular_theme_registry_alter(&$theme_registry) {
+  $module_path = drupal_get_path('module', 'drangular') . "/themes";
+
+  $theme_registry_copy = $theme_registry;
+  _theme_process_registry($theme_registry_copy, 'phptemplate', 'theme_engine', 'drangular_theme', $module_path);
+  $theme_registry += array_diff_key($theme_registry_copy, $theme_registry);
+  // A list of templates the module will provide te mplates for
+  $hooks = array('page');
+  foreach ($hooks as $h) {
+    // Add the key 'theme paths' if it doesn't exist in this theme's registry
+    if (!isset($theme_registry[$h]['theme paths'])) {
+      $theme_registry[$h]['theme paths'] = array();
+    }
+    //Shift this module's directory to the top of the theme path list
+    if(is_array($theme_registry[$h]['theme paths'])) {
+      $first_element = array_shift($theme_registry[$h]['theme paths']);
+      if ($first_element) {
+        array_unshift($theme_registry[$h]['theme paths'], $first_element, $module_path);
+      } else {
+        array_unshift($theme_registry[$h]['theme paths'], $module_path);
+      }
+    }
+  }
+}
+
+function drangular_theme($existing, $type, $theme, $path) {
+  $theme_hooks = array(
+    'drangular_admin_table' => array(
+      'render element' => 'form',
+      'file' => 'admin.inc'
+     ),
+    'drangular_admin_paths_table' => array(
+      'render element' => 'form',
+      'file' => 'admin.inc'
+     ),
+    'drangular_cache_table' => array(
+      'render element' => 'form',
+      'file' => 'admin.inc'
+     )
+  );
+
+  return $theme_hooks;
+}
+
+function drangular_clear_page($app_name) {
+
+  if (!isset($_GET['token']) || !drupal_valid_token($_GET['token'], "admin/config/development/drangular/clear/{$app_name}")) {
+    return MENU_ACCESS_DENIED;
+  }
+
+  drangular_clear_and_rebuild_cache($app_name, "styles");
+  drangular_clear_and_rebuild_cache($app_name, "scripts");
+
+  drupal_set_message(t("File List Cleared and Rebuit"));
+
+  drupal_goto("admin/config/development/drangular");
+}
+
+function drangular_clear_cache($app_name, $cache) {
+  drangular_clear_and_rebuild_cache($app_name, $cache);
+
+  drupal_set_message(t("{$cache} file list cleared and rebuit"));
+
+  drupal_goto("admin/config/development/drangular");
+}
+
+function drangular_clear_and_rebuild_cache($app_name, $cache) {
+  $query = db_update("drangular_apps");
+  $query->fields(array($cache . "_cache" => ""));
+  $query->condition("app_name", $app_name)->execute();
+
+  drangular_rebuild_cache($app_name, $cache, (strtolower($cache) == "styles" ? "*.css" : "*.js"));
+}
+
+function drangular_toggle_status($app_name, $status) {
+
+  if (!isset($_GET['token']) || !drupal_valid_token($_GET['token'], "admin/config/development/drangular/active_toggle/{$app_name}/{$status}")) {
+    return MENU_ACCESS_DENIED;
+  }
+
+  $app = db_select("drangular_apps")
+          ->fields("drangular_apps", array())
+          ->condition("app_name", $app_name)
+          ->execute()
+          ->fetchAll();
+
+  if($app) {
+    db_update("drangular_apps")
+      ->fields(array("active" => $status))
+      ->condition("app_name", $app_name)
+      ->execute();
+  }
+  else {
+    db_insert("drangular_apps")
+      ->fields(array("app_name" => $app_name,
+                     "active" => $status,
+                     "styles_cache" => "",
+                     "scripts_cache" => ""))
+      ->execute();
+  }
+
+  drupal_set_message(t("App status changed"));
+
+  drupal_goto("admin/config/development/drangular");
+}
+
+function drangular_add_to_cache($app_name, $cache, $script) {
+  $cache_data = db_select("drangular_apps")
+                  ->fields("drangular_apps", array($cache . "_cache"))
+                  ->condition("app_name", $app_name)
+                  ->execute()
+                  ->fetchField();
+
+  $cache_array = unserialize($cache_data);
+
+  $cache_array[] = $script;
+
+  $cache_data = serialize($cache_array);
+
+  db_update("drangular_apps")
+    ->fields(array($cache . "_cache" => $cache_data))
+    ->condition("app_name", $app_name)
+    ->execute();
+}
+
+function drangular_remove_cache($app_name, $type, $value) {
+
+  //load the cache
+  $cache = db_select("drangular_apps")
+                    ->condition("app_name", $app_name)
+                    ->fields("drangular_apps", array("{$type}_cache"))
+                    ->execute()
+                    ->fetchField();
+
+  $scripts = unserialize($cache);
+
+  //remove the value
+  if(in_array($value, $scripts)) {
+    unset($scripts[$value]);
+  }
+
+  $cache = serialize($scripts);
+
+  //save the cache
+  db_update("drangular_apps")
+    ->condition("app_name", $app_name)
+    ->fields(array("{$type}_cache" => $cache))
+    ->execute();
+
+}

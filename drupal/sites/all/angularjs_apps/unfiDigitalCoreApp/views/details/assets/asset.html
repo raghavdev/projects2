@@ -1,0 +1,60 @@
+<!-- Asset tab -->
+
+<div class="detail-main asset-detail columns twelve" ng-switch="record.type">
+    <!-- Left detail column -->
+    <section class="detail-main-left four columns">
+      <!-- Update image form -->
+      <form class="image-form image-form-update detail-meta">
+        <header>
+          <div class="image-form__image-wrapper">
+            <img ng-src="{{record.thumb_url}}" class="detail-image">
+          </div>
+          <div class="image-form__meta-wrapper">
+            <a class="button-download button-icon" href="/service/digitalcore/assets/{{record.fid}}">Download</a>
+            <a class="button-delete button-icon clickable" ng-click="modal('delete-asset-confirm')">Remove Asset</a>
+            <ul class="meta-wrapper__meta-data">
+              <li>{{ record.title }}</li>
+              <li ng-repeat="descriptor in meta[view].detail.tabs.asset.descriptors" ng-if="descriptor.type.indexOf(record.type) > -1">{{record | records: descriptor.field:descriptor}}</li>
+            </ul>
+          </div>
+        </header>
+        <section class="field-image-upload field-file-upload">
+          <label for="{{record[meta[view].identifier]}}_file">Replace Image File</label>
+          <input type="file" id="{{record[meta[view].identifier]}}_file" name="{{record[meta[view].identifier]}}_file" class="file-upload">
+          <md-button ng-disabled="uploadStarted" ng-click="uploadAsset({ident: record[meta[view].identifier], type: image_type, use_modal:true})" class="button-upload button-text-only">Upload</md-button>
+          <img class="upload-marquee" ng-show="uploadStarted" src="/sites/all/angularjs_apps/unfiDigitalCoreApp/images/marquee.gif">
+          <md-input-container>
+          <label>Title</label>
+          <input type="text" ng-model="record.title">
+          </md-input-container>
+          <md-input-container>
+            <label for="{{record[meta[view].identifier]}}_alt">Alt Text</label>
+            <input id="{{record[meta[view].identifier]}}_alt" type="text" placeholder="" ng-model="record.alt">
+          </md-input-container>
+          <md-checkbox ng-model="record.internal_only" type="checkbox" id="{{record[meta[view].identifier]}}_internal">Internal Only
+          </md-checkbox>
+        </section>
+<!--             <input ng-model="record.internal_only" type="checkbox" id="{{record[meta[view].identifier]}}_internal"><label for="{{record[meta[view].identifier]}}_internal">Internal Only</label> -->
+      </form>
+    </section>
+    <!-- Right detail column -->
+    <section class="detail-main-right eight columns">
+      <!-- File detail table -->
+      <section class="detail-data">
+        <div class="asset-detail-title">
+          <header>
+            <label>Asset Name</label>
+            <h1>{{record.name}}</h1>
+          </header>
+        </div>
+        <table class="detail-table">
+          <tbody>
+            <tr ng-repeat="descriptor in meta[view].detail.tabs.asset.descriptors" ng-if="descriptor.type.indexOf(record.type) > -1">
+              <th class="table-label label">{{descriptor.label}}</th>
+              <td class="table-data">{{record | records: descriptor.field:descriptor}}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </section>
+</div>

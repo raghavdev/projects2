@@ -1,0 +1,227 @@
+<?php
+/**
+ * @file
+ * Sudo Workflow module functions.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function sudo_workflow_menu() {
+  $items = array();
+
+  $items['admin/config/workflow/sudo_workflow'] = array(
+    'title' => 'Sudo Workflow',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sudo_workflow_admin_settings'),
+    'access arguments' => array('administer site configuration'),
+  );
+
+  return $items;
+}
+
+/**
+ * Form builder: Admin settings form.
+ */
+function sudo_workflow_admin_settings($form, &$form_state) {
+  $form['sudo_workflow_admin_uid'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Admin UID'),
+    '#description' => t('Set to the User id for the admin user used when forcing transitions.'),
+    '#default_value' => variable_get('sudo_workflow_admin_uid', 1),
+  );
+
+  return system_settings_form($form, $form_state);
+}
+
+/**
+ * Transition an entity to a given state.
+ *
+ * @param  string $entity_type
+ *         The entity type; e.g. 'node' or 'user'.
+ * @param  object $entity
+ *         The entity to transition workflow states.
+ * @param  string $field_name
+ *         The field name when using Workflow Field, if using Workflow Node,
+ *         pass an empty string.
+ * @param  int $target_sid
+ *         The target {workflow_states}.sid
+ * @param  string $comment
+ *         Optional. The comment to add to the WorkflowTransition
+ *
+ * @return int
+ *         The final state id. This may not be the target state id if a
+ *         transition failed for any reason.
+ * @throws Exception
+ *         May throw an Exception if the target state does not exist or some
+ *         other error occurs within workflow.
+ */
+function sudo_workflow_transition_to_state($entity_type, $entity, $field_name, $target_sid, $comment = '') {
+  global $user;
+  // Temporarily become the admin user
+  $old_user = $user;
+  $uid = variable_get('sudo_workflow_admin_uid', 1);
+  $user = user_load($uid);
+
+  try {
+    $old_sid = workflow_node_current_state($entity, $entity_type, $field_name);
+
+    $shortest_path = sudo_workflow_get_shortest_path($old_sid, $target_sid);
+    foreach ($shortest_path as $temp_sid) {
+      if ($temp_sid != $old_sid) {
+        $time = time();
+        $transition = new WorkflowTransition();
+        $transition->setValues($entity_type, $entity, $field_name, $old_sid, $temp_sid, $uid, $time, $comment);
+        $new_sid = workflow_execute_transition($entity_type, $entity, $field_name, $transition, TRUE);
+      }
+
+      $old_sid = workflow_node_current_state($entity, $entity_type, $field_name);
+    }
+  }
+  catch (Exception $e) {
+    // Make sure user is reset even if an exception is thrown.
+    $user = $old_user;
+    throw $e;
+  }
+
+  // Go back to the previous user.
+  $user = $old_user;
+
+  return isset($new_sid) ? $new_sid : $old_sid;
+}
+
+/**
+ * Get a graph of the Workflow's states.
+ *
+ * @param  int $wid
+ *         The {workflows}.wid
+ *
+ * @return array
+ *         A multi-dimensional array representing a Graph of states:
+ *
+ *         array(
+ *           [state_sid_1] => array(
+ *             [target_sid_2] => 1,
+ *             [target_sid_3] => 1,
+ *           ),
+ *           [state_sid_2] => array(
+ *             [target_sid_3] => 1,
+ *           ),
+ *         );
+ */
+function sudo_workflow_get_workflow_state_graph($wid) {
+  $graph = array();
+
+  $query = db_select('workflow_states', 's');
+  $query->innerJoin('workflow_transitions', 't', 's.sid = t.sid AND t.sid != t.target_sid');
+  $query->addField('t', 'target_sid');
+  $result = $query
+    ->fields('s', array('sid'))
+    ->condition('s.wid', $wid)
+    ->orderBy('s.weight')
+    ->orderBy('s.state')
+    ->execute();
+  foreach ($result as $state) {
+    $graph[$state->sid][$state->target_sid] = 1;
+  }
+
+  return $graph;
+}
+
+/**
+ * Find the shortest path between two states.
+ *
+ * @param  int $old_sid
+ *         The current {workflow_states}.sid
+ * @param  int $target_sid
+ *         The target {workflow_states}.sid
+ *
+ * @return array
+ *         An array of state ids to go through to get to the target state.
+ * @throws Exception
+ *         May throw an exception if the states do not exist or do not belong to
+ *         the same workflow.
+ */
+function sudo_workflow_get_shortest_path($old_sid, $target_sid) {
+  $old_state = workflow_state_load_single($old_sid);
+  $target_state = workflow_state_load_single($target_sid);
+  if (!$old_state) {
+    throw new Exception(t('Unknown workflow state: @id', array(
+      '@id' => $old_sid,
+    )));
+  }
+  if (!$target_state) {
+    throw new Exception(t('Unknown workflow state: @id', array(
+      '@id' => $target_sid,
+    )));
+  }
+  if ($old_state->wid != $target_state->wid) {
+   throw new Exception(t('Original (@original) and target (@target) workflow states are not in the same workflow (@original_workflow and @target_workflow).', array(
+      '@original' => $old_sid,
+      '@target' => $target_sid,
+      '@original_workflow' => $old_state->wid,
+      '@target_workflow' => $target_state->wid,
+    )));
+  }
+
+  $start = $old_sid;
+  $end = $target_sid;
+
+  $graph = sudo_workflow_get_workflow_state_graph($old_state->wid);
+
+  list($d, $p) = sudo_workflow_dijkstra($graph, $old_sid, $target_sid);
+  $path = array();
+  while (TRUE) {
+    $path[] = $end;
+    if ($end == $start) {
+      break;
+    }
+    $end = $p[$end];
+  }
+
+  return array_reverse($path);
+}
+
+/**
+ * Dijkstra algorithm.
+ *
+ * @see http://en.wikipedia.org/wiki/Dijkstra's_algorithm#Pseudocode
+ */
+function sudo_workflow_dijkstra(array $g, $start, $end = NULL) {
+  $dist[$start] = 0; // dist[source]
+  $unvisited = array(); // Q
+  foreach ($g as $vertex => $children) {
+    if ($vertex != $start) {
+      $dist[$vertex] = PHP_INT_MAX; // Initial distance set to infinity
+      $previous[$vertex] = NULL;
+    }
+    $unvisited[] = $vertex;
+  }
+
+  while (count($unvisited)) {
+    $minDist = PHP_INT_MAX;
+    $minVertex = NULL;
+    // $minVertex = u; vertex in Q with min dist[u]
+    foreach ($unvisited as $vertex) {
+      if ($dist[$vertex] < $minDist) {
+        $minVertex = $vertex;
+        $minDist = $dist[$vertex];
+      }
+    }
+
+    if ($minVertex === NULL) {
+      break;
+    }
+    $key = array_search($minVertex, $unvisited);
+    unset($unvisited[$key]); // remove u from Q
+
+    foreach ($g[$minVertex] as $child => $len) { // $child = v
+        $alt = $dist[$minVertex] + $len;
+        if ($alt < $dist[$child]) {
+          $dist[$child] = $alt;
+          $previous[$child] = $minVertex;
+        }
+    }
+  }
+  return array($dist, $previous);
+}

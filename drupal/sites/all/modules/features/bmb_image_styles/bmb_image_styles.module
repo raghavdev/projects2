@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Blue Marble - Image Styles feature.
+ */
+
+include_once 'bmb_image_styles.features.inc';

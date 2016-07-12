@@ -1,0 +1,26 @@
+// ----------------
+// Detail pane (right pane)
+// ----------------
+
+#pane-detail {
+  z-index: 2;
+  position: relative;
+  padding: 0;
+  background: $p50;
+  > form {
+    height: 100%;
+  }
+}
+.pane-detail-column.pane-column {
+  .pane-content {
+    // Override default scroll padding
+    &.scroll-full-height {
+      @include scroll-full-height($spacing-large, $spacing-xlarge, $pane-header-height);
+    }
+  }
+  .detail-header {
+    ul {
+      @extend %ul-reset;
+    }
+  }
+}

@@ -1,0 +1,12 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function hg_migrate_schema() {
+  $schema = array();
+
+  
+
+  return $schema;
+}

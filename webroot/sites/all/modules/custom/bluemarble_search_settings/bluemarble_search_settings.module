@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Blue Marble Search Settings feature.
+ */
+
+include_once 'bluemarble_search_settings.features.inc';

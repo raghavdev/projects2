@@ -1,0 +1,17 @@
+<fieldset class="{{section_meta.class}}">
+  <legend>{{section_meta.legend}}</legend>
+  <ul class="detail-list">
+    <li ng-repeat="row in record[section_meta.record] track by $index">
+      <ul class="detail-list-inner">
+        <li ng-repeat="section in section_meta.sections">
+          <span class="list-icon">+</span>
+          <md-input-container>
+          <label>{{section.label}}</label>
+          <input ng-change="invalidate('row-{{$parent.$index}}', '{{section.record}}')" ng-model="record[section.record][$parent.$index]" id="row-{{$parent.$index}}" record="{{section.record}}" type="text">
+          </md-input-container>
+        </li>
+      </ul>
+    </li>
+    <md-button ng-click="addrow(section_meta)" class="md-raised">Add Row</md-button>
+  </ul>
+</fieldset>

@@ -1,0 +1,47 @@
+// ----------------
+// Listing pane thumbnail view mode
+// ----------------
+
+.thumb-view {
+}
+.thumb-view__result {
+  float: left;
+  height: 250px;
+  height: ($spacing-small * 2) + (20px * 6) + (125px); // TODO: it'd be awesome if we could convert rem to px
+  width: 175px;
+  margin: $spacing-small;
+  padding: $spacing-xsmall;
+  cursor: pointer;
+  font-size: $font-size-xsmall;
+  line-height: $line-height-small;
+  border: solid 1px $g300;
+  position: relative;
+  &.selected {
+    @include box-shadow($p50 0 0 $spacing-xsmall 4px);
+  }
+  ul {
+    @extend %ul-reset;
+  }
+  .thumb-view__result-thumb {
+    text-align: center;
+    img {
+      max-height: 125px;
+      max-width: 125px;
+    }
+  }
+  .thumb-view__result-title {
+    font-size: $font-size-small;
+    font-weight: bold;
+    max-height: $line-height-small * 3;
+    overflow: hidden;
+  }
+  &-brand {
+    word-break: break-all;
+    max-height: $line-height-small;
+    overflow: hidden;
+  }
+  &-activity_state {
+    top: $spacing-xsmall;
+    left: $spacing-xsmall;
+  }
+}

@@ -1,0 +1,121 @@
+.edit-categories-btn {
+  margin-top: $spacing-xsmall;
+  margin: $spacing-xsmall;
+  position: relative;
+  display: block;
+  top: 7px;
+  left: 55%;
+  z-index: 2;
+  height: 30px;
+}
+#search-clear {
+  @include position-relative(-32px, 12px);
+  @extend %align-right;
+  float: right;
+  cursor: pointer;
+  z-index: 30;
+  width: 91px;
+  a, a:link, a:hover, a:visited, a:active, a:focus {
+    color: $g600;
+    text-decoration: none;
+  }
+}
+.filter-pane__filter-wrapper .clear-toggle.clear-search-toggle {
+  top: 4px;
+  right: -10px;
+  float: right;
+}
+
+.filter-field {
+  margin: 20px;
+  position: relative;
+
+  label {
+    font-size: 14px;
+    font-weight: normal;
+    color: $white70;
+    margin-bottom: 2px;
+  }
+}
+
+.filter-field-multiselect {
+  .button-close {
+    float: right;
+  }
+}
+
+.filter-search {
+  margin-top: 10px;
+}
+
+.action-pane {
+  height: 100%;
+  /* Fix bottom of scroll */
+  padding-bottom: 175px; /* This is the Create Button + Filter tabs heights + column padding +  filters bottom margin */
+}
+
+.create-product-button {
+  .button-create {
+    width: 24px;
+    height: 24px;
+    position: relative;
+    top: 5px;
+    left: 10px;
+  }
+  button {
+    /* Remove normal button styles */
+    border: none;
+    outline: none;
+    box-shadow: none;
+
+    display: block;
+    height: 64px;
+    width: 90%;
+    padding: 16px;
+    margin: auto;
+    font-size: 18px;
+    font-weight: bold;
+    color: $white;
+    border-bottom: solid 1px $p50;
+    opacity: 0.8;
+
+    &:hover,
+    &:active {
+      opacity: 1.0;
+    }
+  }
+}
+
+.save-messages {
+  position: relative;
+  font-size: 14px;
+  margin: 1em;
+  font-weight: bold;
+
+  /* Save failed */
+  .autosave-state-3 {
+    color: $color-error;
+    display: block;
+    border: solid 1px $color-error;
+    border-radius: 5px;
+    padding: 10px;
+    background-color: $white;
+    z-index: 2;
+  }
+
+  md-progress-circular {
+    display: inline-block;
+    position: absolute;
+    top: -14px;
+  }
+}
+
+.workflow-error {
+  color: $color-error;
+  font-size: 14px;
+
+  ul, ol {
+    list-style-type: initial;
+    list-style-position: inside;
+  }
+}

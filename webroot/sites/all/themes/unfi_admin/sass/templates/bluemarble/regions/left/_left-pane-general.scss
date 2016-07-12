@@ -1,0 +1,58 @@
+// ----------------
+// Action pane (left pane)
+// ----------------
+
+#pane-action {
+  background: $p500;
+  border-right: solid 1px $g700;
+  bottom: 0;
+  color: $white;
+  left: 0;
+  padding-bottom: $spacing-small;
+  position: absolute;
+  top: 0;
+  @include transition(transform .25s ease-in-out);
+
+  .filters-closed & {
+    @include transform(translate3d(-100%, 0, 0));
+  }
+
+  .filter-close {
+    cursor: pointer;
+    margin-top: 20px;
+    padding: 5px;
+    display: inline;
+    float: right;
+  }
+
+  // MD Tabs
+  .md-header {
+    border-bottom: 1px solid lighten($p700, 10%);
+  }
+
+  .button-upload {
+    margin: $spacing-medium $spacing-large;
+  }
+
+  // Tablet view
+  @include breakpoint($breakpoint-navigation-max) {
+    .filters-open & {
+      width: 41%;
+    }
+  }
+
+  @include breakpoint($breakpoint-tablet-max) {
+    .filters-open & {
+      width: 100%;
+    }
+  }
+}
+
+.pane-action__header.pane-header {
+  background: none;
+}
+
+.pane-action__content.pane-content {
+  height: 100%;
+  overflow-y: auto;
+}

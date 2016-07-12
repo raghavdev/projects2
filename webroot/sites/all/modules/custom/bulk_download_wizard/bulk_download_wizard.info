@@ -1,0 +1,6 @@
+name = Bulk Download Wizard
+description = Download Bulk files through a stepped interface.
+package = Bulk Download Wizard
+core = 7.x
+dependencies[] = phpexcel
+dependencies[] = digital_core_data

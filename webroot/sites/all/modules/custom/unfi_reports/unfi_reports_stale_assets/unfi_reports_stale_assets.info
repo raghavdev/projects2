@@ -1,0 +1,6 @@
+name = UNFI Reports : Stale Assets
+description = Report for tracking assets that may be in need of an update.
+package = UNFI
+core = 7.x
+
+dependencies[] = unfi_reports

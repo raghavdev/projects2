@@ -1,0 +1,208 @@
+<?php
+/**
+ * @file
+ * Code for the Digital Core feature.
+ */
+
+include_once 'digital_core.features.inc';
+
+/**
+ * @file
+ * Primarily Drupal hooks and global functions to support the Digital Core.
+ */
+
+
+/**
+ * Implementation of hook_services_authentication_info().
+ */
+function digital_core_services_authentication_info() {
+  return array(
+    'title'             => t('Digital Core authentication'),
+    'description'       => t("Setup to allow for Session OR OAuth authentication"),
+    'authenticate_call' => 'digital_core_service_auth',
+  );
+}
+
+//will allow for either version of the auth
+//session or oauth, since they wont play together by themself, doing it this way
+function digital_core_service_auth($auth_settings, $controller, $args) {
+  global $user;
+
+  $server_name = variable_get("auth_server_name", "auth_server");
+
+  // Verify access. The request will be aborted if verification fails.
+  $server = oauth2_server_load($server_name);
+  $oauth2_server = oauth2_server_start($server);
+  $response = new OAuth2\Response();
+  $token = $oauth2_server->getAccessTokenData(OAuth2\Request::createFromGlobals(), $response, "");
+
+  // If the resource owner is known, switch the current user to it.
+  if ($token['user_id']) {
+    //oauth token validation
+    $user = user_load_by_name($token['user_id']);
+  }
+  else if(array_key_exists("auth", $_GET)) {
+    //since we dont know the user that they are trying to use, we have to
+    //pull up a list of all of the secret keys
+
+    //but since very few will use this there will be only a few to loop
+    $keys = db_select("field_data_field_secret_key")
+      ->fields("field_data_field_secret_key", array("entity_id", "field_secret_key_value"))
+      ->execute()
+      ->fetchAll();
+
+    foreach($keys as $key) {
+      //run through and create the hash
+      $url = $_SERVER['HTTP_HOST'] . $_SERVER['REDIRECT_URL'] .  "|" . $key->field_secret_key_value;
+      $hash = md5($url);
+
+      if($hash == $_GET['auth']) {
+        $user = user_load($key->entity_id);
+        break;
+      }
+    }
+  }
+  else {
+
+    //sesison based
+
+    $original_user = services_get_server_info('original_user');
+    if ($original_user->uid == 0) {
+      return;
+    }
+
+    if ($controller['callback'] != '_user_resource_get_token') {
+      $non_safe_method_called = !in_array($_SERVER['REQUEST_METHOD'], array('GET', 'HEAD', 'OPTIONS', 'TRACE'));
+      $csrf_token_invalid = !isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !drupal_valid_token($_SERVER['HTTP_X_CSRF_TOKEN'], 'services');
+      if ($non_safe_method_called && $csrf_token_invalid) {
+        return t('CSRF validation failed');
+      }
+    }
+
+    if ($user->uid != $original_user->uid) {
+      $user = $original_user;
+    }
+  }
+}
+
+/**
+ * Implements hook_menu().
+ *
+ */
+function digital_core_menu() {
+ $items = array();
+
+  // Create an administration block for the module and any submodules.
+  $items['service/digitalcore/collection/download/%'] = array(
+    'page callback' => 'digital_core_download_collection',
+    'access arguments' => array('download collection'),
+    'page arguments' => array(4),
+    'access callback' => 'user_access',
+    'file' => 'digital_core_download_collection.inc',
+    'file path' => drupal_get_path('module', 'digital_core'),
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function digital_core_permission() {
+  return array(
+    'download collection' =>  array(
+      'title' => t('Download Collection'),
+      'restrict access' => TRUE,
+    ),
+    'access digital core product tab' =>  array(
+      'title' => t('access digital core product tab'),
+      'restrict access' => TRUE,
+    ),
+    'access digital core cmp tab' =>  array(
+      'title' => t('access digital core cmp tab'),
+      'restrict access' => TRUE,
+    ),
+    'access digital core marketing tab' =>  array(
+      'title' => t('access digital core marketing tab'),
+      'restrict access' => TRUE,
+    ),
+    'access digital core images tab' =>  array(
+      'title' => t('access digital core images tab'),
+      'restrict access' => TRUE,
+    ),
+    'access digital core descriptions tab' =>  array(
+      'title' => t('access digital core descriptions tab'),
+      'restrict access' => TRUE,
+    ),
+    'access digital core nutritional tab' =>  array(
+      'title' => t('access digital core nutritional tab'),
+      'restrict access' => TRUE,
+    ),
+    'access digital core other tab' =>  array(
+      'title' => t('access digital core other tab'),
+      'restrict access' => TRUE,
+    ),
+    'access digital core specs tab' =>  array(
+      'title' => t('access digital core specs tab'),
+      'restrict access' => TRUE,
+    ),
+    'access digital core ecomm tab' =>  array(
+      'title' => t('access digital core ecomm tab'),
+      'restrict access' => TRUE,
+    ),
+    'access digital core asset tab' =>  array(
+      'title' => t('access digital core asset tab'),
+      'restrict access' => TRUE,
+    ),
+    'access digital core assets additional information tab' =>  array(
+      'title' => t('access digital core assets additional information tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit digital core products product tab' =>  array(
+      'title' => t('edit digital core products product tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit digital core products cmp tab' =>  array(
+      'title' => t('edit digital core products cmp tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit digital core products marketing tab' =>  array(
+      'title' => t('edit digital core products marketing tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit digital core products images tab' =>  array(
+      'title' => t('edit digital core products images tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit digital core products descriptions tab' =>  array(
+      'title' => t('edit digital core products descriptions tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit digital core products nutritional tab' =>  array(
+      'title' => t('edit digital core products nutritional tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit digital core products other tab' =>  array(
+      'title' => t('edit digital core products other tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit digital core products specs tab' =>  array(
+      'title' => t('edit digital core products specs tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit digital core products ecommercefeed tab' =>  array(
+      'title' => t('edit digital core products ecommercefeed tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit digital core assets asset tab' =>  array(
+      'title' => t('edit digital core products asset tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit digital core assets asset-information tab' =>  array(
+      'title' => t('edit digital core products asset-information tab'),
+      'restrict access' => TRUE,
+    )
+  );
+}
+

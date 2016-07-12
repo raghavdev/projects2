@@ -1,0 +1,26 @@
+// ----------------
+// Action pane (left pane)
+// ----------------
+
+#pane-action {
+  height: 100%;
+  padding-bottom: $spacing-small;
+  background: $p700;
+  color: $white;
+  // MD Tabs
+  .md-header {
+    border-bottom: 1px solid lighten($p700, 10%);
+  }
+  .button-upload {
+    margin: $spacing-medium $spacing-large;
+  }
+}
+.pane-action__header.pane-header {
+  background: none;
+  @extend %border-bottom-thin;
+  border-color: $g400;
+}
+.pane-action__content.pane-content {
+  height: 100%;
+  overflow-y: auto;
+}

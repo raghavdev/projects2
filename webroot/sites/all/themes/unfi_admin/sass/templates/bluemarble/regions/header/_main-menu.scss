@@ -1,0 +1,84 @@
+button.menu {
+  #header & {
+    background: #4F90C1 url(/sites/all/themes/unfi_admin/images/menu-icon.png) no-repeat center center;
+    bottom: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 55px;
+    @include border-radius(0);
+    @include breakpoint($breakpoint-navigation) {
+      display: none;
+    }
+  }
+}
+
+#bmb-main-menu {
+  @extend %ul-reset;
+  font-size: $font-size-small;
+  font-weight: bold;
+  line-height: $line-height-small;
+  text-transform: uppercase;
+
+  a {
+    color: $color-action-secondary;
+    display: block;
+    padding: calc((#{$logo-height} - #{$line-height-small}) / 2);
+    text-align: center;
+
+    &:hover {
+      color: $white;
+      background-color: $color-action-secondary-hover;
+    }
+  }
+
+  a.active {
+    color: $white;
+    background-color: $color-action-secondary;
+  }
+
+  // Mobile Menu
+  @include breakpoint($breakpoint-navigation-max) {
+    background: $color-action-secondary;
+    height: 0;
+    left: 0;
+    overflow: hidden;
+    position: fixed;
+    right: 0;
+    top: $header-height-phone;
+    @include transition(height 0.2s linear);
+
+    &.open {
+      height: 100%;
+    }
+
+    a {
+      color: $white;
+    }
+
+    li {
+      + li {
+        border-top: 1px solid $white;
+      }
+    }
+  }
+
+  // Desktop Menu
+  @include breakpoint($breakpoint-navigation) {
+    float: right;
+
+    li {
+      float: left;
+      border-left: solid 1px $p100;
+
+      &.last {
+        border-right: solid 1px $p100;
+      }
+    }
+
+    a {
+      display: inline-block;
+      min-width: 158px; // TODO: I'd prefer some sort of arbitrary ratio based on the font-size
+    }
+  }
+}

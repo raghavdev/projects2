@@ -1,0 +1,18 @@
+<div class="{{field_name}} form-field form-field-workflow">
+  <md-input-container>
+    <label ng-show="section_meta.label">{{section_meta.label}}<span ng-show="{{section_meta.required}}"> *</span>
+      <div ng-if="section_meta.marketing_icons != ''" class="marketing-icons">
+        <i ng-repeat="icon in section_meta.marketing_icons" class="{{icon}}"></i>
+      </div>
+    </label>
+    <select name="{{field_name}}" ng-required="section_meta.required" id="{{section_meta.record}}" ng-disabled="disabled" ng-model="state.selected" ng-if="!nopermission" drupal-validate>
+      <option ng-repeat="(key, option) in getAllowedStates()" value="{{key}}" ng-selected="state.selected==key">{{option}}</option>
+    </select>
+    <span ng-if="nopermission" ng-repeat="(key, value) in record[field_name]">{{value}}{{$last ? '' : ', '}}</span>
+    <div ng-messages="recordForm[field_name].$error">
+      <div ng-message="required">This is required!</div>
+    </div>
+    <div class="workflow-error" ng-if="drupal_messages">{{drupal_messages}}</div>
+  </md-input-container>
+  <div class="field-description" ng-bind-html="section_meta.description"></div>
+</div>

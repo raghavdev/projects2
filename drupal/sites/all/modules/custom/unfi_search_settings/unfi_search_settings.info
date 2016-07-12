@@ -1,0 +1,6 @@
+name = UNFI Search API Settings
+description = Module to allow search_api settings to be set in settings.php. See <a href='http://wunderkraut.com/blog/search-api-server-in-settingsphp/2013-02-22'>http://wunderkraut.com/blog/search-api-server-in-settingsphp/2013-02-22</a>
+core = 7.x
+package = Search
+dependencies[] = search_api
+dependencies[] = search_api_solr

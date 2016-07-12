@@ -1,0 +1,109 @@
+// Trying to deprecate these. Please don't use them.
+
+%word-wrap {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+%border-box {
+  @include box-sizing(border-box); // Requires "compass/css3/box-sizing"
+}
+
+%content-box {
+  @include box-sizing(content-box); // Requires "compass/css3/box-sizing"
+}
+
+//////// Colors //////////////////////
+// Borders
+%no-border {
+  border: 0px;
+}
+
+%border-thin {
+  border: 1px solid;
+}
+
+%border-bottom-thin {
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+}
+
+%border-top-thin {
+  border-top-width: 1px;
+  border-top-style: solid;
+}
+
+%border-right-thin {
+  border-right-width: 1px;
+  border-right-style: solid;
+}
+
+%border-left-thin {
+  border-left-width: 1px;
+  border-left-style: solid;
+}
+
+%border-medium {
+  border: 3px solid;
+}
+
+%border-top-medium {
+  border-top-width: 3px;
+  border-top-style: solid;
+}
+
+%border-bottom-medium {
+  border-bottom-width: 3px;
+  border-bottom-style: solid;
+}
+
+%border-thick {
+  border: 6px solid;
+}
+
+%border-top-thick {
+  border-top-width: 6px;
+  border-top-style: solid;
+}
+
+%border-bottom-thick {
+  border-bottom-width: 6px;
+  border-bottom-style: solid;
+}
+
+//////// Typography & Text //////////
+%align-right {
+  text-align: right;
+}
+
+%align-left {
+  text-align: left;
+}
+
+%align-center {
+  text-align: center;
+}
+
+%normal-font {
+  font-weight: normal;
+}
+
+%bold-font {
+  font-weight: bold;
+}
+
+%italic-font {
+  font-style: italic;
+}
+
+%underline-text {
+  text-decoration: underline;
+}
+
+%uppercase {
+  text-transform: uppercase;
+}
+
+%capitalize {
+  text-transform: capitalize;
+}

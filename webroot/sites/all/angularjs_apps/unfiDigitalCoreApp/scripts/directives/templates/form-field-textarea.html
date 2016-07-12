@@ -1,0 +1,16 @@
+<div class="{{field_name}} form-field form-field-textarea">
+  <div ng-if="section_meta.marketing_icons != ''" class="marketing-icons">
+    <i ng-repeat="icon in section_meta.marketing_icons" class="{{icon}}"></i>
+  </div>
+  <label>{{section_meta.label}}</label>
+  <section>
+    <textarea name="{{field_name}}" ng-required="{{section_meta.required}}" value="{{record[field_name]}}" ng-model="record[field_name]" ng-model-options="{debounce:500,allowInvalid:true}" ng-maxlength="{{section_meta.config.settings.max_length}}" ng-disabled="nopermission" drupal-validate></textarea>
+    <span class="char-count" ng-if="section_meta.config.settings.max_length">{{record[field_name].length || 0}} of {{section_meta.config.settings.max_length}}</span>
+  </section>
+  <div ng-messages="recordForm[field_name].$error">
+    <div ng-message="required">This is required!</div>
+    <div ng-message="maxlength">Exceeds {{section_meta.config.settings.max_length}}</div>
+    <div ng-message="drupal">{{drupal_messages}}</div>
+  </div>
+  <div class="field-description" ng-bind-html="section_meta.description"></div>
+</div>

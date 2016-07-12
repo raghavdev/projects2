@@ -1,0 +1,268 @@
+// ----------------
+// FORMS/INPUTS
+// ----------------
+
+//
+// Input active/focus
+//
+
+input[type="color"]:focus, input[type="color"]:active,
+input[type="date"]:focus, input[type="date"]:active,
+input[type="datetime"]:focus, input[type="datetime"]:active,
+input[type="datetime-local"]:focus, input[type="datetime-local"]:active,
+input[type="email"]:focus, input[type="email"]:active, input[type="file"]:focus,
+input[type="file"]:active, input[type="month"]:focus, input[type="month"]:active,
+input[type="number"]:focus, input[type="number"]:active, input[type="password"]:focus,
+input[type="password"]:active, input[type="range"]:focus, input[type="range"]:active,
+input[type="search"]:focus, input[type="search"]:active, input[type="tel"]:focus,
+input[type="tel"]:active,
+input[type="time"]:focus, input[type="time"]:active, input[type="url"]:focus,
+input[type="url"]:active, input[type="week"]:focus, input[type="week"]:active,
+select:focus, select:active {
+  background: none;
+  border-color: inherit;
+}
+
+//
+// Text inputs
+//
+
+input[type="text"] {
+  margin-bottom: $spacing-medium;
+}
+input[type="text"]:focus,
+input[type="text"]:active {
+  background: none;
+  border-color: none;
+}
+
+//
+// Text areas
+//
+
+textarea, textarea:focus, textarea:active {
+  width: 100%;
+  min-height: 100px;
+  max-width: 100%;
+  color: $a600;
+  background: $white;
+  border: 1px solid $color-action-secondary;
+  padding: .5em;
+}
+
+//
+// Selects
+//
+select {
+  background: none;
+  border-color: inherit;
+  margin-top: 7px;
+}
+
+//
+// Lists inside forms
+//
+
+form {
+  ul, ol {
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 0;
+    list-style-type: none;
+  }
+}
+
+//
+// Radios/Checkboxes
+//
+
+input[type="radio"],
+input[type="checkbox"] {
+  // Reset font for labels used next to radios & checkboxes
+  & + label {
+    margin-left: $spacing-xsmall;
+    font-size: inherit;
+    color: inherit;
+  }
+}
+
+//
+// File upload
+//
+
+.file-uploader {
+  div, input, button {
+    margin-bottom: 5px;
+  }
+}
+
+input[type="file"] {
+  font-style: italic;
+}
+
+// ----------------
+// ANGULAR MD SPECIFIC
+// ----------------
+
+//
+// Angular MD text input
+//
+
+md-input-container {
+  & + md-input-container {
+    margin-top: calc(#{$spacing-medium} * 2);
+  }
+  input, input[type="text"] {
+    margin-bottom: 0;
+  }
+  // Default theme
+  &.md-default-theme {
+    .md-input {
+      -webkit-flex: none;
+      -ms-flex: none;
+      -moz-flex: none;
+      flex: none;
+      height: 30px;
+      padding: 0;
+      color: $a600;
+      border-color: $a600;
+      font-size: $font-size-small;
+    }
+  }
+  [ng-messages] {
+    color: $color-error;
+    margin-bottom: 16px;
+  }
+  // Dark theme (for use on dark background)
+  &.dark-theme {
+    .md-input {
+      color: $white;
+    }
+  }
+  .md-label, label {
+    padding-left: 0;
+  }
+  .field-description {
+    order: 4;
+  }
+}
+// Text input focused/active/has value
+md-input-container.md-default-theme:not(.md-input-invalid).md-input-focused .md-input {
+  border-color: $color-action-primary;
+}
+md-input-container.md-default-theme:not(.md-input-invalid).md-input-focused label,
+md-input-container.md-input-has-value .md-label,
+md-input-container.md-input-has-value label {
+  color: $a900;
+}
+
+//
+// Angular MD Radio/Checkbox inputs
+//
+
+md-radio-group,
+md-checkbox-group {
+  outline: none;
+  border: none;
+}
+md-radio-group md-radio-button:first-child {
+  margin-top: 0;
+}
+md-radio-button,
+md-checkbox {
+  height: $md-checkbox-height;
+  margin: $spacing-medium $spacing-medium $spacing-medium 0;
+  .md-label, label {
+    font-size: $font-size-base;
+    border: none;
+  }
+  // focus
+  &:focus {
+    .md-icon {
+      @include box-shadow($p50 0 0 $spacing-xsmall 4px);
+    }
+  }
+}
+// Radio/checkbox after text input
+md-input-container + md-radio-button,
+md-input-container + md-checkbox {
+  margin-top: $spacing-large + $spacing-small;
+}
+md-checkbox.md-default-theme .md-icon,
+md-radio-button.md-default-theme .md-off {
+  border-color: $color-action-secondary;
+}
+.md-switch-thumb .md-off,
+md-radio-button .md-off,
+md-checkbox .md-icon {
+  border-width: 1px;
+}
+// Focused/Active
+md-radio-button.md-default-theme.md-checked .md-off {
+  border-color: $color-action-primary;
+}
+md-radio-button.md-default-theme .md-on,
+md-checkbox.md-default-theme.md-checked .md-icon {
+  background: $color-action-primary;
+}
+// Dark theme
+md-radio-button,
+md-checkbox {
+  &.dark-theme {
+    .md-label {
+      color: $white;
+    }
+  }
+}
+
+//
+// Angular MD Select input
+//
+
+md-select {
+  margin: 0;
+}
+.md-select-menu-container.md-active md-select-menu > * {
+  opacity: .9;
+}
+md-select-menu.md-default-theme md-option[selected],
+md-select-menu.md-default-theme md-option[selected]:focus,
+md-select-menu.md-default-theme md-option[selected]:active {
+  background-color: $color-action-primary-selected;
+}
+md-option {
+  height: 30px;
+}
+.md-select-label,
+.md-placeholder {
+  padding-top: 0;
+  .md-select-icon:after {
+    color: $color-action-primary;
+  }
+}
+
+//
+// Drupal-ish form fields
+//
+
+.form-field {
+  .char-count {
+    float: right;
+    display: block;
+    font-size: $font-size-xsmall;
+  }
+
+  padding-bottom: $spacing-medium;
+  border-bottom: solid 1px $a200;
+}
+
+#ui-datepicker-div {
+  *,
+  *:after,
+  *:before {
+    @include box-sizing(content-box);
+  }
+  &.month-picker .ui-datepicker-calendar {
+    display: none;
+  }
+}

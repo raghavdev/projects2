@@ -1,0 +1,16 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function bmb_buyers_install() {
+  db_update('taxonomy_vocabulary')
+    ->fields(array(
+      'name'         => 'Buyer',
+      'machine_name' => 'buyer',
+    ))
+    ->condition('machine_name', 'buyers')
+    ->execute();
+
+  field_delete_field('field_macola_id');
+}

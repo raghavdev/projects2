@@ -1,0 +1,64 @@
+// ----------------
+// Listing pane thumbnail view mode
+// ----------------
+
+.thumb-view {
+  @extend %ul-reset;
+  padding: $spacing-medium;
+  margin-right: -#{$spacing-medium};
+}
+.thumb-view__result {
+  float: left;
+  height: 200px;
+  width: 127px;
+  margin-right: $spacing-medium;
+  cursor: pointer;
+  &.selected {
+    @extend %bold-font;
+    .result-thumb__thumb-container {
+      @include box-shadow($color-action-primary-selected 0 0 12px 4px);
+    }
+    img {
+      border-color: $a100;
+    }
+  }
+  ul {
+    @extend %ul-reset;
+  }
+  .thumb-view__result-thumb {
+    position: relative;
+    display: block;
+    margin: 0;
+    margin-bottom: $spacing-medium;
+    md-checkbox {
+      position: absolute;
+      margin-left: $spacing-medium;
+      bottom: -3px;
+      .md-container {
+        background: $white;
+      }
+    }
+  }
+  .result-thumb__thumb-container {
+    display: table-cell;
+    height: 127px;
+    width: 127px;
+    vertical-align: middle;
+    @extend %border-thin;
+    border-color: #ccc;
+    img {
+      margin: 0;
+      max-width: 125px;
+      max-height: 125px;
+      display: block;
+      margin: auto;
+    }
+  }
+  .result-thumb__result-title {
+    overflow: hidden;
+  }
+  .result-thumb__result-ein {
+    font-size: $font-size-small;
+    color: $font-color-light;
+  }
+}

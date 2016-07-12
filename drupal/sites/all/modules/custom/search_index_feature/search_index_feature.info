@@ -1,0 +1,10 @@
+name = Search Index Feature
+description = Feature to support the search API, solr, and indexes.
+core = 7.x
+package = Features
+dependencies[] = digital_core
+dependencies[] = entity
+dependencies[] = search_api
+features[features_api][] = api:2
+features[search_api_index][] = asset_index
+features[search_api_index][] = default_node_index

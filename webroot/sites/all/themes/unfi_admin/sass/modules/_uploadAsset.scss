@@ -1,0 +1,43 @@
+.upload-asset {
+  ul li {
+    display: inline;
+  }
+ legend {
+    @extend %bold-font;
+  }
+  textarea {
+    height: 80px;
+  }
+  .filter-rows-wrapper {
+    max-height: 200px;
+  }
+  .filter {
+    padding-right: 25px;
+  }
+  .description textarea {
+    height: 140px;
+  }
+
+}
+
+.upload-marquee {
+  margin: 0px;
+  @include position-relative(3px, 5px);
+}
+
+#angular-view-wrapper .upload-asset .columns {
+  padding: 0;
+}
+
+.upload-content {
+  margin-left: 0px;
+}
+
+.upload-asset-button {
+  display: inline;
+}
+
+.uploader {
+  float: left;
+}
+

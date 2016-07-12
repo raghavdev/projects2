@@ -1,0 +1,28 @@
+<div class="{{field_name}} file-uploader form-field form-field-file">
+  <div ng-if="section_meta.marketing_icons != ''" class="marketing-icons">
+    <i ng-repeat="icon in section_meta.marketing_icons" class="{{icon}}"></i>
+  </div>
+  <label>{{section_meta.label}}<span ng-show="{{section_meta.required}}"> *</span></label>
+  <div ng-if="multivalued">
+    <div ng-repeat="(delta, file) in record[field_name]">
+      <div ng-show="file">Current: <a href="{{file.url}}" target="_blank">{{file.filename}}</a></div>
+      <div ng-show="file">Uploaded by: {{file.uploaded_by}}</div>
+      <md-button ng-show="file" ng-click="removeFile($event, delta)">Remove</md-button>
+    </div>
+  </div>
+  <div ng-if="!multivalued">
+    <div ng-show="record[field_name]">Current: <a href="{{record[field_name].url}}" target="_blank">{{record[field_name].filename}}</a></div>
+    <div ng-show="record[field_name]">Uploaded by: {{record[field_name].uploaded_by}}</div>
+    <md-button ng-show="record[field_name]" ng-click="removeFile($event)">Remove</md-button>
+  </div>
+  <md-progress-circular ng-show=" buttonText === 'Uploading' " md-mode="indeterminate" md-diameter="15"></md-progress-circular>
+  <div layout="column" ng-hide="nopermission">
+    <input type="file" id="{{field_name}}-file" name="{{field_name}}" class="file-upload">
+    <button ng-click="uploadFile()">{{buttonText}}</button>
+  </div>
+  <div ng-messages="recordForm[field_name].$error">
+    <div ng-message="required">This is required!</div>
+    <div ng-message="drupal">{{drupal_messages}}</div>
+  </div>
+  <div class="field-description" ng-bind-html="section_meta.description"></div>
+</div>

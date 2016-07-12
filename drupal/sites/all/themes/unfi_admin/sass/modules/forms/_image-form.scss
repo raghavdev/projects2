@@ -1,0 +1,50 @@
+// ----------------
+// Image upload/update field
+// ----------------
+
+.image-form {
+  header {
+    max-width: 200px;
+    margin-bottom: $spacing-medium;
+    background: white;
+    border: 1px solid $p100;
+  }
+  .image-form__image-wrapper {
+    border-bottom: 1px solid $p100;
+    &.default-image {
+      background: #EDEDED;
+    }
+    .detail-image {
+      display: block;
+      max-width: 200px;
+      margin: 0 auto;
+    }
+  }
+  .image-form__meta-wrapper {
+    position: relative;
+    padding: $spacing-medium;
+  }
+  .meta-wrapper__meta-data {
+    margin-top: $spacing-small;
+    font-size: $font-size-small;
+    color: $font-color-light;
+    li:first-child {
+      font-size: $font-size-base;
+      color: $font-color-header;
+    }
+  }
+  .button-icon {
+    margin-right: $spacing-medium;
+  }
+  .button-upload {
+    margin-top: $spacing-small;
+  }
+  .upload-marquee + md-input-container {
+    margin-top: calc(#{$spacing-medium} * 2);
+  }
+  // Download select filter styled as icon
+  .field-image-style-select.button-icon.button-download  {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+}

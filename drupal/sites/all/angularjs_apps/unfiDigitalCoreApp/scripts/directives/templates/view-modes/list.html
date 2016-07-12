@@ -1,0 +1,12 @@
+<div class="list-view__result list-view__result--{{ ($index % 2 === 0) ? 'even' : 'odd'}} {{listingSelected(r)}}" ng-repeat="r in records" ng-click="loadRecord(r)">
+  <span class="list-view__result-activity_state activity-state-{{r.activity_state}}"></span>
+  <ul class="list-view__result-fields">
+      <li class="list-view__result-title">{{r.title}}</li>
+      <li class="list-view__result-item_size">{{r.item_size}} {{r.item_size_uom}}</li>
+      <li class="list-view__result-upc">{{r.upc}}</li>
+      <li class="list-view__result-bmb_category"><span ng-repeat="(key, value) in r.category">{{value}}{{$last ? '' : ', '}}</span></li>
+      <li class="list-view__result-brand"><span ng-repeat="(key, value) in r.brand">{{value}}{{$last ? '' : ', '}}</span></li>
+  </ul>
+</div>
+
+<div ng-show="!hasRecords">{{noRecordsText}}</div>

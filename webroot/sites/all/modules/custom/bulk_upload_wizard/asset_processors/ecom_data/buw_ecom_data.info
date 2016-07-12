@@ -1,0 +1,5 @@
+core = "7.x"
+description = "Bulk Upload Ecommerce Data"
+name = "buw_ecom_data"
+package = "Bulk Upload Wizard"
+php = "5.2.4"

@@ -1,0 +1,162 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ *
+ */
+function enterprise_data_menu() {
+
+  $items = array();
+
+  // Create an administration block for the module and any submodules.
+  $items['admin/config/enterprisedata'] = array(
+    'title' => 'Enterprise Data',
+    'description' => 'Enterprise data interface.',
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => array('access administration pages'),
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  );
+
+  $items['admin/config/enterprisedata/polling'] = array(
+    'title' => t('Enterprise Data Polling'),
+    'page callback' => "drupal_get_form",
+    'page arguments' => array("enterprise_data_admin_form"),
+    //'access callback' => 'user_access',
+    'access callback' => true,
+    //'access arguments' => array('administer enterprise data polling'),
+    'file' => 'enterprise_data_polling.inc',
+  );
+
+  $items['service/enterprisedata/sync/%'] = array(
+    'page callback' => 'enterprise_data_polling_run_task',
+    'access arguments' => array('run enterprise data task'),
+    'page arguments' => array(4),
+    'access callback' => 'user_access',
+    'file' => 'enterprise_data_polling.inc',
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+function enterprise_data_theme($existing, $type, $theme, $path) {
+
+  $theme_hooks = array(
+    'enterprise_data_table' => array(
+      'render element' => 'form',
+     )
+  );
+
+  return $theme_hooks;
+}
+
+/**
+* Implements hook_views_api().
+*/
+function enterprise_data_views_api() {
+  return array(
+    'api' => 3,
+    'path' => drupal_get_path('module', 'enterprise_data'),
+  );
+}
+
+/**
+ * Implements hook_views_data()
+*/
+function enterprise_data_views_data() {
+  $data = array();
+
+  $data['enterprise_data_poll_log']['table'] = array(
+    'group' => t("Content"),
+    'title' => t("Enterprise Data Polling Log"),
+  );
+
+  // Advertise this table as a possible base table
+  $data['enterprise_data_poll_log']['table']['base'] = array(
+    'field' => 'polling_id',
+    'title' => t('Enterprise Polling Log'),
+    'weight' => -10,
+  );
+
+  $data['enterprise_data_poll_log']['start'] = array(
+    'title' => t('start'),
+    'help' => t('Start of the polling job'), // The help that appears on the UI,
+    // Information for displaying the field
+    'field' => array(
+      'handler' => 'views_handler_field_date',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_date'
+    ),
+  );
+
+  $data['enterprise_data_poll_log']['finish'] = array(
+    'title' => t('finish'),
+    'help' => t('Start of the polling job'), // The help that appears on the UI,
+    // Information for displaying the field
+    'field' => array(
+      'handler' => 'views_handler_field_date',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_date'
+    ),
+  );
+
+  $data['enterprise_data_poll_log']['task'] = array(
+    'title' => t('task'),
+    'help' => t('Task of the polling job'), // The help that appears on the UI,
+    // Information for displaying the field
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_equality',
+    ),
+  );
+  $data['enterprise_data_poll_log']['message'] = array(
+    'title' => t('message'),
+    'help' => t('Any messages from the polling job'), // The help that appears on the UI,
+    // Information for displaying the field
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    )
+  );
+  $data['enterprise_data_poll_log']['DataExtractSid'] = array(
+    'title' => t('Data Extract SID'),
+    'help' => t('Data Extract Unique ID'), // The help that appears on the UI,
+    // Information for displaying the field
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    )
+  );
+
+  $data['enterprise_data_poll_log']['JobExecSid'] = array(
+    'title' => t('Job Exec Sid'),
+    'help' => t('Job Execute Unique ID'), // The help that appears on the UI,
+    // Information for displaying the field
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    )
+  );
+  $data['enterprise_data_poll_log']['status'] = array(
+    'title' => t('Status'),
+    'help' => t('Status of the task flag'), // The help that appears on the UI,
+    // Information for displaying the field
+    'field' => array(
+      'handler' => 'views_handler_field',
+      'click sortable' => TRUE,
+    ),
+    'filter' => array(
+      'handler' => 'views_handler_filter_equality',
+    ),
+  );
+
+  return $data;
+}

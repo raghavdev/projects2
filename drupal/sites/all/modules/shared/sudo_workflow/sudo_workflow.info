@@ -1,0 +1,16 @@
+name = Sudo Workflow
+description = Provides some extra functions for developers to use to get Workflow
+to do what they want.
+package = Workflow
+core = 7.x
+configure = admin/config/workflow/sudo_workflow
+
+dependencies[] = workflow
+
+; Information added by ToadHub packaging script on 2015-06-12
+version = "7.x-1.0"
+core = "7.x"
+project = "sudo_workflow"
+project status url = "http://toadhub.metaltoad.com/project-updates"
+datestamp = "1434125704"
+

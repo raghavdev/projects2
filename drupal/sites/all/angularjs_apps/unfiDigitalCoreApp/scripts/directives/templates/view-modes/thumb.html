@@ -1,0 +1,15 @@
+<div class="thumb-view__result {{listingSelected(r)}} clearfix" ng-repeat="r in records" ng-click="loadRecord(r)">
+  <span class="thumb-view__result-activity_state activity-state-{{r.activity_state}}"></span>
+  <ul class="thumb-view__result-fields">
+    <li class="thumb-view__result-thumb">
+      <img ng-src="{{r.thumb_url}}" alt="thumbnail">
+    </li>
+    <li class="thumb-view__result-title">{{r.title}}</li>
+    <li class="thumb-view__result-item_size">{{r.item_size}} {{r.item_size_uom}}</li>
+    <li class="thumb-view__result-upc">{{r.upc}}</li>
+    <li class="thumb-view__result-brand"><span ng-repeat="(key, value) in r.brand">{{value}}{{$last ? '' : ', '}}</span></li>
+  </ul>
+  <div class="thumb-view__result-status product_details-activity_state"></div>
+</div>
+
+<div ng-show="!hasRecords">{{noRecordsText}}</div>

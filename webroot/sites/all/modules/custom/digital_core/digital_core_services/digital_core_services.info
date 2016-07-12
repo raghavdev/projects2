@@ -1,0 +1,15 @@
+name = Digital Core Services
+description = Digital Core service resources.
+package = Digital Core
+core = 7.x
+dependencies[] = digital_core
+dependencies[] = digital_core_assets
+dependencies[] = digital_core_data
+files[] = digital_core_services_assets.inc
+files[] = digital_core_services_brands.inc
+files[] = digital_core_services_categories.inc
+files[] = digital_core_services_collections.inc
+files[] = digital_core_services_products.inc
+files[] = digital_core_services_rcm_categories.inc
+files[] = digital_core_services_user_prefs.inc
+files[] = digital_core_services_image_styles.inc

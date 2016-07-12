@@ -1,0 +1,72 @@
+
+#detail-view.row {
+  width: 100%;
+  min-width: 710px;
+  .odd {
+  }
+  .even{
+  }
+  .selected {
+    background-color: $a100;
+    font-weight: bold;
+  }
+  table {
+    margin: 0;
+    display: block;
+    border: none;
+    .odd, .even {
+      background: none;
+      td:first-child {
+        color: $g400;
+      }
+    }
+    tbody, td, tr {
+      border: none;
+      line-height: 1.4em;
+    }
+    td {
+      padding: 0px 8px;
+    }
+  }
+}
+.record-wrapper {
+  @extend .twelve;
+  padding: 0;
+  @extend %border-bottom-thin;
+}
+.record-image {
+  @extend .one;
+  .thumb-container {
+    @extend %border-thin;
+    border-color: #ccc;
+    height: 77px;
+    width: 77px;
+    margin-top: 9px;
+    background: $white;
+  }
+  img {
+    max-height: 75px;
+    margin: 0;
+    //keep smaller images centered in thumb-container
+    position: relative;
+    left: 50%;
+    transform: translate(-50%);
+  }
+  input {
+    position: absolute;
+    bottom: 10px;
+    left: 3px;
+  }
+}
+#detail-view .record-info {
+  @extend .five;
+  table {
+    padding-left: 20px;
+  }
+}
+.record-description {
+  @extend .six;
+}
+#detail-view .record-wrapper.columns {
+  padding: 0;
+}

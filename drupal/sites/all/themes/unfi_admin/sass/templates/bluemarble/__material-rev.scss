@@ -1,0 +1,23 @@
+button, html, input, select, textarea {
+  font-family: $font-family-base;
+}
+
+md-input-container {
+  overflow-x: visible;
+}
+
+md-input-container .md-placeholder,
+md-input-container label:not(.md-no-float) {
+  padding-left: 0;
+  // Prevent material design of the label floating as the placeholder.
+  -webkit-transform: scale(1);
+  transform: scale(1);
+}
+
+// Overriding stupid top -18px rule
+md-radio-button .md-label,
+md-radio-button label,
+md-checkbox .md-label,
+md-checkbox label {
+    top: 0;
+}

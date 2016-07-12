@@ -1,0 +1,198 @@
+// -----------
+// BASE COLORS
+// Based on Google Material Design color palette:
+// http://www.google.com/design/spec/style/color.html#color-color-palette
+// -----------
+
+// Lets define the basic colors here based on Google MD and then give them semantic names later:
+
+// Primary (Blues)
+$p10: #EDF7FC;
+$p50: #94D1F1;
+$p100: #42AFE0;
+$p300: #4FADE2; // Blue in comps
+$p500: #4F90C1; // Official Blue Marble Brands blue
+$p700: #376383;
+$p900: #264B64;
+
+// Accent
+$a100: #E8E4E1;
+$a200: #CAC6C3;
+$a400: #AEAAA7; // Red-ish
+$a401: #A4B7C8; // Blue-ish
+$a600: #6B6055;
+$a800: #483F38;
+$a900: #312D2C;
+
+// Greyscale
+$white: #FFFFFF;
+$white80: rgba(255, 255, 255, 0.8);
+$white70: rgba(255, 255, 255, 0.7);
+$white50: rgba(255, 255, 255, 0.5);
+$g300: #E5E5E5;
+$g400: #B3B3B3;
+$g500: #9E9E9E;
+$g600: #757575;
+$g700: #616161;
+$g900: #212121;
+$black: #000000;
+
+// ----------------
+// SEMANTIC COLORS
+// (Generally "extending" above base colors but giving them semantic names)
+// ----------------
+
+//
+// Action colors
+//
+
+// Primary
+$color-action-primary: $a400;
+$color-action-primary-hover: $a100;
+$color-action-primary-selected: lighten($color-action-primary-hover, 15%);
+// Secondary
+$color-action-secondary: $p500;
+$color-action-secondary-hover: lighten($color-action-secondary, 10%);
+$color-action-secondary-selected: $p700;
+
+//
+// Text link colors
+//
+
+// Primary
+$color-link-primary: $a900;
+$color-link-primary-hover: $a800;
+// Secondary (darken slightly for legibility)
+$color-link-secondary: darken($color-action-secondary, 15%);
+$color-link-secondary-hover: darken($color-action-secondary-hover, 15%);
+
+// Other colors
+$color-success: #82bb41;
+$color-warning: #f79521;
+$color-error: #cb2026;
+
+// Font colors
+$font-color-base: $g700;
+$font-color-light: $g500;
+
+// Header colors
+$font-color-header: $p900;
+
+//
+// Workflow Colors
+//
+
+$activity-state-color-development: #FF0000;
+$activity-state-color-review: #FF9E00;
+$activity-state-color-approved: #E49F0C;
+$activity-state-color-active: #00C34E;
+$activity-state-color-hold: $activity-state-color-approved;
+$activity-state-color-discontinued: #ED00F0;
+
+// ----------
+// SPACING
+// (margins & padding)
+// ----------
+
+$spacing-xsmall: 7px;
+$spacing-small: 10px;
+$spacing-medium: 13px;
+$spacing-large: 20px;
+$spacing-xlarge: $spacing-large * 2;
+
+// ------------
+// FONT SIZES
+// ------------
+
+// Font families
+$font-family-base: 'Helvetica Neue', sans-serif;
+
+// Common font sizes
+$font-size-xsmall: .7rem; // 14px
+$font-size-small: .9rem; // 18px
+$font-size-base: 20px; // default font size
+$font-size-large: 1.1rem; // 22px
+$font-size-xlarge: 1.2rem; // 24px
+
+// Header font sizes
+$font-size-h1: 1.4rem;
+$font-size-h2: $font-size-xlarge;
+$font-size-h3: $font-size-large;
+$font-size-h4: 1rem;
+$font-size-h5: 1rem;
+$font-size-h6: 1rem;
+
+// Line heights
+$line-height-small: 1rem; // 20px
+$line-height-base: 1.4rem; // 28px
+$line-height-large: 2.3rem; // 46px
+
+// ------------
+// IMPORTANT ELEMENTS LAYOUT
+// ------------
+
+//
+// Breakpoints
+//
+
+// Main
+$breakpoint-phone: 320px;
+$breakpoint-tablet: 760px;
+$breakpoint-desktop: 1100px; //896px prev val
+$breakpoint-navigation: $breakpoint-desktop;
+
+// Max Widths
+$breakpoint-tablet-max: max-width ($breakpoint-tablet - 1);
+$breakpoint-navigation-max: max-width ($breakpoint-desktop - 1);
+
+//
+// Site widths
+//
+
+// Default page max-width
+$site-max-width: 960px;
+
+// All content panes
+$pane-header-height: 52px;
+
+// Left pane
+$left-pane-default-width: 280px;
+
+// Middle pane
+$middle-pane-header-height: 95px;
+
+// Menus
+$main-menu-height: 40px;
+$logo-height: 74px;
+
+// Activity State (Workflow)
+$activity-state-width: 16px;
+$activity-state-height: $activity-state-width;
+
+// ----------
+// HEADER
+// ----------
+$header-height-phone: 55px;
+$header-height-desktop: 74px;
+
+// ----------
+// MISC.
+// ----------
+
+//
+// Form elements
+//
+
+// MD checkbox height
+$md-checkbox-height: 28px;
+
+// MD input height (text and select)
+$md-input-height: 52px;
+$md-input-height-small: 35px;
+
+//
+// Browser
+//
+
+// Scrollbar width
+$scrollbar-width: 10px;

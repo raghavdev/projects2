@@ -1,0 +1,3 @@
+name = Digital Core Image Serve
+description = Fast Image service for digital core images
+core = 7.x

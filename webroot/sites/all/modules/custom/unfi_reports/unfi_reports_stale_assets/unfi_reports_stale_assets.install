@@ -1,0 +1,40 @@
+<?php
+
+/**
+ * Implements hook_install()
+ */
+function unfi_reports_stale_assets_install() {
+  variable_set('unfi_reports_stale_assets_cron_info', array(
+    'enabled'       => '0',
+    'recipient'     => '',
+    'filter_params' => '',
+    'download_type' => 'csv',
+    'interval'      => '',
+  ));
+  variable_set('unfi_reports_stale_assets_cron_start', 0);
+  variable_set('unfi_reports_stale_assets_cron_finish', 0);
+}
+
+/**
+ * Implements hook_uninstall()
+ */
+function unfi_reports_stale_assets_uninstall() {
+  variable_del('unfi_reports_stale_assets_cron_info');
+  variable_del('unfi_reports_stale_assets_cron_start');
+  variable_del('unfi_reports_stale_assets_cron_finish');
+}
+
+/**
+ * Add variables for cron-based reporting.
+ */
+function unfi_reports_stale_assets_update_7000(&$sandbox) {
+  variable_set('unfi_reports_stale_assets_cron_info', array(
+    'enabled'       => '0',
+    'recipient'     => '',
+    'filter_params' => '',
+    'download_type' => 'csv',
+    'interval'      => '',
+  ));
+  variable_set('unfi_reports_stale_assets_cron_start', 0);
+  variable_set('unfi_reports_stale_assets_cron_finish', 0);
+}

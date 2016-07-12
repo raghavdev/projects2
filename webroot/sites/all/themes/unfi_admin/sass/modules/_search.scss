@@ -1,0 +1,125 @@
+
+.search-form {
+  margin: 0;
+  border-bottom: solid 1px $p50;
+
+  .button-close {
+    position: absolute;
+    right: 0px;
+    top: 8px;
+  }
+  form {
+    position: relative;
+    text-align: center;
+
+    ul li {
+      height: 27px;
+      display: inline-block;
+      vertical-align: top;
+      &#search-input,
+      &#advanced-search-wrapper {
+        width:88%;
+      }
+
+      &#search-submit {
+        @extend %border-thin;
+        border-color: #b2b2b2;
+        border-left: 0px;
+        height: 26px;
+        width: 26px;
+        position: relative;
+        z-index: 10;
+        left:-3px;
+
+      }
+    }
+  }
+  input[type="text"] {
+    color: $white;
+    background: none;
+    border: none;
+    width: 100%;
+    text-indent: 10px;
+    font-size: 22px;
+    padding: 6px 20px 6px 32px;
+    margin: -6px 0 0 0;
+
+    /* Apparently these cannot be grouped :( */
+    &::-webkit-input-placeholder {
+      color: $white70;
+    }
+    /* Firefox 18- */
+    &:-moz-placeholder {
+      color: $white70;
+    }
+    /* Firefox 19+ */
+    &::-moz-placeholder {
+      color: $white70;
+    }
+    &:-ms-input-placeholder {
+      color: $white70;
+    }
+  }
+  .search-form__submit {
+    position: absolute;
+    left: 2px;
+    top: 0;
+    height: 24px;
+    width: 24px;
+    background-size: contain;
+  }
+}
+#search-accordion .open {
+  .accordion-header {
+    padding-left: 2px;
+    span:hover {
+      text-decoration: underline;
+    }
+  }
+  .filtered-accordion-toggle {
+    border: none;
+  }
+}
+form #advanced-search {
+  ul {
+    margin: 0;
+    vertical-align: middle;
+  }
+
+  ul li {
+    display: inline-block;
+    vertical-align: middle;
+    height: auto; // @extend fails
+  }
+
+  .open .accordion-content {
+
+    ul {
+      @extend %align-left;
+      padding-left: 2px;
+    }
+
+    #date-query {
+     ul.date-fields {
+        width: 150px;
+        input[type="text"] {
+         width: 40px;
+         margin: 0;
+        }
+      }
+      select {
+        width: 43%;
+      }
+    }
+    .query-section {
+      padding: $spacing-xsmall;
+    }
+  }
+}
+
+ul.attribute-row {
+  padding-top: 8px;
+}
+#advanced-search .accordion-header {
+  height: 1em;
+}

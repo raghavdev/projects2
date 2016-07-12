@@ -1,0 +1,250 @@
+<?php
+
+function buw_ecom_data_bulk_upload_wizard_get_asset_info () {
+
+    global $base_url;
+
+    $path = $base_url . "/" . drupal_get_path("module", "buw_ecom_data") . '/EcommerceDataTemplate.xls';
+
+    $options = array('excel_template' => array(
+        '#markup' => l("Click here to download the excel template", $path),
+    )
+    );
+
+    return array("Ecommerce Product Data" => array(
+        "options" => $options,
+        "type" => "Ecommerce Product Data",
+        "uploader" => "file",
+        "analysis_table_theme_callback" => "buw_ecom_data_analysis_table",
+        "analysis_results_callback" => "buw_ecom_data_results_analysis",
+        "analysis_callback" => "buw_ecom_data_analysis",
+        "apply_callback" => "buw_ecom_data_apply",
+        "cleanup_callback" => "buw_ecom_data_cleanup",
+    ));
+}
+
+//determine if the products are new or updates
+function buw_ecom_data_analysis($row, $asset_info, $excel_file_id) {
+
+    $status = "product not found";
+
+    //determine if this is a new record or update or just a bad record
+
+    //col 0 is always east id, and better be numeric
+    if(!is_numeric($row[0])) {
+        $status = "error";
+        $message = "Invalid East ID";
+    }
+    else {
+        $q = db_select("field_data_field_productsid")
+            ->fields("field_data_field_productsid", array("entity_id"));
+        $q->addJoin("inner", "digital_core_data_products", "dp", "dp.productsid = field_data_field_productsid.field_productsid_value");
+        $id = $q->condition("dp.east_product_id", $row[0])
+                ->execute()
+                ->fetchField();
+
+        if($id) {
+            $status = "update";
+            $message = "Ecommerce Data will be applied";
+        }
+    }
+
+    $record = buw_ecom_data_map_product($row);
+
+    return array(
+        "product_record" => $record,
+        "id" => $id,
+        "status" => $status,
+        "message" => $message
+    );
+}
+
+function buw_ecom_data_apply($product_data, $job_id, $asset_info, $options, $context) {
+    $record = array();
+
+    module_load_include('inc', 'digital_core_data', 'digital_core_data_products');
+
+    if($product_data['status'] == "update") {
+
+        //we will not allow blanking out any fields on update, so kill those
+        foreach($product_data['product_record'] as $field => $value) {
+            if($value == "") {
+                unset($product_data['product_record'][$field]);
+            }
+        }
+
+        digital_core_data_products_update($product_data['id'], $product_data['product_record']);
+    }
+
+    $context['results']['job_id'] = $job_id;
+}
+
+function buw_ecom_data_results_analysis($analysis_results) {
+
+    $structure = array();
+
+    $error_count = 0;
+    $warning_count = 0;
+    $ok_count = 0;
+    $notfound = 0;
+    $update = 0;
+
+    foreach($analysis_results as $idx => $result) {
+        if(is_numeric($idx)) {
+
+            $result = unserialize($result);
+
+            $structure['table']['upload_table']['east_product_id'][$result["product_record"]['east_product_id']] = array(
+                "#markup" => $result["product_record"]['east_product_id']
+            );
+
+            $structure['table']['upload_table']['status'][$result["product_record"]["east_product_id"]] = array(
+                "#markup" => $result['status']
+            );
+
+            $structure['table']['upload_table']['message'][$result["product_record"]["east_product_id"]] = array(
+                "#markup" => $result['message']
+            );
+
+            if(strtolower($result['status']) == "error") {
+                $error_count++;
+            }
+            else if(strtolower($result['status']) == "warning") {
+                $warning_count++;
+            }
+            else if(strtolower($result['status']) == 'update') {
+                $ok_count++;
+                $update++;
+            }
+            else if(strtolower($result['status']) == 'product not found') {
+                $ok_count++;
+                $notfound++;
+            }
+        }
+    }
+
+    $structure['summary']['analysis_result_block'] = array (
+        '#type' => 'fieldset',
+    );
+
+    $structure['summary']['analysis_result_block']['number_uploads'] = array(
+        "#markup" => "<div><b>Number of Uploads:</b> " . count($analysis_results) . "</div>",
+    );
+
+    $structure['summary']['analysis_result_block']['validated_uploads'] = array(
+        "#markup" => "<div><b>Validated Uploads:</b> {$ok_count} </div>",
+    );
+
+    $structure['summary']['analysis_result_block']['not_found'] = array(
+        "#markup" => "<div><b>Number of Products not found:</b> {$notfound} </div>",
+    );
+
+    $structure['summary']['analysis_result_block']['update_uploads'] = array(
+        "#markup" => "<div><b>Number of Updates:</b> {$update} </div>",
+    );
+
+    $structure['summary']['analysis_result_block']['errors'] = array(
+        "#markup" => "<div><b>Errors:</b> {$error_count} </div>",
+    );
+
+    $structure['summary']['analysis_result_block']['warnings'] = array(
+        "#markup" => "<div><b>Warnings:</b> {$warning_count} </div>",
+    );
+
+    return $structure;
+}
+
+function theme_buw_ecom_data_analysis_table($variables) {
+
+    $form = $variables['form'];
+
+    $header = array(t('East Product ID'), t('Status'), t('Message'));
+
+    $rows = array();
+
+    foreach (element_children($form['upload_table']['east_product_id']) as $key) {
+
+        $record = array();
+        $record[] = drupal_render($form['upload_table']['east_product_id'][$key]);
+        $record[] = drupal_render($form['upload_table']['status'][$key]);
+        $record[] = drupal_render($form['upload_table']['message'][$key]);
+
+        $rows[] = $record;
+    }
+
+    $output = theme('table', array(
+        'header' => $header,
+        'rows' => $rows
+    ));
+
+    return $output;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function buw_ecom_data_theme($existing, $type, $theme, $path) {
+
+    $theme_hooks = array(
+        'buw_ecom_data_analysis_table' => array(
+            'render element' => 'form',
+            'file' => 'buw_ecom_data.module'
+        )
+    );
+
+    return $theme_hooks;
+}
+
+//Clean up any temp files
+function buw_ecom_data_cleanup($job_id) {
+    //need to remove the excel file from the system
+    $options = db_select("bulk_upload_wizard_jobs")
+        ->condition("job_id", $job_id)
+        ->fields("bulk_upload_wizard_jobs", array("job_record"))
+        ->condition("record_type", "options")
+        ->execute()
+        ->fetchField();
+
+    $fid = unserialize($options);
+
+    $file = file_load($fid);
+
+    file_delete($file);
+}
+
+function buw_ecom_data_map_product($data) {
+
+    $record = array();
+
+    $record['east_product_id'] = $data[0];
+    $record['map_policy'] = (strtolower($data[1]) == "y" ? 1 : 0);
+    $record['map_policy_price'] = $data[2];
+
+    //lookup the category that is referenced
+    $vcab = taxonomy_vocabulary_machine_name_load("rcm_categories");
+
+    //I forsee an issue here with this, it will match to the first category which might not be right
+    //and the sub category would need to match to the one that is below the category
+
+    $category = taxonomy_get_term_by_name($data[3], $vcab->vid);
+    if(count($category) > 0) {
+        $record['category'] = $category[0]->tid;
+    }
+
+    $subcategory = taxonomy_get_term_by_name($data[4], $vcab->vid);
+    if(count($subcategory) > 0) {
+        $record['subcategory'] = $subcategory[0]->tid;
+    }
+
+    $record['web_description'] = $data[5];
+    $record['length'] = $data[6];
+    $record['width'] = $data[7];
+    $record['height'] = $data[8];
+    $record['weight'] = $data[9];
+    $record['country_of_origin'] = $data[10];
+    $record['base_wholesale'] = $data[11];
+    $record['account_state_restrictions'] = $data[12];
+    $record['amazon_restricted'] = (strtolower($data[13]) == "y" ? 1 : 0);
+
+    return $record;
+}

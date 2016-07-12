@@ -1,0 +1,8 @@
+name = Blue Marble Staging
+description = Blue Marble staging integration.
+package = Blue Marble
+core = 7.x
+files[] = field_mapping.inc
+files[] = bluemarble_staging_field_mapping.inc
+dependencies[] = bluemarble
+dependencies[] = bluemarble_data

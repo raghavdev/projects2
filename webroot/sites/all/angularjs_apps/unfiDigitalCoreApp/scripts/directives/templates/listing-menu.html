@@ -1,0 +1,27 @@
+<div id="listing-menu" class="listing-menu clearfix">
+  <!-- Products specific listing primary menu -->
+  <div class="listing-sort-wrapper">
+    <label>Sort By:</label>
+    <select ng-model="search[view].sort" ng-change="query()">
+      <option value="activity_state">Status</option>
+      <option value="title">Label</option>
+      <option value="changed">Date</option>
+      <option value="item_num">Item Number</option>
+    </select>
+    <select ng-model="search[view].sort_dir" ng-change="query()">
+      <option value="ASC">(Ascending)</option>
+      <option value="DESC">(Descending)</option>
+    </select>
+  </div>
+  <!-- View mode filter -->
+  <div id="view-modes" class="listing-view-menu">
+    <ul>
+      <li ng-click="toggleFilters()" class="filters {{(filtersOpen === true) ? 'selected' : ''}}"></li>
+      <li ng-click="loadViewMode('list')" class="listview {{(viewMode === 'list') ? 'selected' : ''}}"></li>
+      <li ng-click="loadViewMode('thumb')" class="thumbnailview {{(viewMode === 'thumb') ? 'selected' : ''}}"></li>
+    </ul>
+  </div>
+  <!-- Result info/progress bar -->
+  <div ng-show="!loadingAppData" class="listing-result-count">Results: {{ resultcount }}</div>
+  <div ng-show="loadingAppData" class="listing-result-info__progress-bar"><img src="/sites/all/angularjs_apps/unfiDigitalCoreApp/images/marquee.gif"></div>
+</div>

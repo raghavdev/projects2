@@ -1,0 +1,8 @@
+core = "7.x"
+files[] = direct_connect.inc
+dependencies[] = digital_core_staging
+
+description = "EIW Connect"
+name = "eiw_connect"
+package = "unfi"
+php = "5.2.4"

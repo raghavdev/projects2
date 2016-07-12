@@ -1,0 +1,818 @@
+<?php
+
+/*
+ * Digital Core Services
+ *
+ * Function:
+ * Provides the resources for the digital core webservices endpoint.
+ * the service resources will be used by the angular app to comunicate back to drupal
+ *
+ * Author:
+ * Peter Bliss
+ * Metal Toad Media
+ * pbliss@metaltoad.com
+ *
+ */
+
+define('SOLRSERVER', "solr");
+define('SOLRINDEX', "default_node_index");
+define('SOLRASSETINDEX', "asset_index");
+
+/**
+ * Implements hook_services_resources().
+ */
+function digital_core_services_services_resources() {
+  return array(
+    'image_styles' => array(
+      'index' => array(
+        'help' => 'Get a list of defined image styles globaly',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_image_styles'),
+        'callback' => 'digital_core_services_image_styles_index',
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core image styles'),
+        'access arguments append' => FALSE,
+      ),
+      'retrieve' => array(
+        'help' => 'Retrieves a list of image styles defined for the specified image file',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_image_styles'),
+        'callback' => 'digital_core_services_image_styles_retrieve',
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core image styles'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'file_name',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'Image file Name',
+          ),
+        ),
+      ),
+    ),
+    'user_prefs' => array(
+      'retrieve' => array(
+        'help' => 'Current user UI Preferences',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_user_prefs'),
+        'callback' => 'digital_core_services_user_prefs_retrieve',
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core user prefs'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'uid',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'User Id',
+          ),
+        ),
+      ),
+      'update' => array(
+        'help' => 'Updates an array of user prefs',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_user_prefs'),
+        'callback' => 'digital_core_services_user_prefs_update',
+        'access callback' => 'user_access',
+        'access arguments' => array('update digital core user prefs'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'id',
+            'type' => 'int',
+            'description' => 'The id of the user to update',
+            'source' => array('path' => '0'),
+            'optional' => TRUE,
+          ),
+          array(
+            'name' => 'data',
+            'type' => 'array',
+            'description' => 'The user prefs object',
+            'source' => 'data',
+            'optional' => TRUE,
+          ),
+        ),
+      ),
+    ),
+    'assets' => array(
+      'index' => array(
+        'help' => 'Retrieves a listing of assets',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_assets'),
+        'callback' => 'digital_core_services_assets_index',
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core assets'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'perPage',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'perPage',
+            ),
+            'optional' => TRUE,
+            'default value' => 100,
+          ),
+          array(
+            'name' => 'page',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'page',
+            ),
+            'optional' => TRUE,
+            'default value' => 0,
+          ),
+          array(
+            'name' => 'parameters',
+            'type' => 'array',
+            'description' => '',
+            'source' => 'param',
+            'optional' => TRUE,
+            'default value' => array(),
+          ),
+          array(
+            'name' => 'sort',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'sort',
+            ),
+            'optional' => TRUE,
+            'default value' => 'fid',
+          ),
+        ),
+      ),
+      'retrieve' => array(
+        'help' => 'Retrieves an asset',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_assets'),
+        'callback' => 'digital_core_services_assets_retrieve',
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core assets'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'fid_id',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'FID',
+          ),
+          array(
+            'name' => 'option',
+            'optional' => TRUE,
+            'source' => array('path' => 1),
+            'type' => 'string',
+            'description' => 'Rendition or option',
+          ),
+        ),
+      ),
+      'create' => array(
+        'help' => 'Creates an asset',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_assets'),
+        'callback' => 'digital_core_services_assets_create',
+        'access callback' => 'user_access',
+        'access arguments' => array('create digital core assets'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'data',
+            'type' => 'struct',
+            'description' => 'The asset object',
+            'source' => 'data',
+            'optional' => FALSE,
+          ),
+        ),
+      ),
+      'update' => array(
+        'help' => 'Updates an asset',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_assets'),
+        'callback' => 'digital_core_services_assets_update',
+        'access callback' => 'user_access',
+        'access arguments' => array('update digital core assets'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'id',
+            'type' => 'int',
+            'description' => 'The id of the asset to update',
+            'source' => array('path' => '0'),
+            'optional' => TRUE,
+          ),
+          array(
+            'name' => 'data',
+            'type' => 'struct',
+            'description' => 'The asset data object',
+            'source' => 'data',
+            'optional' => TRUE,
+          ),
+         ),
+      ),
+      'delete' => array(
+        'help' => 'Deletes an asset',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_assets'),
+        'callback' => 'digital_core_services_assets_delete',
+        'access callback' => 'user_access',
+        'access arguments' => array('delete digital core assets'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'nid',
+            'type' => 'int',
+            'description' => 'The id of the asset to delete',
+            'source' => array('path' => '0'),
+            'optional' => FALSE,
+          ),
+        ),
+      ),
+    ),
+    'feeds' => array(
+      'retrieve' => array(
+        'help' => 'Retrieve the specified feed',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_feeds'),
+        'callback' => 'digital_core_services_feeds_retrieve',
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core products'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'feedid',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'feed owner name',
+          ),
+          array(
+            'name' => 'perPage',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'perPage',
+            ),
+            'optional' => TRUE,
+            'default value' => 100,
+          ),
+          array(
+            'name' => 'page',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'page',
+            ),
+            'optional' => TRUE,
+            'default value' => 0,
+          ),
+          array(
+            'name' => 'sort',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'sort',
+            ),
+            'optional' => TRUE,
+            'default value' => 'nid',
+          ),
+        ),
+      ),
+      'update' => array(
+        'help' => 'Updates a feed',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_feeds'),
+        'callback' => 'digital_core_services_feeds_update',
+        'access callback' => 'user_access',
+        'access arguments' => array('update digital core feeds'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'id',
+            'type' => 'text',
+            'description' => 'The name of the user that owns the feed is the way the feed is referenced',
+            'source' => array('path' => '0'),
+            'optional' => FALSE,
+          ),
+          array(
+            'name' => 'op',
+            'optional' => FALSE,
+            'source' => array('path' => 1),
+            'type' => 'text',
+            'description' => 'the op to be performed',
+          ),
+          array(
+            'name' => 'nid',
+            'optional' => FALSE,
+            'source' => array('path' => 2),
+            'type' => 'text',
+            'description' => 'the nid of the product',
+          ),
+          array(
+            'name' => 'data',
+            'type' => 'struct',
+            'description' => 'The feed data object',
+            'source' => 'data',
+            'optional' => TRUE,
+          ),
+         ),
+      ),
+    ),
+    'products' => array(
+      'index' => array(
+        'help' => 'Retrieves a listing of products',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_products'),
+        'callback' => 'digital_core_services_products_index',
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core products'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'perPage',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'perPage',
+            ),
+            'optional' => TRUE,
+            'default value' => 100,
+          ),
+          array(
+            'name' => 'page',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'page',
+            ),
+            'optional' => TRUE,
+            'default value' => 0,
+          ),
+          array(
+            'name' => 'parameters',
+            'type' => 'array',
+            'description' => '',
+            'source' => 'param',
+            'optional' => TRUE,
+            'default value' => array(),
+          ),
+          array(
+            'name' => 'sort',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'sort',
+            ),
+            'optional' => TRUE,
+            'default value' => 'nid',
+          ),
+        ),
+      ),
+      'retrieve' => array(
+        'help' => 'Retrieves a product',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_products'),
+        'callback' => 'digital_core_services_products_retrieve',
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core products'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'products_id',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'Product ID',
+          ),
+        ),
+      ),
+      'update' => array(
+        'help' => 'Updates a product',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_products'),
+        'callback' => 'digital_core_services_products_update',
+        'access callback' => 'user_access',
+        'access arguments' => array('update digital core products'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'id',
+            'type' => 'int',
+            'description' => 'The id of the product to update',
+            'source' => array('path' => '0'),
+            'optional' => TRUE,
+          ),
+          array(
+            'name' => 'data',
+            'type' => 'array',
+            'description' => 'The product data object',
+            'source' => 'data',
+            'optional' => TRUE,
+          ),
+        ),
+      ),
+    ),
+    'rcm_categories' => array(
+      'index' => array(
+        'help' => 'List all categories',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_rcm_categories'),
+        'callback' => 'digital_core_services_rcm_categories_index',
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core rcm categories'),
+        'args' => array(
+        ),
+      ),
+    ),
+    'categories' => array(
+      'retrieve' => array(
+        'help' => 'Retrieve a category',
+        'callback' => 'digital_core_services_categories_retrieve',
+        'args' => array(
+          array(
+            'name' => 'tid',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'The tid of the category to get',
+          ),
+        ),
+        'access arguments' => array('read digital core categories'),
+        'access callback' => 'user_access',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_categories'),
+      ),
+      'create' => array(
+        'help' => 'Create a category',
+        'callback' => 'digital_core_services_categories_create',
+        'args' => array(
+          array(
+            'name' => 'term',
+            'optional' => FALSE,
+            'source' => 'data',
+            'description' => 'The category object to create',
+            'type' => 'array',
+          ),
+        ),
+        'access callback' => 'user_access',
+        'access arguments' => array('create digital core categories'),
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_categories'),
+      ),
+      'update' => array(
+        'help' => 'Update a category',
+        'callback' => 'digital_core_services_categories_update',
+        'args' => array(
+          array(
+            'name' => 'tid',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'description' => 'The unique identifier for this category.',
+            'type' => 'int',
+          ),
+          array(
+            'name' => 'term',
+            'optional' => FALSE,
+            'source' => 'data',
+            'description' => 'The category data to update',
+            'type' => 'array',
+          ),
+        ),
+        'access callback' => 'user_access',
+        'access arguments' => array('update digital core categories'),
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_categories'),
+      ),
+      'delete' => array(
+        'help' => 'Delete a category',
+        'callback' => 'digital_core_services_categories_delete',
+        'args' => array(
+          array(
+            'name' => 'tid',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+          ),
+        ),
+        'access callback' => 'user_access',
+        'access arguments' => array('delete digital core categories'),
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_categories'),
+      ),
+      'index' => array(
+        'help' => 'List all categories',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_categories'),
+        'callback' => 'digital_core_services_categories_index',
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core categories'),
+        'args' => array(
+        ),
+      ),
+    ),
+    'brands' => array(
+      'retrieve' => array(
+        'help' => 'Retrieve a brand',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_brands'),
+        'callback' => 'digital_core_services_brands_retrieve',
+        'args' => array(
+          array(
+            'name' => 'nid',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'The nid of the brand to retrieve',
+          ),
+        ),
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core brands'),
+        'access arguments append' => FALSE,
+      ),
+      'update' => array(
+        'help' => 'Update a brand',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_brands'),
+        'callback' => 'digital_core_services_brands_update',
+        'args' => array(
+          array(
+            'name' => 'nid',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'The nid of the brand to update',
+          ),
+          array(
+            'name' => 'node',
+            'optional' => FALSE,
+            'source' => 'data',
+            'description' => 'The brand data to update',
+            'type' => 'array',
+          ),
+        ),
+        'access callback' => 'user_access',
+        'access arguments' => array('update digital core brands'),
+        'access arguments append' => FALSE,
+      ),
+      'index' => array(
+        'help' => 'List all brands',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_brands'),
+        'callback' => 'digital_core_services_brands_index',
+        'args' => array(
+           array(
+            'name' => 'perPage',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'perPage',
+            ),
+            'optional' => TRUE,
+            'default value' => 100,
+          ),
+          array(
+            'name' => 'page',
+            'optional' => TRUE,
+            'type' => 'int',
+            'description' => 'The zero-based index of the page to get, defaults to 0.',
+            'default value' => 0,
+            'source' => array('param' => 'page'),
+          ),
+          array(
+            'name' => 'parameters',
+            'optional' => TRUE,
+            'type' => 'array',
+            'description' => 'Parameters array',
+            'default value' => array(),
+            'source' => array('param' => 'parameters'),
+          ),
+          array(
+            'name' => 'sort',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'sort',
+            ),
+            'optional' => TRUE,
+            'default value' => 'nid',
+          ),
+        ),
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core brands'),
+       ),
+    ),
+    'collections' => array(
+      'index' => array(
+        'help' => 'Retrieves a listing of collections',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_collections'),
+        'callback' => 'digital_core_services_collections_index',
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core collections'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'perPage',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'perPage',
+            ),
+            'optional' => TRUE,
+            'default value' => 100,
+          ),
+          array(
+            'name' => 'page',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'page',
+            ),
+            'optional' => TRUE,
+            'default value' => 0,
+          ),
+          array(
+            'name' => 'parameters',
+            'type' => 'array',
+            'description' => '',
+            'source' => 'param',
+            'optional' => TRUE,
+            'default value' => array(),
+          ),
+          array(
+            'name' => 'sort',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'sort',
+            ),
+            'optional' => TRUE,
+            'default value' => 'nid',
+          ),
+          array(
+            'name' => 'user_id',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'User ID',
+          ),
+        ),
+      ),
+      'retrieve' => array(
+        'help' => 'Retrieves a collection',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_collections'),
+        'callback' => 'digital_core_services_collections_retrieve',
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core collections'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'user_id',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'User ID',
+          ),
+          array(
+            'name' => 'collection_id',
+            'optional' => FALSE,
+            'source' => array('path' => 1),
+            'type' => 'int',
+            'description' => 'Collection ID',
+          ),
+        ),
+      ),
+      'create' => array(
+        'help' => 'Creates a collection',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_collections'),
+        'callback' => 'digital_core_services_collections_create',
+        'access callback' => 'user_access',
+        'access arguments' => array('create digital core collections'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'data',
+            'optional' => FALSE,
+            'source' => 'data',
+            'description' => 'The category object to create',
+            'type' => 'struct',
+          ),
+        ),
+      ),
+      'update' => array(
+        'help' => 'Updates a collection',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_collections'),
+        'callback' => 'digital_core_services_collections_update',
+        'access callback' => 'user_access',
+        'access arguments' => array('update digital core collections'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'id',
+            'type' => 'int',
+            'description' => 'The id of the collection to update',
+            'source' => array('path' => '0'),
+            'optional' => FALSE,
+          ),
+          array(
+            'name' => 'data',
+            'type' => 'struct',
+            'description' => 'The collection data object',
+            'source' => 'data',
+            'optional' => FALSE,
+          ),
+        ),
+      ),
+      'delete' => array(
+        'help' => 'Deletes a collection',
+        'file' => array('type' => 'inc', 'module' => 'digital_core_services', 'name' => 'digital_core_services_collections'),
+        'callback' => 'digital_core_services_collections_delete',
+        'access callback' => 'user_access',
+        'access arguments' => array('delete digital core collections'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'nid',
+            'type' => 'int',
+            'description' => 'The id of the collection to delete',
+            'source' => array('path' => '0'),
+            'optional' => FALSE,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_permission().
+ */
+function digital_core_services_permission() {
+  return array(
+    'update digital core feeds' => array(
+      'title' => t('update digital core feeds'),
+      'restrict access' => TRUE,
+    ),
+    'read digital core assets' =>  array(
+      'title' => t('read digital core assets'),
+      'restrict access' => TRUE,
+    ),
+    'create digital core assets' =>  array(
+      'title' => t('create digital core assets'),
+      'restrict access' => TRUE,
+    ),
+    'update digital core assets' =>  array(
+      'title' => t('update digital core assets'),
+      'restrict access' => TRUE,
+    ),
+    'delete digital core assets' =>  array(
+      'title' => t('delete digital core assets'),
+      'restrict access' => TRUE,
+    ),
+    'read digital core brands' =>  array(
+      'title' => t('read digital core brands'),
+      'restrict access' => TRUE,
+    ),
+    'update digital core brands' =>  array(
+      'title' => t('update digital core brands'),
+      'restrict access' => TRUE,
+    ),
+    'read digital core categories' =>  array(
+      'title' => t('read digital core categories'),
+      'restrict access' => TRUE,
+    ),
+    'create digital core categories' =>  array(
+      'title' => t('create digital core categories'),
+      'restrict access' => TRUE,
+    ),
+    'delete digital core categories' =>  array(
+      'title' => t('delete digital core categories'),
+      'restrict access' => TRUE,
+    ),
+    'update digital core categories' => array(
+      'title' => t('update digital core categories'),
+      'restrict access' => TRUE,
+    ),
+    'create digital core collections' =>  array(
+      'title' => t('create digital core collections'),
+      'restrict access' => TRUE,
+    ),
+    'update digital core collections' =>  array(
+      'title' => t('update digital core collections'),
+      'restrict access' => TRUE,
+    ),
+    'delete digital core collections' =>  array(
+      'title' => t('delete digital core collections'),
+      'restrict access' => TRUE,
+    ),
+    'read digital core image styles' =>  array(
+      'title' => t('read digital core image styles'),
+      'restrict access' => TRUE,
+    ),
+    'read digital core products' =>  array(
+      'title' => t('read digital core products'),
+      'restrict access' => TRUE,
+    ),
+    'update digital core products' =>  array(
+      'title' => t('update digital core products'),
+      'restrict access' => TRUE,
+    ),
+    'read digital core rcm categories' =>  array(
+      'title' => t('read digital core rcm categories'),
+      'restrict access' => TRUE,
+    ),
+    'read digital core user prefs' =>  array(
+      'title' => t('read digital core user prefs'),
+      'restrict access' => TRUE,
+    ),
+    'update digital core user prefs' =>  array(
+      'title' => t('update digital core user prefs'),
+      'restrict access' => TRUE,
+    ),
+    'read digital core collections' => array(
+      'title' => t('read digital core collections'),
+      'restrict access' => TRUE,
+    )
+  );
+}

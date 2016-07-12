@@ -1,0 +1,83 @@
+// Angular MD Tabs menus
+md-tabs {
+  overflow: hidden;
+  md-tab {
+    padding: $spacing-medium $spacing-large;
+  }
+  .md-header {
+  }
+  .md-paginator {
+    width: 37px;
+  }
+  .md-paginator.md-next {
+    padding-right: $spacing-xsmall;
+  }
+  .md-paginator.md-prev {
+    padding-left: $spacing-xsmall;
+  }
+}
+// Default theme and dark theme
+md-tabs.md-default-theme,
+md-tabs.dark-theme {
+  md-tab {
+    font-weight: bold;
+    font-size: 18px;
+  }
+  .md-paginator {
+    box-shadow: none;
+    &:hover {
+      background-color: inherit;
+      box-shadow: none;
+    }
+  }
+}
+md-tabs.md-default-theme {
+  md-tabs-ink-bar {
+    color: $color-action-primary;
+    background: $color-action-primary;
+  }
+  md-tab {
+    color: $color-link-secondary;
+  }
+  md-tab .md-ripple-container {
+    color: $color-action-primary;
+  }
+  md-tab.active,
+  md-tab:focus {
+    color: $black;
+  }
+  .md-paginator {
+    md-icon {
+      color: $color-action-secondary;
+      &:hover {
+        color: $color-action-secondary-hover;
+      }
+    }
+  }
+}
+
+// Dark theme (meant to be paired with a dark background)
+md-tabs.md-default-theme.dark-theme {
+  md-tabs-ink-bar {
+    color: $white;
+    background: $white;
+  }
+  md-tab {
+    color: $white50;
+  }
+  md-tab .md-ripple-container {
+    color: $color-action-primary;
+  }
+  md-tab.active,
+  md-tab:focus {
+    color: $white;
+  }
+  .md-paginator {
+    md-icon {
+      color: $white50;
+      &:hover {
+        color: $white;
+      }
+    }
+  }
+}

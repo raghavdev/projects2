@@ -1,0 +1,7 @@
+<div class="{{section_meta.class}}">
+  <div ng-if="section_meta.marketing_icons != ''" class="marketing-icons">
+    <i ng-repeat="icon in section_meta.marketing_icons" class="{{icon}}"></i>
+  </div>
+  <label ng-show="section_meta.label">{{section_meta.label}}:</label>
+  <div record="{{section_meta.record}}" ng-model="record[section_meta.record]">{{record[section_meta.record]}}</div>
+</div>

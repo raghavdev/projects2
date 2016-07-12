@@ -1,0 +1,783 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ * Sets up the page where the app can be seen from
+ */
+function bulk_download_wizard_menu() {
+
+  $items = array();
+
+  //process page
+  $items["bulk_download"] = array(
+    'title' => "Bulk Download",
+    'description' => "",
+    'page callback' => 'bulk_download_wizard_download_page',
+    'access arguments' => array('access bulk downloads'),
+    'type' => MENU_NORMAL_ITEM,
+    'access callback' => 'user_access',
+  );
+
+  $items["bulk_download/analysis"] = array(
+    'title' => "Bulk Download",
+    'description' => "",
+    'page callback' => 'bulk_download_wizard_page_analysis',
+    'access arguments' => array('access bulk downloads'),
+    'type' => MENU_NORMAL_ITEM,
+    'access callback' => 'user_access',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function bulk_download_wizard_permission() {
+  return array(
+    'access bulk downloads' =>  array(
+      'title' => t('Access / utilize bulk downloads page'),
+    ),
+  );
+};
+
+//process page
+function bulk_download_wizard_download_page() {
+
+  drupal_add_js(drupal_get_path("module", 'bulk_download_wizard') . "/bulk_download_wizard.js");
+
+  return drupal_get_form("bulk_download_wizard_page_download_form");
+}
+
+function bulk_download_wizard_page_download_form($form, $form_state) {
+  $form = array();
+
+  $step = 1;
+  $jobid = '';
+
+  if(isset($_GET['step']) && isset($_GET['job_id'])) {
+    $step = $_GET['step'];
+    $jobid = $_GET['job_id'];
+  }
+
+  if($step == 2) {
+
+    $data = db_select("bulk_download_wizard_jobs")
+              ->fields("bulk_download_wizard_jobs", array('job_results'))
+              ->condition("job_id", $jobid)
+              ->execute()
+              ->fetchField();
+
+    if(!$data || $data == "") {
+      $step = 1;
+      drupal_set_message(t("Job not found"));
+    }
+    else {
+      $data = unserialize($data);
+
+      //pull up the job information, the excel data will be stored with it
+
+      //build out the table of the info from the result set
+
+      $form['file_upload_remove_sheet'] = array(
+        '#type' => 'button',
+        '#value' => 'Upload new download spreadsheet',
+        //'#attributes' => array("style" => "display:none"),
+      );
+
+      $form['spreadsheet_header'] = array(
+        '#type' => 'checkbox',
+        '#title' => 'Spreadsheet contains a header row?',
+        '#default_value' => TRUE,
+        //'#attributes' => array("style" => "display:none"),
+      );
+
+      $form['identity_select'] = array(
+        '#type' => 'select',
+        '#options' => array("field_ein" => 'EIN', "field_upc" => 'UPC', "east_product_id" => 'East Product ID', "west_product_id" => 'West Product ID'),
+        '#default_value' => "field_ein",
+        '#title' => "Selected column type",
+        '#required' => TRUE
+      );
+
+      $form['identity_table'] = array(
+        '#type' => "fieldset",
+        '#title' => "What column can be used to identify products?",
+        //'#attributes' => array("style" => "display:none"),
+        '#theme' => 'bulk_download_wizard_identity_table',
+        '#tree' => TRUE,
+      );
+
+      foreach($data['excel_sample_data'] as $row_idx => $row) {
+        foreach($row as $idx => $column) {
+          if($row_idx == 0) {
+            $form['identity_table']["idt_rows"][$row_idx][$idx] = array(
+              $radio = array(
+                '#type' => 'radios',
+                '#default_value' => 0,
+                '#options' => array($idx => t('')),
+                '#attributes' => array('name' => array("identity_radio"), 'class' => array('idt_radio'))
+              )
+            );
+          }
+
+          $form['identity_table']["idt_rows"][$row_idx + 1][$idx] = array(
+            "#markup" => $column
+          );
+        }
+      }
+
+      //will hold the value of the selection from above
+      //uses jquery to update when checked, couldnt figure out how to get the
+      //value otherwise
+      $form['identity_column'] = array (
+        "#type" => "hidden",
+        "#default_value" => 0,
+        '#attributes' => array('id' => array("identity_col"))
+      );
+
+      $image_styles = image_styles();
+
+      $option_data = array("original" => "Original Image");
+
+      foreach($image_styles as $style_name => $style) {
+        $option_data[$style_name] = $style['label'];
+      }
+
+      $form['image_styles'] = array(
+        '#type' => 'checkboxes',
+        '#options' => $option_data,
+        '#title' => 'Which renditions would you like?',
+        '#required' => TRUE
+        //'#attributes' => array("style" => "display:none"),
+      );
+
+      $form['step'] = array (
+        "#type" => "hidden",
+        "#value" => "2"
+      );
+
+      $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Analyze Downloads'),
+        //'#attributes' => array("style" => "display:none"),
+      );
+    }
+  }
+
+  if($step == 1) {
+
+    $assets = array("" => "Select an Asset");
+
+    //get the fields assigned to the product_details that are entity references
+    //this will be the types of images that are setup
+
+    //select field_config_instance.data from field_config_instance
+    //inner join field_config on field_id = field_config.id
+    //where bundle = 'product_details' and field_config.`type` = 'entityreference'
+    $query = db_select("field_config_instance");
+    $query->fields("field_config_instance", array("field_name", "data"));
+    $query->join("field_config", "field_config", "field_id = field_config.id");
+    $query->condition("bundle", "product_details");
+    $query->condition("field_config.type", "entityreference");
+    $asset_data = $query->execute()
+                ->fetchAll();
+
+    foreach($asset_data as $data) {
+      $field_data = unserialize($data->data);
+
+      //make the label plural
+      if(!preg_match('/' . preg_quote('s', '/') . '$/', $field_data['label'])) {
+        $field_data['label']  .= "s";
+      }
+
+      //TODO key this properly or it uses the numeric index
+      $assets[$data->field_name] =  $field_data['label'];
+    }
+
+    $form['asset'] = array(
+      '#title' => 'What are you downloading?',
+      '#type' => 'select',
+      '#description' => t(""),
+      '#required' => TRUE,
+      '#maxlength' => 500,
+      '#size' => 1,
+      '#options' => $assets,
+      '#default_value' => "",
+    );
+
+    $form['file'] = array(
+      '#title' => 'Upload your spreadsheet',
+      '#type' => 'file',
+      '#description' => t(""),
+      //'#attributes' => array("style" => "display:none"),
+    );
+
+    $form['step'] = array (
+      "#type" => "hidden",
+      "#value" => "1"
+    );
+
+    $form['file_upload_process'] = array(
+      '#type' => 'submit',
+      '#value' => 'Process Spreadsheet',
+      //'#attributes' => array("style" => "display:none"),
+    );
+  }
+
+  return $form;
+}
+
+function bulk_download_wizard_page_download_form_validate($form, &$form_state) {
+
+  $step = 1;
+
+  if(isset($form_state['values']['step'])) {
+    $step = $form_state['values']['step'];
+  }
+
+  if($step == 1) {
+    $file = file_save_upload('file', array(
+        'file_validate_extensions' => array('xls'),
+    ));
+    if ($file) {
+      if ($file = file_move($file, variable_get("digital_core_asset_protocol", "s3://"))) {
+        $form_state['values']['file'] = $file;
+      }
+      else {
+        form_set_error('file', t('Failed to write the uploaded file the site\'s file folder.'));
+      }
+    }
+    else {
+      form_set_error('file', t('No file was uploaded.'));
+    }
+  }
+}
+
+function bulk_download_wizard_page_download_form_submit(&$form, &$form_state){
+  module_load_include('inc', 'phpexcel');
+
+  $step = 1;
+  $job_id = false;
+
+  if(isset($form_state['values']['step'])) {
+    $step = $form_state['values']['step'];
+  }
+
+  if(isset($_GET['job_id'])) {
+    $job_id = $_GET['job_id'];
+  }
+
+  if($step == "1") {
+
+    //upload the file
+    $file=$form_state['values']['file'];
+    unset($form_state['values']['file']);
+    $file->status = FILE_STATUS_PERMANENT;
+    file_save($file);
+
+    //open up the specified excel file and read some rows from it
+    $excel_data = phpexcel_import($file->uri, false);
+
+    //setup the result array
+    $results = array();
+    $sample_data = array();
+
+    if(count($excel_data) > 0) {
+      $sample_data = array_splice($excel_data[0], 0, 5);
+    }
+
+    $results['excel_sample_data'] = $sample_data;
+    $results['excel_file_id'] = $file->fid;
+    $results['excel_file_uri'] = $file->uri;
+    $results['asset'] = $form_state['values']['asset'];
+
+    //save the job info
+    $job_id = db_insert("bulk_download_wizard_jobs")
+                ->fields(array("job_results" => serialize($results)))
+                ->execute();
+
+    //set the step and job id
+    drupal_goto(current_path(), array('query' => array("step" => 2, "job_id" => $job_id)));
+  }
+  else if($job_id) {
+
+    //update the job info on the table
+    $data = db_select("bulk_download_wizard_jobs")
+              ->fields("bulk_download_wizard_jobs", array('job_results'))
+              ->condition("job_id", $job_id)
+              ->execute()
+              ->fetchField();
+
+    $data_array = unserialize($data);
+
+    //compile list of the valid styles
+    $style_data = array();
+    foreach($form_state['values']['image_styles'] as $style => $used) {
+      if($used !== 0) {
+        $style_data[] = $style;
+      }
+    }
+
+    $data_array['key_col'] = $form_state['values']['identity_column'];
+    $data_array['renditions'] = $style_data;
+    $data_array['identity_select'] = $form_state['values']['identity_select'];
+
+    $result = db_update("bulk_download_wizard_jobs")
+                ->fields(array("job_results" => serialize($data_array)))
+                ->condition("job_id", $job_id)
+                ->execute();
+
+    //trigger analysis
+    //the batch api stuff
+    $excel_data = phpexcel_import($data_array['excel_file_uri'], false);
+
+    $operations = array();
+
+    if(count($excel_data) > 0) {
+
+      for($i = 0; $i < count($excel_data[0]); $i++) {
+        //skip the header row
+        if($form_state['values']['spreadsheet_header'] == 1 && $i == 0) {
+          continue;
+        }
+
+        $operations[] = array("batch_download_analysis", array($excel_data[0][$i][$data_array['key_col']], $style_data, $data_array['asset'], $data_array['identity_select'], $job_id, $data_array['key_col']));
+      }
+
+      batch_set(array(
+                      'title' => t('File Analysis'),
+                      'operations' => $operations,
+                      'finished' => 'bulk_download_analysis_finish', // Finished batch callback.
+                    )
+      );
+    }
+    else {
+      drupal_set_message(t("Error parsing the excel file"));
+    }
+  }
+  else {
+    drupal_set_message(t("Error finding specified job id."));
+  }
+}
+
+function batch_download_analysis($key_field, $renditions, $image_type, $key_identity, $job_id, $key_col, $context) {
+  //perform a look up to try and match up the file to a product
+
+  //find the drupal id of the product in question
+  $entity_id = digital_core_data_get_nid($key_identity, $key_field);
+
+  //find the value of the image_type on for the product that has this key identity
+  //save that fid value into the results
+  $fid = db_select("field_data_{$image_type}")
+          ->fields("field_data_{$image_type}", array("{$image_type}_target_id"))
+          ->condition("entity_id", $entity_id)
+          ->execute()
+          ->fetchField();
+
+  $message = "";
+  $status = "ok";
+
+  //no file found for this product
+  if($fid == false && $entity_id != false) {
+    $message = "No Image found";
+    $status = "warning";
+  }
+  else if(!$entity_id) {
+    //couldnt find the product --- error
+    $message = "Product not found";
+    $status = "error";
+  }
+
+  $context['results']['job_id'] = $job_id;
+  $context['results'][] = array("fid" => $fid,
+                                "entity_id" => $entity_id,
+                                "key" => $key_field,
+                                "renditions" => $renditions,
+                                "upload_type" => $image_type,
+                                "key_identity" => $key_identity,
+                                "job_id" => $job_id,
+                                "key_col" => $key_col,
+                                "status" => $status,
+                                "message" => $message
+                               );
+}
+
+function bulk_download_analysis_finish($success, $results, $operations) {
+
+  //pull out the job_id from the result data, not using the batch job id here
+  //this is the one we have been using all along
+
+  //remove the excel file from the system, not needed anymore
+  $job_data = db_select("bulk_download_wizard_jobs")
+                ->fields("bulk_download_wizard_jobs", array("job_results"))
+                ->condition("job_id", $results['job_id'])
+                ->execute()
+                ->fetchField();
+
+  if($job_data) {
+    $job_data = unserialize($job_data);
+
+    if(array_key_exists("excel_file_id", $job_data)) {
+      file_delete_multiple(array($job_data['excel_file_id']));
+    }
+  }
+
+  if(count($results) > 0) {
+    $result = db_update("bulk_download_wizard_jobs")
+                ->fields(array("job_results" => serialize($results)))
+                ->condition("job_id", $results[0]['job_id'])
+                ->execute();
+
+    drupal_goto("bulk_download/analysis", array("query" => array("job_id" => $results[0]['job_id'])));
+  }
+  else {
+    drupal_set_message(t("No file information was processed in the request. Check you excel file and try again"));
+    drupal_goto("bulk_download");
+  }
+}
+
+function bulk_download_wizard_page_analysis() {
+  return drupal_get_form("bulk_download_wizard_page_analysis_form", $_GET['job_id']);
+}
+
+function bulk_download_wizard_page_analysis_form($form, $form_state, $job_id) {
+  $form = array();
+
+  $upload_type = false;
+  $key_name = false;
+  $key_col = false;
+
+  $analysis_results = db_select("bulk_download_wizard_jobs")
+              ->condition("job_id", $job_id)
+              ->fields("bulk_download_wizard_jobs", array("job_results"))
+              ->execute()
+              ->fetchField();
+
+  if(!$analysis_results) {
+    drupal_set_message(t("Error job id not found"));
+    drupal_goto("bulk_download/");
+  }
+
+  $analysis_results = unserialize($analysis_results);
+
+  $form['analysis_table'] = array (
+    '#type' => 'fieldset',
+    '#title' => 'Review the analysis results',
+    '#theme' => 'bulk_download_wizard_analysis_table',
+    '#tree' => TRUE,
+  );
+
+  $error_count = 0;
+  $warning_count = 0;
+  $ok_count = 0;
+
+  foreach($analysis_results as $result) {
+
+    $form['analysis_table']['key'][$result['key']] = array(
+      "#markup" => $result['key']
+    );
+
+    //wasn't a file for this product -- warning
+    if($result['status'] == 'warning') {
+      $warning_count++;
+    }
+    else if($result['status'] == 'error') {
+      $error_count++;
+    }
+    else {
+      $ok_count++;
+    }
+
+    $form['analysis_table']['status'][$result['key']] = array(
+      "#markup" => $result['status']
+    );
+
+    $form['analysis_table']['message'][$result['key']] = array(
+      "#markup" => $result['message']
+    );
+
+    //get the name of the upload type from the field lable for the type
+    if(!$upload_type) {
+      $data = db_select("field_config_instance")
+                ->fields("field_config_instance", array("data"))
+                ->condition("field_name", $result['upload_type'])
+                ->condition("bundle", "product_details")
+                ->execute()
+                ->fetchField();
+
+      if($data) {
+        $data = unserialize($data);
+
+        $upload_type = $data['label'];
+      }
+    }
+
+    //get the name of the field used as the key on the sheet
+    if(!$key_name) {
+      $data = db_select("field_config_instance")
+                ->fields("field_config_instance", array("data"))
+                ->condition("field_name", $result['key_identity'])
+                ->condition("bundle", "product_details")
+                ->execute()
+                ->fetchField();
+
+      if($data) {
+        $data = unserialize($data);
+
+        $key_name = $data['label'];
+      }
+    }
+
+    //set the column used
+    if(!$key_col) {
+      $key_col = $result['key_col'];
+    }
+  }
+
+  $form['analysis_result_block'] = array (
+    '#type' => 'fieldset',
+  );
+
+  $form['analysis_result_block']['type'] = array(
+    "#markup" => "<div><b>Upload Type:</b> {$upload_type}</div>",
+  );
+
+  $form['analysis_result_block']['resolution'] = array(
+    "#markup" => "<div><b>Product Resolution Method:</b> {$key_name} as Col {$key_col}</div>",
+  );
+
+  $form['analysis_result_block']['number_downloads'] = array(
+    "#markup" => "<div><b>Number of Rows:</b> " . count($analysis_results) . "</div>",
+  );
+
+  $form['analysis_result_block']['validated_downloads'] = array(
+    "#markup" => "<div><b>Validated Rows:</b> {$ok_count} </div>",
+  );
+
+  $form['analysis_result_block']['errors'] = array(
+    "#markup" => "<div><b>Errors:</b> {$error_count} </div>",
+  );
+
+  $form['analysis_result_block']['warnings'] = array(
+    "#markup" => "<div><b>Warnings:</b> {$warning_count} </div>",
+  );
+
+  $form['job_id'] = array(
+    "#type" => "hidden",
+    "#value" => $job_id
+  );
+
+  $form['archive_name'] = array(
+    "#type" => "hidden",
+    "#value" => str_replace(' ', '_', strtolower($upload_type)) . "_" . date('dmY') . ".zip"
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Bundle Assets and Download'),
+  );
+
+    $form['or'] = array(
+      '#markup' => "OR"
+    );
+
+  $form['cancel'] = array(
+    '#type' => 'submit',
+    '#value' => t('Cancel'),
+  );
+
+  return $form;
+}
+
+function bulk_download_wizard_page_analysis_form_submit(&$form, &$form_state) {
+
+  if($form_state['values']['op'] == "Cancel") {
+    drupal_goto("bulk_download/");
+  }
+
+  $analysis_results = db_select("bulk_download_wizard_jobs")
+              ->condition("job_id", $form_state['values']['job_id'])
+              ->fields("bulk_download_wizard_jobs", array("job_results"))
+              ->execute()
+              ->fetchField();
+
+  if(!$analysis_results) {
+    drupal_set_message(t("Error job id not found"));
+    drupal_goto("bulk_download/");
+  }
+
+  $analysis_results = unserialize($analysis_results);
+
+  $operations = array();
+
+  foreach($analysis_results as $result) {
+    if($result['status'] == "ok") {
+      $result['job_id'] = $form_state['values']['job_id'];
+
+      $operations[] = array('batch_download_bundle', array($result, $form_state['values']['archive_name'], $form_state['values']['job_id']));
+    }
+  }
+
+  batch_set(array(
+                  'title' => t('Processing'),
+                  'operations' => $operations,
+                  'finished' => 'bulk_download_finished', // Finished batch callback.
+                )
+  );
+}
+
+function batch_download_bundle($record, $filename, $job_id, $context) {
+  //process all the images make sure there are renditions available
+
+  $file = file_load($record['fid']);
+
+  foreach($record['renditions'] as $rendition) {
+
+    if($rendition == "original") {
+      $file_uri = $file->uri;
+    }
+    else {
+
+      //get the uri to the image
+      $file_uri = image_style_path($rendition, $file->uri);
+
+      //get the path to the rendition file
+      if(file_exists($file->uri) && !file_exists($file_uri)) {
+        //generate the rendition
+        //forces the image cache to generate the image
+        image_style_create_derivative($rendition, $file->uri, $file_uri);
+      }
+    }
+
+    //add the file to the zip list
+    $context['results']['files'][] = array("file_name" => $file_uri, "rendition" => $rendition);
+
+    //set the resulting file name
+    $context['results']['filename'] = $filename;
+
+    $context['results']['job_id'] = $job_id;
+  }
+}
+
+function bulk_download_finished ($success, $results, $operations) {
+  if($success && array_key_exists("filename", $results) && array_key_exists("files", $results)) {
+
+    //has to be local right? can zip files that are not local
+    $archive_uri = "public://" . $results['filename'];
+    $zip = new ZipArchive();
+
+    if ($zip->open($archive_uri, ZipArchive::OVERWRITE) === TRUE) {
+
+      //add all the files to the zip
+      foreach($results['files'] as $file) {
+
+        $readable = is_readable($file['file_name']);
+        $exists = file_exists($file['file_name']);
+
+        if($readable && $exists) {
+
+          //add to the zip
+          $zip->addFile($file['file_name'], $file['rendition'] . "/" . basename($file['file_name']));
+        }
+        else {
+          drupal_set_message(t("Error adding image file to the archive, it does not exist. File: @file", array('@file' => $file['file_name'])));
+        }
+      }
+      //close the zip
+      $result = $zip->close();
+
+      //result is simply the job id
+      //clean up the table and remove this job so as not to leave a mess
+      db_delete("bulk_download_wizard_jobs")
+        ->condition("job_id", $results['job_id'])
+        ->execute();
+
+      drupal_set_message(t('Bulk download processing completed successfully. Click here to download: !link', array('!link' => l(file_create_url($archive_uri), file_create_url($archive_uri)))));
+    }
+    else {
+      drupal_set_message(t('Error creating Zip archive.'), 'error');
+    }
+  }
+  else {
+    drupal_set_message(t("Error Processing File Batch"));
+  }
+
+  drupal_goto("bulk_download");
+}
+
+function theme_bulk_download_wizard_analysis_table($variables) {
+
+  $form = $variables['form'];
+
+  $header = array(t('Key Value'), t('Status'), t('Message'));
+
+  $rows = array();
+
+  foreach (element_children($form['key']) as $key) {
+
+    $record = array();
+    $record[] = drupal_render($form['key'][$key]);
+    $record[] = drupal_render($form['message'][$key]);
+    $record[] = drupal_render($form['status'][$key]);
+
+    $rows[] = $record;
+  }
+
+  $output = theme('table', array(
+      'header' => $header,
+      'rows' => $rows
+  ));
+
+  return $output;
+}
+
+function theme_bulk_download_wizard_identity_table($variables) {
+  $form = $variables['form'];
+
+  $rows = array();
+
+  //add the header radio buttons
+//  if(count(element_children($form['idt_rows'])) > 0) {
+//    $record = array();
+//    foreach (element_children($form['idt_rows'][0]) as $col) {
+//      $active = array(0 => t('Closed'), 1 => t('Active'));
+//
+//      $record[] = drupal_render($radio);
+//    }
+//    $rows[] = $record;
+//  }
+
+  //add the rows
+  foreach (element_children($form['idt_rows']) as $key) {
+    $record = array();
+
+    foreach (element_children($form['idt_rows'][$key]) as $col) {
+      $record[] = drupal_render($form['idt_rows'][$key][$col]);
+    }
+
+    $rows[] = $record;
+  }
+
+  $output = theme('table', array(
+      'rows' => $rows
+  ));
+
+  return $output;
+}
+
+function bulk_download_wizard_theme($existing, $type, $theme, $path) {
+
+  $theme_hooks = array(
+    'bulk_download_wizard_analysis_table' => array(
+      'render element' => 'form',
+      'file' => 'bulk_download_wizard.module'
+     ),
+    'bulk_download_wizard_identity_table' => array(
+      'render element' => 'form',
+      'file' => 'bulk_download_wizard.module'
+     )
+  );
+
+  return $theme_hooks;
+}

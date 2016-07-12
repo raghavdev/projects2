@@ -1,0 +1,61 @@
+.rcm-hierarchy-nodes {
+  margin-top: 0;
+  .fieldset-legend {
+    font-size: $font-size-small;
+  }
+  li {
+    list-style-type: none;
+    padding-left: $spacing-xsmall;
+    &:before {
+      @include arrow-down($black);
+    }
+    &.collapsed:before {
+      @include arrow-right($black);
+    }
+    &:nth-child(even) {
+      background: $p700;
+      div {
+        //keep striping on open divs without bleeding into sub-sections
+        background: $p50;
+        padding-left: 5px;
+        margin-left: -5px;
+      }
+    }
+  }
+  .edit {
+    float: right;
+    padding-right:11px;
+  }
+  .collapsed .edit {
+    padding-right: 5px;
+  }
+
+  a, a:link {
+    color: $black;
+    //left padding to include :before (arrows) in the link
+    //negative left margin to keep link text in place
+    padding-left: 25px;
+    margin-left: -20px;
+  }
+  a:visited, a:hover {
+    color: $g600;
+  }
+  .departments {
+
+  }
+
+  .categories {
+    margin-left: $spacing-medium;
+  }
+
+  .segments {
+    margin-left: $spacing-medium;
+  }
+
+  .subsegments {
+   margin-left: $spacing-medium;
+  }
+}
+.collapsed > div {
+  display: none;
+}

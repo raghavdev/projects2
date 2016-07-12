@@ -1,0 +1,11 @@
+.revision-current td,
+.revision-pending td,
+.table-revisions {
+  a,
+  a:visited,
+  a:hover,
+  a:link,
+  a:active {
+    color: $g600;
+  }
+}

@@ -1,0 +1,15 @@
+diff --git a/modules/image/image.module b/modules/image/image.module
+index 7159c9f..cd32ad4 100644
+--- a/modules/image/image.module
++++ b/modules/image/image.module
+@@ -1082,7 +1082,9 @@ function image_style_path($style_name, $uri) {
+     $path = $uri;
+     $scheme = file_default_scheme();
+   }
+-  return $scheme . '://styles/' . $style_name . '/' . $scheme . '/' . $path;
++  $result = $scheme . '://styles/' . $style_name . '/' . $scheme . '/' . $path;
++  drupal_alter('image_style_path', $result, $style_name, $uri);
++  return $result;
+ }
+ 
+ /**

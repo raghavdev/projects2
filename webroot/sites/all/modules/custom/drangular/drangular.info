@@ -1,0 +1,7 @@
+core = "7.x"
+files[] = admin.inc
+dependencies[] = angularjs
+description = "Angular app manager for Drupal"
+name = "drangular"
+package = "Other"
+php = "5.2.4"

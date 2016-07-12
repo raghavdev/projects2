@@ -1,0 +1,20 @@
+<div class="{{field_name}} form-field form-field-number">
+  <md-input-container>
+  <label>{{section_meta.label}}
+    <div ng-if="section_meta.marketing_icons != ''" class="marketing-icons">
+      <i ng-repeat="icon in section_meta.marketing_icons" class="{{icon}}"></i>
+    </div>
+  </label>
+  <span class="form-field-prefix" ng-if="section_meta.settings.prefix">{{section_meta.settings.prefix}}</span>
+  <input name="{{field_name}}" type="number" string-to-number ng-value="record[field_name]" ng-model="record[field_name]" ng-model-options="{debounce:500,allowInvalid:true}" record="{{field_name}}" ng-required="{{section_meta.required}}" min="{{section_meta.settings.min}}" max="{{section_meta.settings.max}}" step="any" ng-disabled="nopermission" drupal-validate>
+  <span class="form-field-suffix" ng-if="section_meta.settings.suffix">{{section_meta.settings.suffix}}</span>
+  <div ng-messages="recordForm[field_name].$error">
+    <div ng-message="required">This is required!</div>
+    <div ng-message="number">Not a number</div>
+    <div ng-message="min">Must be greater than {{section_meta.settings.min}}</div>
+    <div ng-message="max">Must be less than {{section_meta.settings.max}}</div>
+    <div ng-message="drupal">{{drupal_messages}}</div>
+  </div>
+  <div class="field-description" ng-bind-html="section_meta.description"></div>
+  </md-input-container>
+</div>

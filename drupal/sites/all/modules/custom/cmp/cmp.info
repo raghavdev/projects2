@@ -1,0 +1,5 @@
+name = CMP Integration
+description = Support for the CMP integration
+package = Digital Core
+core = 7.x
+dependencies[] = digital_core

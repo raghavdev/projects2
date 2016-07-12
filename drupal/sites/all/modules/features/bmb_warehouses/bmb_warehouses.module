@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Blue Marble - Warehouse Locations feature.
+ */
+
+include_once 'bmb_warehouses.features.inc';

@@ -1,0 +1,193 @@
+<?php
+
+function buw_ecom_inclusion_sheet_bulk_upload_wizard_get_asset_info () {
+  return array("ecom_inclusion_sheet" => array(
+      "options" => array(),
+      "type" => "Ecommerce Inclusion Sheet",
+      "uploader" => "file",
+      "analysis_table_theme_callback" => "buw_ecom_inclusion_analysis_table",
+      "analysis_results_callback" => "buw_ecom_inclusion_results_analysis",
+      "analysis_pre_callback" => "buw_ecom_inclusion_pre",
+      "analysis_callback" => "buw_ecom_inclusion_sheet_analysis",
+      "apply_callback" => "buw_ecom_inclusion_sheet_apply",
+      "cleanup_callback" => "buw_ecom_inclusion_sheet_cleanup",
+   ));
+}
+
+function buw_ecom_inclusion_pre() {
+  //clear the ecom flags so that only ones here are included
+}
+
+function buw_ecom_inclusion_sheet_analysis($row, $asset_info, $excel_file_id) {
+  $status = "product not found";
+  $name = "";
+  //determine if this is a new record or update or just a bad record
+
+  //col 0 is always the id, and better be numeric
+  if(!is_numeric($row[0])) {
+    $status = "error";
+    $message = "Invalid East ID";
+  }
+  else {
+    //link the east id from the products table to the product in drupal via the product sid
+
+    $q = db_select("field_data_field_productsid")
+          ->fields("field_data_field_productsid", array("entity_id"));
+    $q->addJoin("inner", "digital_core_data_products", "dp", "dp.productsid = field_data_field_productsid.field_productsid_value");
+    $id = $q->condition("dp.east_product_id", $row[0])
+      ->execute()
+      ->fetchField();
+
+    if($id) {
+      $status = "Included";
+      $message = "Product will be Included in Ecom Feed";
+
+      //get the product name
+      $name = db_select("node")
+        ->fields("node", array("title"))
+        ->condition("nid", $id)
+        ->execute()
+        ->fetchField();
+
+    }
+    else {
+      $status = "Error";
+      $message = "Product not found";
+    }
+  }
+
+  return array(
+      "name" => $name,
+      "east_product_id" => $row[0],
+      "id" => $id,
+      "status" => $status,
+      "message" => $message
+  );
+}
+
+function buw_ecom_inclusion_sheet_apply($product_data, $job_id, $asset_info, $options, $context) {
+  $record = array();
+
+  module_load_include('inc', 'digital_core_data', 'digital_core_data_feeds');
+  module_load_include('inc', 'digital_core_data', 'digital_core_data_products');
+
+  if($product_data['status'] == "Included") {
+
+    //need the nid for this east id
+    $nid = digital_core_data_products_nid_from_east_id($product_data['east_product_id']);
+
+    digital_core_data_feeds_update("ecom_feed", "set", $nid, array("ecom_include" => 1));
+  }
+
+  $context['results']['job_id'] = $job_id;
+}
+
+function buw_ecom_inclusion_sheet_cleanup($job_id) {
+  //need to remove the excel file from the system
+  $options = db_select("bulk_upload_wizard_jobs")
+                ->condition("job_id", $job_id)
+                ->fields("bulk_upload_wizard_jobs", array("job_record"))
+                ->condition("record_type", "options")
+                ->execute()
+                ->fetchField();
+
+  $fid = unserialize($options);
+
+  $file = file_load($fid);
+
+  file_delete($file);
+}
+
+function buw_ecom_inclusion_sheet_theme($existing, $type, $theme, $path) {
+
+  $theme_hooks = array(
+    'buw_ecom_inclusion_analysis_table' => array(
+      'render element' => 'form',
+      'file' => 'buw_ecom_inclusion_sheet.module'
+     )
+  );
+
+  return $theme_hooks;
+}
+
+function theme_buw_ecom_inclusion_analysis_table($variables) {
+
+  $form = $variables['form'];
+
+  $header = array(t('East Product ID'), t('Status'));
+
+  $rows = array();
+
+  foreach (element_children($form['upload_table']['east_product_id']) as $key) {
+
+    $record = array();
+    $record[] = drupal_render($form['upload_table']['east_product_id'][$key]);
+    $record[] = drupal_render($form['upload_table']['message'][$key]);
+    $rows[] = $record;
+  }
+
+  $output = theme('table', array(
+      'header' => $header,
+      'rows' => $rows
+  ));
+
+  return $output;
+}
+
+function buw_ecom_inclusion_results_analysis($analysis_results) {
+  $structure = array();
+
+  $error_count = 0;
+  $warning_count = 0;
+  $ok_count = 0;
+  $new = 0;
+  $update = 0;
+
+  foreach($analysis_results as $idx => $result) {
+    if(is_numeric($idx)) {
+
+      $result = unserialize($result);
+
+      $structure['table']['upload_table']['east_product_id'][$result["east_product_id"]] = array(
+        "#markup" => $result['east_product_id']
+      );
+
+       $structure['table']['upload_table']['name'][$result["name"]] = array(
+        "#markup" => $result['name']
+      );
+
+      $structure['table']['upload_table']['status'][$result["east_product_id"]] = array(
+        "#markup" => $result['status']
+      );
+
+      $structure['table']['upload_table']['message'][$result["east_product_id"]] = array(
+        "#markup" => $result['message']
+      );
+
+      if(strtolower($result['status']) == "error") {
+        $error_count++;
+      }
+      else if(strtolower($result['status']) == "warning") {
+        $warning_count++;
+      }
+      else if(strtolower($result['status']) == 'update') {
+        $ok_count++;
+        $update++;
+      }
+      else if(strtolower($result['status']) == 'new product') {
+        $ok_count++;
+        $new++;
+      }
+    }
+  }
+
+  $structure['summary']['analysis_result_block'] = array (
+    '#type' => 'fieldset',
+  );
+
+  $structure['summary']['analysis_result_block']['number_uploads'] = array(
+    "#markup" => "<div><b>Number of Updates:</b> " . count($analysis_results) . "</div>",
+  );
+
+  return $structure;
+}

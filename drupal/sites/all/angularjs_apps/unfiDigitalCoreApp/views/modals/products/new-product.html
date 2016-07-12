@@ -1,0 +1,19 @@
+<form name="newProductForm" novalidate>
+  <div ng-init="record=newProductDefaults">
+      <div id="pane-detail-modal" class="pane-column twelve columns">
+          <div id="pane-detail-header" class="pane-detail-header pane-header"><span ng-click="closeCreateProduct()" class="button-icon button-close"></span>Create New Product</div>
+          <div id="pane-detail-content" class="pane-detail-content pane-content scroll-full-height clearfix">
+              <div class="help-text">Please provide the required fields for creating a new product.<br />
+                  You will add additional information to the product in the main interface after you click Save.<br />
+                  The product's status will automatically be set to Development.</div>
+              <div section="marketing" formfield="title"></div>
+              <div section="marketing" formfield="brand"></div>
+              <div section="marketing" formfield="bmb_category"></div>
+          </div>
+          <div id="pane-detail-footer" class="pane-detail-footer pane-footer">
+            <button class="save" ng-disabled="!newProductForm.$valid || saving" ng-click="newProductForm.$valid && createProduct()">Save<md-progress-circular md-mode="indeterminate" ng-show="saving" md-diameter="16"></md-progress-circular></button>
+            <a class="cancel" ng-disabled="saving" ng-click="closeCreateProduct()">Cancel</a>
+          </div>
+      </div>
+  </div>
+</form>

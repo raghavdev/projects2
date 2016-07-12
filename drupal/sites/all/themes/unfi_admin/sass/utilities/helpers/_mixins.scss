@@ -1,0 +1,90 @@
+@mixin position-relative($top,$left) {
+  position: relative;
+  top: $top;
+  left: $left;
+}
+
+// Vertically center an element using absolute positioning
+@mixin vertically-center($height-of-element) {
+  position: absolute;
+  top: calc(50% - (#{$height-of-element} / 2));
+  margin: 0;
+  padding: 0;
+}
+
+// Apply to a .pane-column .pane-content to give it custom padding and to calculate its height based on the
+// height of .pane-header.
+@mixin scroll-full-height($padding-vertical: default, $padding-horizontal: default, $header-height: 0) {
+  height: 100%;
+  width: 100%;
+  overflow-y: scroll;
+  overflow-x: hidden;
+
+  @if $padding-vertical == default {
+    $padding-vertical: $spacing-small;
+  }
+  @if $padding-horizontal == default {
+    $padding-horizontal: $spacing-small;
+  }
+  padding: $padding-vertical $padding-horizontal;
+
+  @if $header-height == 0 {
+    height: calc(100% - (#{$padding-vertical} * 2));
+  }
+  @else {
+    height: calc(100% - (#{$padding-vertical} * 2) - (#{$header-height}));
+  }
+}
+
+// Arrow toggles
+@mixin arrow-down ($arrowColor){
+  content: ".";
+  display: inline-block;
+  font-size: 0;
+  width: 0px;
+  height: 0px;
+  border-left: 4px solid transparent;
+  border-top: 7px solid $arrowColor;
+  border-right: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  vertical-align: middle;
+}
+
+@mixin arrow-up ($arrowColor){
+  content: ".";
+  display: inline-block;
+  font-size: 0;
+  width: 0px;
+  height: 0px;
+  border-left: 4px solid transparent;
+  border-top: 6px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 5px solid $arrowColor;
+  vertical-align: middle;
+}
+
+@mixin arrow-right ($arrowColor){
+  content: ".";
+  display: inline-block;
+  font-size: 0;
+  width: 0px;
+  height: 0px;
+  border-left: 7px solid $arrowColor;
+  border-top: 4px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  vertical-align: middle;
+}
+
+@mixin arrow-left ($arrowColor){
+  content: ".";
+  display: inline-block;
+  font-size: 0;
+  width: 0px;
+  height: 0px;
+  border-left: 6px solid transparent;
+  border-top: 4px solid transparent;
+  border-right: 5px solid $arrowColor;
+  border-bottom: 4px solid transparent;
+  vertical-align: middle;
+}

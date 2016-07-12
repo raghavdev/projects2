@@ -1,0 +1,6 @@
+<div id="listing" class="pane-listing__content__wrapper clearfix" lerzerlerd="lazyLoader">
+  <div class="listing-result-info" ng-if="resultcount == 0 || resultcount == undefined">
+    <div ng-if="resultcount == 0">No results were found</div>
+  </div>
+  <div ng-include="loadViewModeTemplate()" onload="loadSortingPrefs()" id="listing-view-wrapper" class="clearfix"></div>
+</div>

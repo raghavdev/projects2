@@ -1,0 +1,77 @@
+// ----------------
+// BROWSE SECTION
+// ----------------
+
+body.page-browse {
+  height: 100%;
+}
+
+// ----------------
+// CONTENT PANES
+// ----------------
+
+.pane-column {
+  height: 100%;
+  // Headers
+  .pane-header {
+    @extend %clearfix;
+    height: $pane-header-height;
+    background: $p100;
+    border-bottom: 1px solid $g400;
+  }
+  .scroll-full-height {
+    @include scroll-full-height($spacing-small, $spacing-small, $pane-header-height);
+  }
+}
+
+// ----------------
+// CONTENT WRAPPERS
+// ----------------
+
+#angular-view-wrapper {
+  min-width: $browse-section-min-width;
+
+  height: 100%;
+  overflow: hidden;
+  @extend %border-box;
+  background: $p50;
+  p {
+    margin: 0;
+  }
+  input[type="checkbox"] {
+    cursor: pointer;
+  }
+  //remove Ember dropdown arrows and use browser defaults in angular
+  .form-select {
+    background: $white;
+    -webkit-appearance: menulist;
+  }
+}
+
+#page-wrapper {
+  height: 100%;
+  padding: 0;
+  margin-top: $main-menu-height;
+}
+
+.tabs {
+  ul {
+    margin-left: $spacing-small;
+  }
+  li {
+    display: inline;
+    border-radius: 2px;
+    margin-right: 1px;
+  }
+  @extend %no-border; // overrule foundation
+}
+#angular-view-wrapper .row {
+  //overrule Foundation
+  width: 100%;
+  min-width: initial;
+}
+//remove Ember dropdown arrows and use browser defaults in drupal
+#page .form-select {
+  background: $white;
+  -webkit-appearance: menulist;
+}

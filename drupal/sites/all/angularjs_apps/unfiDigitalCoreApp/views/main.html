@@ -1,0 +1,37 @@
+<div id="page-wrapper" class="twelve columns {{ (filtersOpen === true) ? 'filters-open' : 'filters-closed' }} {{(record) ? 'product-open' : 'product-closed'}} {{(isMobile === true) ? 'mobile' : 'desktop'}}">
+
+  <!-- Left menu pane -->
+  <div id="pane-action" class="pane-action-column dark-theme three columns pane-column">
+    <div class="filter-close">
+      <div ng-click="toggleFilters()" class="button-icon button-right button-close {{(filtersOpen === true) ? 'selected' : ''}}"></div>
+    </div>
+    <div ng-if="canCreateProduct()" class="create-product-button">
+      <button ng-click="openCreateProduct()">Create New Product<span class="button-icon button-create"></span></button>
+    </div>
+    <div actionpane class="action-pane"></div>
+  </div>
+
+  <!-- <div flexpane="vertical" data-pane-left="pane-action" data-pane-right="pane-listing"></div> -->
+  <!-- Middle listing pane -->
+  <div id="pane-listing" class="pane-listing-column columns pane-column">
+    <div id="pane-listing-header" class="pane-listing__header pane-header" listingmenu></div>
+    <div id="listing" class="pane-listing__content pane-content scroll-full-height clearfix" listing></div>
+  </div>
+
+  <!-- <div flexpane="vertical" data-pane-left="pane-listing" data-pane-right="pane-detail"></div> -->
+  <!-- Right detail pane -->
+  <div id="pane-detail" class="pane-detail-column columns pane-column">
+    <form name="updateRecord" auto-save ng-model="record" novalidate>
+      <div id="pane-detail-header" class="pane-detail__header pane-header" detailmenu></div>
+      <div class="product-close">
+        <div ng-click="loadRecord(record)" class="button-icon button-left button-close {{(product-open === true) ? 'selected' : ''}}"></div>
+      </div>
+      <div class="pane-content save-messages" ng-if="record !== null && record.id">
+        <span ng-if="saveMessage!=''" class="autosave-state-{{saveState}}">{{saveMessage}} <md-progress-circular md-mode="indeterminate" ng-show="isSaving()" md-diameter="10"></md-progress-circular></span>
+        <span ng-if="saveMessage==''">Last updated {{getTime(record.changed)}}</span>
+      </div>
+    <div id="pane-detail-content" class="pane-detail__content pane-content scroll-full-height clearfix" detail></div>
+    </form>
+  </div>
+</div>
+<div modal></div>

@@ -1,0 +1,5 @@
+<?php
+
+function digital_core_data_update_7000() {
+  module_enable(array('simple_solr'));
+}

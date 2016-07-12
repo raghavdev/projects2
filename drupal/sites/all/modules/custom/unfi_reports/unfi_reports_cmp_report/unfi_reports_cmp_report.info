@@ -1,0 +1,6 @@
+name = UNFI Reports : CMP Report
+description = Report to view the current CMP products.
+package = UNFI
+core = 7.x
+
+dependencies[] = unfi_reports

@@ -1,0 +1,31 @@
+// ----------------
+// Listing pane list view mode
+// ----------------
+
+.list-view {
+  @extend %ul-reset;
+}
+.list-view__result {
+  position: relative;
+  padding: $spacing-small $spacing-medium;
+  border-bottom: 1px solid $g300;
+  cursor: pointer;
+  &.selected {
+    background: $color-action-primary-selected;
+  }
+  md-checkbox {
+    @include vertically-center($md-checkbox-height);
+  }
+}
+.list-view__result__fields {
+  @extend %ul-reset;
+  padding-left: 40px;
+}
+.list-view__result__fields__field {
+  color: $font-color-light;
+  &:first-child {
+    font-size: $font-size-large;
+    line-height: $line-height-large;
+    color: $font-color-base;
+  }
+}

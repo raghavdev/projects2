@@ -1,0 +1,4 @@
+name = UNFI Custom Functions
+description = Miscellaneous functions
+package = "UNFI"
+core = 7.x

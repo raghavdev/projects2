@@ -1,0 +1,58 @@
+
+.unfi-reports-page {
+  fieldset {
+    padding-left: 0;
+  }
+  #edit-filters {
+    width: 50%;
+  }
+  .unfi-reports-filters-area {
+    margin: 0 0 20px 0;
+    width: 50%;
+    float: left;
+  }
+  .unfi-reports-download-area {
+    margin: 0 0 20px 0;
+    width: 50%;
+    padding-top: 40px;
+    input {
+      margin-top: 9px;
+    }
+  }
+  .unfi-reports-pagination {
+    width: 100%;
+    border-top: 1px solid #aaaaaa;
+    padding-top: 20px;
+    .unfi-reports-page-btn {
+      margin-right: 20px;
+    }
+  }
+  .unfi-reports-results {
+    border: 1px solid #bbbbbb;
+    overflow: auto;
+    table {
+      margin: 0;
+    }
+    th {
+      color: #ffffff;
+      background: #666666;
+      border-right: 1px solid #878787;
+    }
+    tr:nth-child(3n) {
+      background: #F4FDFF;
+    }
+    td, th {
+      font-size: 10px;
+      line-height: 17px;
+    }
+    td {
+      border-right: 1px solid #eeeeee;
+    }
+  }
+}
+
+.form-item-range-preset {
+  label[for="edit-range-preset"] {
+    padding-right: 10px;
+  }
+}

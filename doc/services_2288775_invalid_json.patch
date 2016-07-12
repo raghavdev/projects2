@@ -1,0 +1,29 @@
+From d82bbe31a4ddf973a6a811a9854e312d87e3ce78 Mon Sep 17 00:00:00 2001
+From: Dylan Tack <git@dylan-tack.net>
+Date: Wed, 18 Jun 2014 16:47:31 -0700
+Subject: [PATCH] Issue [#2288775] Reject invalid JSON
+
+---
+ servers/rest_server/includes/ServicesParser.inc | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/servers/rest_server/includes/ServicesParser.inc b/servers/rest_server/includes/ServicesParser.inc
+index c5d09a7..2b2b78a 100644
+--- a/servers/rest_server/includes/ServicesParser.inc
++++ b/servers/rest_server/includes/ServicesParser.inc
+@@ -111,7 +111,11 @@ class ServicesParserXML implements ServicesParserInterface {
+ 
+ class ServicesParserJSON implements ServicesParserInterface {
+   public function parse(ServicesContextInterface $context) {
+-    return json_decode($context->getRequestBody(), TRUE);
++    $data = json_decode($context->getRequestBody(), TRUE);
++    if ($data === NULL) {
++      return services_error(t('Invalid JSON.'), 400);
++    }
++    return $data;
+   }
+ }
+ 
+-- 
+1.8.5.4
+

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Blue Marble - Product Feeds feature.
+ */
+
+include_once 'bmb_product_feeds.features.inc';

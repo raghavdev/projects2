@@ -1,0 +1,1666 @@
+<?php
+/**
+ * @file
+ * Macola Connect installation and update functions.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function macola_connect_schema() {
+  $schema['macola_connect_products'] = array(
+    'description' => 'The staging table for Macola products before they are updated in Drupal.',
+    'fields' => array(
+      'item_no' => array(
+        'description' => 'item_no',
+        'type' => 'varchar', // "2171841276",
+        'length' => 255,
+        'default' => '',
+      ),
+      'item_filler' => array(
+        'description' => 'item_filler',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'search_desc' => array(
+        'description' => 'search_desc',
+        'type' => 'varchar', // "HERBAMARE OG FISH/SEAFO 12/4.4",
+        'length' => 255,
+        'default' => '',
+      ),
+      'item_desc_1' => array(
+        'description' => 'item_desc_1',
+        'type' => 'varchar', // "HERBAMARE OG FISH/SEAFO 12/4.4",
+        'length' => 255,
+        'default' => '',
+      ),
+      'item_desc_2' => array(
+        'description' => 'item_desc_2',
+        'type' => 'varchar', // "V58078",
+        'length' => 255,
+        'default' => '',
+      ),
+      'prod_cat' => array(
+        'description' => 'prod_cat',
+        'type' => 'varchar', // "SEA",
+        'length' => 255,
+        'default' => '',
+      ),
+      'loc' => array(
+        'description' => 'loc',
+        'type' => 'varchar', // "HAL",
+        'length' => 255,
+        'default' => '',
+      ),
+      'uom' => array(
+        'description' => 'uom',
+        'type' => 'varchar', // "CS",
+        'length' => 255,
+        'default' => '',
+      ),
+      'price_uom' => array(
+        'description' => 'price_uom',
+        'type' => 'varchar', // "CS",
+        'length' => 255,
+        'default' => '',
+      ),
+      'price_ratio' => array(
+        'description' => 'price_ratio',
+        'type' => 'varchar', // 1,
+        'length' => 32,
+        'default' => '',
+      ),
+      'pur_uom' => array(
+        'description' => 'pur_uom',
+        'type' => 'varchar', // "CS",
+        'length' => 255,
+        'default' => '',
+      ),
+      'pur_to_inv_ratio' => array(
+        'description' => 'pur_to_inv_ratio',
+        'type' => 'varchar', // 1,
+        'length' => 32,
+        'default' => '',
+      ),
+      'mfg_uom' => array(
+        'description' => 'mfg_uom',
+        'type' => 'varchar', // "CS",
+        'length' => 255,
+        'default' => '',
+      ),
+      'mfg_to_inv_ratio' => array(
+        'description' => 'mfg_to_inv_ratio',
+        'type' => 'varchar', // 1,
+        'length' => 32,
+        'default' => '',
+      ),
+      'item_weight_uom' => array(
+        'description' => 'item_weight_uom',
+        'type' => 'varchar', // "LB",
+        'length' => 255,
+        'default' => '',
+      ),
+      'item_weight' => array(
+        'description' => 'item_weight',
+        'type' => 'varchar', // 3.5,
+        'length' => 32,
+        'default' => '',
+      ),
+      'yield_pct' => array(
+        'description' => 'yield_pct',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'bkord_fg' => array(
+        'description' => 'bkord_fg',
+        'type' => 'varchar', // "N",
+        'length' => 255,
+        'default' => '',
+      ),
+      'tax_fg' => array(
+        'description' => 'tax_fg',
+        'type' => 'varchar', // "Y",
+        'length' => 255,
+        'default' => '',
+      ),
+      'end_item_cd' => array(
+        'description' => 'end_item_cd',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'kit_feat_fg' => array(
+        'description' => 'kit_feat_fg',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'kit_prc_rollup' => array(
+        'description' => 'kit_prc_rollup',
+        'type' => 'varchar', // "N",
+        'length' => 255,
+        'default' => '',
+      ),
+      'feature_prc_opt' => array(
+        'description' => 'feature_prc_opt',
+        'type' => 'varchar', // "N",
+        'length' => 255,
+        'default' => '',
+      ),
+      'kit_cst_rollup' => array(
+        'description' => 'kit_cst_rollup',
+        'type' => 'varchar', // "N",
+        'length' => 255,
+        'default' => '',
+      ),
+      'mat_cost_type' => array(
+        'description' => 'mat_cost_type',
+        'type' => 'varchar', // "FG",
+        'length' => 255,
+        'default' => '',
+      ),
+      'p_and_ic_cd' => array(
+        'description' => 'p_and_ic_cd',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'activity_cd' => array(
+        'description' => 'activity_cd',
+        'type' => 'varchar', // "O",
+        'length' => 255,
+        'default' => '',
+      ),
+      'activity_dt' => array(
+        'description' => 'activity_dt',
+        'type' => 'varchar', // "2025-12-31",
+        'length' => 255,
+        'default' => '',
+      ),
+      'stocked_fg' => array(
+        'description' => 'stocked_fg',
+        'type' => 'varchar', // "Y",
+        'length' => 255,
+        'default' => '',
+      ),
+      'controlled_fg' => array(
+        'description' => 'controlled_fg',
+        'type' => 'varchar', // "Y",
+        'length' => 255,
+        'default' => '',
+      ),
+      'pur_or_mfg' => array(
+        'description' => 'pur_or_mfg',
+        'type' => 'varchar', // "P",
+        'length' => 255,
+        'default' => '',
+      ),
+      'ms_item_fg' => array(
+        'description' => 'ms_item_fg',
+        'type' => 'varchar', // "N",
+        'length' => 255,
+        'default' => '',
+      ),
+      'commodity_cd' => array(
+        'description' => 'commodity_cd',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'byr_plnr' => array(
+        'description' => 'byr_plnr',
+        'type' => 'varchar', // "TD",
+        'length' => 255,
+        'default' => '',
+      ),
+      'mrp_stat_item' => array(
+        'description' => 'mrp_stat_item',
+        'type' => 'varchar', // "N",
+        'length' => 255,
+        'default' => '',
+      ),
+      'last_item_revision' => array(
+        'description' => 'last_item_revision',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'lec_revision' => array(
+        'description' => 'lec_revision',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'lec_dt' => array(
+        'description' => 'lec_dt',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'consumed_fg' => array(
+        'description' => 'consumed_fg',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'mrp_min_ord' => array(
+        'description' => 'mrp_min_ord',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'mrp_safety_stk' => array(
+        'description' => 'mrp_safety_stk',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'mrp_ord_up_to' => array(
+        'description' => 'mrp_ord_up_to',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'planning_lead_tm' => array(
+        'description' => 'planning_lead_tm',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'fix_var_ld_tm_fac' => array(
+        'description' => 'fix_var_ld_tm_fac',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'approved_vend_req' => array(
+        'description' => 'approved_vend_req',
+        'type' => 'varchar', // "N",
+        'length' => 255,
+        'default' => '',
+      ),
+      'drawing_release_no' => array(
+        'description' => 'drawing_release_no',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'drawing_revision_no' => array(
+        'description' => 'drawing_revision_no',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'rtg_release_no' => array(
+        'description' => 'rtg_release_no',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'rtg_revision_no' => array(
+        'description' => 'rtg_revision_no',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'rtg_no' => array(
+        'description' => 'rtg_no',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'ord_policy_cd' => array(
+        'description' => 'ord_policy_cd',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'planning_prd' => array(
+        'description' => 'planning_prd',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'planning_ord_mult' => array(
+        'description' => 'planning_ord_mult',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'mrp_tm_fence_shop' => array(
+        'description' => 'mrp_tm_fence_shop',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'lot_size' => array(
+        'description' => 'lot_size',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'stk_stat_cd' => array(
+        'description' => 'stk_stat_cd',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'low_lvl_cd' => array(
+        'description' => 'low_lvl_cd',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'comm_pct_amt' => array(
+        'description' => 'comm_pct_amt',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'calc_comm_tp' => array(
+        'description' => 'calc_comm_tp',
+        'type' => 'varchar', // "A",
+        'length' => 255,
+        'default' => '',
+      ),
+      'ser_lot_fg' => array(
+        'description' => 'ser_lot_fg',
+        'type' => 'varchar', // "L",
+        'length' => 255,
+        'default' => '',
+      ),
+      'cad_drawing_name' => array(
+        'description' => 'cad_drawing_name',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'shelf_life_days' => array(
+        'description' => 'shelf_life_days',
+        'type' => 'varchar', // 900,
+        'length' => 32,
+        'default' => '',
+      ),
+      'ser_warranty_days' => array(
+        'description' => 'ser_warranty_days',
+        'type' => 'varchar', // 60,
+        'length' => 32,
+        'default' => '',
+      ),
+      'inspection_cd' => array(
+        'description' => 'inspection_cd',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'qty_pct_to_inspect' => array(
+        'description' => 'qty_pct_to_inspect',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'upc_cd' => array(
+        'description' => 'upc_cd',
+        'type' => 'varchar', // "2171841276",
+        'length' => 255,
+        'default' => '',
+      ),
+      'trx_aud_fg' => array(
+        'description' => 'trx_aud_fg',
+        'type' => 'varchar', // "Y",
+        'length' => 255,
+        'default' => '',
+      ),
+      'group_tech_cd' => array(
+        'description' => 'group_tech_cd',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'cube_width_uom' => array(
+        'description' => 'cube_width_uom',
+        'type' => 'varchar', // "IN",
+        'length' => 255,
+        'default' => '',
+      ),
+      'cube_length_uom' => array(
+        'description' => 'cube_length_uom',
+        'type' => 'varchar', // "IN",
+        'length' => 255,
+        'default' => '',
+      ),
+      'cube_height_uom' => array(
+        'description' => 'cube_height_uom',
+        'type' => 'varchar', // "IN",
+        'length' => 255,
+        'default' => '',
+      ),
+      'cube_width' => array(
+        'description' => 'cube_width',
+        'type' => 'varchar', // 5.5,
+        'length' => 32,
+        'default' => '',
+      ),
+      'cube_length' => array(
+        'description' => 'cube_length',
+        'type' => 'varchar', // 7,
+        'length' => 32,
+        'default' => '',
+      ),
+      'cube_height' => array(
+        'description' => 'cube_height',
+        'type' => 'varchar', // 4.25,
+        'length' => 32,
+        'default' => '',
+      ),
+      'cube_qty_per' => array(
+        'description' => 'cube_qty_per',
+        'type' => 'varchar', // 0.09,
+        'length' => 32,
+        'default' => '',
+      ),
+      'note_1' => array(
+        'description' => 'note_1',
+        'type' => 'varchar', // "DRY",
+        'length' => 255,
+        'default' => '',
+      ),
+      'note_2' => array(
+        'description' => 'note_2',
+        'type' => 'varchar', // "32/11",
+        'length' => 255,
+        'default' => '',
+      ),
+      'note_3' => array(
+        'description' => 'note_3',
+        'type' => 'varchar', // "0.08",
+        'length' => 255,
+        'default' => '',
+      ),
+      'note_4' => array(
+        'description' => 'note_4',
+        'type' => 'varchar', // "0.14",
+        'length' => 255,
+        'default' => '',
+      ),
+      'note_5' => array(
+        'description' => 'note_5',
+        'type' => 'varchar', // "A. VOGEL",
+        'length' => 255,
+        'default' => '',
+      ),
+      'user_dt' => array(
+        'description' => 'user_dt',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'user_amt' => array(
+        'description' => 'user_amt',
+        'type' => 'varchar', // 0,
+        'length' => 32,
+        'default' => '',
+      ),
+      'user_def_fld_1' => array(
+        'description' => 'user_def_fld_1',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'user_def_fld_2' => array(
+        'description' => 'user_def_fld_2',
+        'type' => 'varchar', // "0",
+        'length' => 255,
+        'default' => '',
+      ),
+      'user_def_fld_3' => array(
+        'description' => 'user_def_fld_3',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'user_def_fld_4' => array(
+        'description' => 'user_def_fld_4',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'user_def_fld_5' => array(
+        'description' => 'user_def_fld_5',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'user_def_cd' => array(
+        'description' => 'user_def_cd',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'landed_cost_cd' => array(
+        'description' => 'landed_cost_cd',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'landed_cost_cd_2' => array(
+        'description' => 'landed_cost_cd_2',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'landed_cost_cd_3' => array(
+        'description' => 'landed_cost_cd_3',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'landed_cost_cd_4' => array(
+        'description' => 'landed_cost_cd_4',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'landed_cost_cd_5' => array(
+        'description' => 'landed_cost_cd_5',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'landed_cost_cd_6' => array(
+        'description' => 'landed_cost_cd_6',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'landed_cost_cd_7' => array(
+        'description' => 'landed_cost_cd_7',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'landed_cost_cd_8' => array(
+        'description' => 'landed_cost_cd_8',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'landed_cost_cd_9' => array(
+        'description' => 'landed_cost_cd_9',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'landed_cost_cd_10' => array(
+        'description' => 'landed_cost_cd_10',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'mfg_method' => array(
+        'description' => 'mfg_method',
+        'type' => 'varchar', // "OE",
+        'length' => 255,
+        'default' => '',
+      ),
+      'forced_demand' => array(
+        'description' => 'forced_demand',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'var_lead_tm' => array(
+        'description' => 'var_lead_tm',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'comm_cd' => array(
+        'description' => 'comm_cd',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'country_origin' => array(
+        'description' => 'country_origin',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'web_item' => array(
+        'description' => 'web_item',
+        'type' => 'varchar', // "N",
+        'length' => 255,
+        'default' => '',
+      ),
+      'po_req_fg' => array(
+        'description' => 'po_req_fg',
+        'type' => 'varchar', // "N",
+        'length' => 255,
+        'default' => '',
+      ),
+      'po_req_consolidate' => array(
+        'description' => 'po_req_consolidate',
+        'type' => 'varchar', // "N",
+        'length' => 255,
+        'default' => '',
+      ),
+      'create_po' => array(
+        'description' => 'create_po',
+        'type' => 'varchar', // "N",
+        'length' => 255,
+        'default' => '',
+      ),
+      'filler_0002' => array(
+        'description' => 'filler_0002',
+        'type' => 'varchar', // null,
+        'length' => 255,
+        'default' => NULL,
+      ),
+      'id' => array(
+        'description' => 'id',
+        'type' => 'varchar', // 123,
+        'length' => 32,
+        'default' => '',
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function macola_connect_install() {
+  // Insert the field mappings
+  macola_connect_update_7001();
+  macola_connect_update_7002();
+}
+
+/**
+ * Implement hook_uninstall().
+ */
+function macola_connect_uninstall() {
+  db_delete('bluemarble_mapping')
+    ->condition('source', 'macola_connect')
+    ->execute();
+
+  variable_del('macola_connect_last_update');
+  variable_del('macola_connect_update_frequency');
+  variable_del('macola_connect_api_url');
+  variable_del('macola_connect_products_updated_since');
+  variable_del('macola_connect_read');
+  variable_del('macola_connect_write');
+}
+
+/**
+ * Create database table.
+ */
+function macola_connect_update_7000() {
+  // Normally not necessary but the schema didn't exist when the module was
+  // first enabled.
+  drupal_install_schema('macola_connect');
+  // Enable Blue Marble Staging module
+  module_enable(array('bluemarble_staging'));
+}
+
+/**
+ * Insert our initial mappings.
+ */
+function macola_connect_update_7001() {
+  $mappings = array(
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'item_no',
+      'toField' => 'field_item_num',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'item_desc_1',
+      'toField' => 'title',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'item_desc_2',
+      'toField' => 'field_item_description_2',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'prod_cat',
+      'toField' => 'field_product_category',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'macola_connect_map_product_category',
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'loc',
+      'toField' => 'field_primary_location',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'macola_connect_map_warehouse',
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'uom',
+      'toField' => 'field_stocking_uom',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'price_uom',
+      'toField' => 'field_price_uom',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'price_ratio',
+      'toField' => 'field_price_ratio',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'pur_uom',
+      'toField' => 'field_purchasing_uom',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'pur_to_inv_ratio',
+      'toField' => 'field_purchasing_ratio',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'mfg_uom',
+      'toField' => 'field_manufacturing_uom',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'mfg_to_inv_ratio',
+      'toField' => 'field_manufacturing_ratio',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'item_weight_uom',
+      'toField' => 'field_item_weight_uom',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'item_weight',
+      'toField' => 'field_item_weight',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'yield_pct',
+      'toField' => 'field_yield_percentage',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'bkord_fg',
+      'toField' => 'field_backorderable',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'macola_connect_map_boolean',
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'tax_fg',
+      'toField' => 'field_taxable',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'macola_connect_map_boolean',
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'mat_cost_type',
+      'toField' => 'field_material_cost_type',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'macola_connect_map_material_cost_types',
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'activity_cd',
+      'toField' => 'field_activity_state',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'macola_connect_map_activity_code',
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'pur_or_mfg',
+      'toField' => 'field_item_category',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'byr_plnr',
+      'toField' => 'field_buyer',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'macola_connect_map_buyers',
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'planning_lead_tm',
+      'toField' => 'field_planning_lead_time',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'ser_lot_fg',
+      'toField' => 'field_serial_lot',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'shelf_life_days',
+      'toField' => 'field_shelf_life_days',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'ser_warranty_days',
+      'toField' => 'field_warranty_days',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'upc_cd',
+      'toField' => 'field_upc',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'macola_connect_map_upc',
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'cube_width',
+      'toField' => 'field_cube_width',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'cube_length',
+      'toField' => 'field_cube_length',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'cube_height',
+      'toField' => 'field_cube_height',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'cube_qty_per',
+      'toField' => 'field_cube_qty_per',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'mfg_method',
+      'toField' => 'field_manufacturing_method',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'country_origin',
+      'toField' => 'field_country_of_origin',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'web_item',
+      'toField' => 'field_web_item',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'id',
+      'toField' => 'field_macola_id',
+      'fromAlt' => NULL,
+      'primary_key' => 1,
+      'customProcessing' => NULL,
+    ),
+  );
+
+  $query = db_insert('bluemarble_mapping')
+    ->fields(array_keys($mappings[0]));
+  foreach ($mappings as $values) {
+    $query->values($values);
+  }
+  $query->execute();
+}
+
+/**
+ * Insert additional mappings.
+ */
+function macola_connect_update_7002() {
+  $mappings = array(
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'note_5',
+      'toField' => 'field_brand',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'macola_connect_map_brand',
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'note_2',
+      'toField' => 'field_tie',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'macola_connect_map_tie',
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'note_2',
+      'toField' => 'field_high',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'macola_connect_map_high',
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'note_3',
+      'toField' => 'field_east_freight_rate',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'note_4',
+      'toField' => 'field_west_freight_rate',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'create_po',
+      'toField' => 'field_use_oe_to_po',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'note_1',
+      'toField' => 'field_grocery_type',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'mrp_min_ord',
+      'toField' => 'field_minimum_order_qty',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    )
+  );
+
+  $query = db_insert('bluemarble_mapping')
+    ->fields(array_keys($mappings[0]));
+  foreach ($mappings as $values) {
+    $query->values($values);
+  }
+  $query->execute();
+}
+
+/**
+ * Update UPC mapping.
+ */
+function macola_connect_update_7003() {
+  db_update('bluemarble_mapping')
+    ->fields(array(
+      'customProcessing' => 'macola_connect_map_upc',
+    ))
+    ->condition('source', 'macola_connect')
+    ->condition('destination', 'product_details')
+    ->condition('dataType', 'macola_connect_products')
+    ->condition('toField', 'field_upc')
+    ->execute();
+}
+
+/**
+ * Update Vendor mapping.
+ */
+function macola_connect_update_7004() {
+  db_update('bluemarble_mapping')
+    ->fields(array(
+      'toField' => 'field_vendors',
+      'customProcessing' => 'macola_connect_map_vendor',
+    ))
+    ->condition('source', 'macola_connect')
+    ->condition('destination', 'product_details')
+    ->condition('dataType', 'macola_connect_products')
+    ->condition('fromField', 'vend_no')
+    ->execute();
+}
+
+/**
+ * Add Serial/Lot field mapping to Macola
+ */
+function macola_connect_update_7005() {
+  $mappings = array(
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'ser_lot_fg',
+      'toField' => 'field_serial_lot',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+  );
+
+  $query = db_insert('bluemarble_mapping')
+    ->fields(array_keys($mappings[0]));
+  foreach ($mappings as $values) {
+    $query->values($values);
+  }
+  $query->execute();
+}
+
+/**
+ * Add 'Activity Date' field mapping to Macola
+ */
+function macola_connect_update_7006() {
+  $mappings = array(
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'activity_dt',
+      'toField' => 'field_activity_date ',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+  );
+
+  $query = db_insert('bluemarble_mapping')
+    ->fields(array_keys($mappings[0]));
+  foreach ($mappings as $values) {
+    $query->values($values);
+  }
+  $query->execute();
+}
+
+/**
+ * Update 'Activity Date' field mapping to use macola_connect_map_date()
+ */
+function macola_connect_update_7007() {
+  $fields = array(
+    'source' => 'macola_connect',
+    'destination' => 'product_details',
+    'dataType' => 'macola_connect_products',
+    'fromField' => 'activity_dt',
+    'toField' => 'field_activity_date ',
+    'fromAlt' => NULL,
+    'primary_key' => 0,
+    'customProcessing' => 'macola_connect_map_yyyymmdd_date',
+  );
+
+  $query = db_update('bluemarble_mapping')
+    ->fields($fields)
+    ->condition('fromField', 'activity_dt')
+    ->condition('toField', 'field_activity_date');
+
+  $query->execute();
+}
+
+/**
+ * Update 'Activity Date' field strip trailing space character from 'field_activity_date '
+ */
+function macola_connect_update_7008() {
+  $fields = array(
+    'toField' => 'field_activity_date',
+    'customProcessing' => 'macola_connect_map_yyyymmdd_date',
+  );
+
+  $query = db_update('bluemarble_mapping')
+    ->fields($fields)
+    ->condition('source', 'macola_connect')
+    ->condition('destination', 'product_details')
+    ->condition('dataType', 'macola_connect_products')
+    ->condition('fromField', 'activity_dt')
+    ->condition('toField', 'field_activity_date ');
+
+  $query->execute();
+}
+
+/**
+ * Update 'Activity Date' field to use macola_connect_map_date() for real
+ */
+function macola_connect_update_7009() {
+  $fields = array(
+    'toField' => 'field_activity_date',
+    'customProcessing' => 'macola_connect_map_date',
+  );
+
+  $query = db_update('bluemarble_mapping')
+    ->fields($fields)
+    ->condition('source', 'macola_connect')
+    ->condition('destination', 'product_details')
+    ->condition('dataType', 'macola_connect_products')
+    ->condition('fromField', 'activity_dt')
+    ->condition('toField', 'field_activity_date');
+
+  $query->execute();
+}
+
+/**
+ * Add 'Manufacturer Part Number' field mapping to Macola
+ */
+function macola_connect_update_7010() {
+  $mappings = array(
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'vend_item_no',
+      'toField' => 'field_manufacturer_part_number',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+  );
+
+  $query = db_insert('bluemarble_mapping')
+    ->fields(array_keys($mappings[0]));
+  foreach ($mappings as $values) {
+    $query->values($values);
+  }
+  $query->execute();
+}
+
+/**
+ * Change Macola mapping from Retail Size Weight to Gross Case Weight.
+ */
+function macola_connect_update_7011() {
+  $mappings = array(
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'item_weight',
+      'toField' => 'field_case_weight',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'macola_connect',
+      'destination' => 'product_details',
+      'dataType' => 'macola_connect_products',
+      'fromField' => 'item_weight_uom',
+      'toField' => 'field_case_weight_uom',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'macola_connect_map_uom',
+    ),
+  );
+
+  db_delete('bluemarble_mapping')
+    ->condition('fromField', array('item_weight', 'item_weight_uom'))
+    ->condition('source', 'macola_connect')
+    ->execute();
+
+  $query = db_insert('bluemarble_mapping')
+    ->fields(array_keys($mappings[0]));
+  foreach ($mappings as $values) {
+    $query->values($values);
+  }
+  $query->execute();
+}
+
+/**
+ * Add mapping of cube_qty_per to field_case_cube.
+ */
+function macola_connect_update_7012() {
+  $mappings = array(
+    array(
+      'source'               => 'macola_connect',
+      'destination'          => 'product_details',
+      'dataType'             => 'macola_connect_products',
+      'fromField'            => 'cube_qty_per',
+      'toField'              => 'field_case_cube',
+      'fromAlt'              => NULL,
+      'primary_key'          => 0,
+      'customProcessing'     => 'macola_connect_map_number',
+      'customProcessingArgs' => serialize(array(
+        'decimal'        => NULL,
+        'decimal_export' => 2,
+      )),
+    ),
+  );
+
+  $query = db_insert('bluemarble_mapping')
+    ->fields(array_keys($mappings[0]));
+  foreach ($mappings as $values) {
+    $query->values($values);
+  }
+  $query->execute();
+}
+
+/**
+ * Update existing mappings of taxonomy terms with simplified function and context.
+ */
+function macola_connect_update_7013(&$sandbox) {
+  if (!isset($sandbox['mappings'])) {
+    $sandbox['mappings'] = array(
+      'macola_connect_map_product_category'                => array(
+        'entity_type' => 'taxonomy_term',
+        'bundle'      => 'category',
+      ),
+      'macola_connect_map_warehouse'                       => array(
+        'entity_type' => 'taxonomy_term',
+        'bundle'      => 'warehouse',
+      ),
+      'macola_connect_map_material_cost_types'             => array(
+        'entity_type' => 'taxonomy_term',
+        'bundle'      => 'material_cost_type',
+      ),
+      'macola_connect_map_buyers'                          => array(
+        'entity_type' => 'taxonomy_term',
+        'bundle'      => 'buyer',
+      ),
+      'macola_connect_map_freight_protection_level_option' => array(
+        'entity_type' => 'taxonomy_term',
+        'bundle'      => 'freight_protection_level',
+      ),
+      'macola_connect_map_vendor'                          => array(
+        'entity_type' => 'taxonomy_term',
+        'bundle'      => 'vendor',
+      ),
+    );
+    $sandbox['max']      = count($sandbox['mappings']);
+  }
+
+  if (!empty($sandbox['mappings'])) {
+    $old_func = key($sandbox['mappings']);
+    $new_args = array_shift($sandbox['mappings']);
+
+    db_update('bluemarble_mapping')
+      ->fields(array(
+        'customProcessing'     => 'macola_connect_map_entity',
+        'customProcessingArgs' => serialize($new_args),
+      ))
+      ->condition('customProcessing', $old_func)
+      ->execute();
+  }
+
+  if (!empty($sandbox['max'])) {
+    $sandbox['#finished'] = 1 - (count($sandbox['mappings']) / $sandbox['max']);
+  }
+}
+
+/**
+ * Add mapping for vendor pricing (field collection) and its sub fields.
+ */
+function macola_connect_update_7014() {
+  $query = db_insert('bluemarble_mapping');
+
+  $query->fields(array(
+    'source',
+    'destination',
+    'dataType',
+    'fromField',
+    'toField',
+    'fromAlt',
+    'primary_key',
+    'customProcessing',
+    'customProcessingArgs',
+  ));
+
+  $query->values(array(
+    'source'               => 'macola_connect',
+    'destination'          => 'product_details',
+    'dataType'             => 'macola_connect_products',
+    'fromField'            => 'some_fake_field',
+    'toField'              => 'field_vendor_pricing',
+    'fromAlt'              => NULL,
+    'primary_key'          => 0,
+    'customProcessing'     => 'macola_connect_map_field_collection',
+    'customProcessingArgs' => serialize(array()),
+  ));
+
+  $query->values(array(
+    'source'               => 'macola_connect',
+    'destination'          => 'field_vendor_pricing',
+    'dataType'             => 'macola_connect_products',
+    'fromField'            => 'vend_no',
+    'toField'              => 'field_vendors',
+    'fromAlt'              => NULL,
+    'primary_key'          => 0,
+    'customProcessing'     => 'macola_connect_map_entity',
+    'customProcessingArgs' => serialize(array(
+      'entity_type' => 'taxonomy_term',
+      'bundle'      => 'vendor',
+      'field_name'  => 'field_macola_name',
+    )),
+  ));
+
+  $query->values(array(
+    'source'               => 'macola_connect',
+    'destination'          => 'field_vendor_pricing',
+    'dataType'             => 'macola_connect_products',
+    'fromField'            => 'ap_terms_cd',
+    'toField'              => 'field_terms',
+    'fromAlt'              => NULL,
+    'primary_key'          => 0,
+    'customProcessing'     => 'macola_connect_map_entity',
+    'customProcessingArgs' => serialize(array(
+      'entity_type' => 'taxonomy_term',
+      'bundle'      => 'payment_terms',
+      'field_name'  => 'field_macola_name',
+    )),
+  ));
+
+  $query->values(array(
+    'source'               => 'macola_connect',
+    'destination'          => 'field_vendor_pricing',
+    'dataType'             => 'macola_connect_products',
+    'fromField'            => 'vend_item_no',
+    'toField'              => 'field_vendor_item_number',
+    'fromAlt'              => NULL,
+    'primary_key'          => 0,
+    'customProcessing'     => NULL,
+    'customProcessingArgs' => NULL,
+  ));
+
+  $query->execute();
+}
+
+/**
+ * Add mapping for vendor pricing (field collection) Approved Source sub field.
+ */
+function macola_connect_update_7015() {
+  $query = db_insert('bluemarble_mapping');
+
+  $query->fields(array(
+    'source',
+    'destination',
+    'dataType',
+    'fromField',
+    'toField',
+    'fromAlt',
+    'primary_key',
+    'customProcessing',
+    'customProcessingArgs',
+  ));
+
+  $query->values(array(
+    'source'               => 'macola_connect',
+    'destination'          => 'field_vendor_pricing',
+    'dataType'             => 'macola_connect_products',
+    'fromField'            => 'approved_cd',
+    'toField'              => 'field_approved_source',
+    'fromAlt'              => NULL,
+    'primary_key'          => 0,
+    'customProcessing'     => NULL,
+    'customProcessingArgs' => NULL,
+  ));
+
+  $query->execute();
+}
+
+/**
+ * Truncate UPC fields and correct mapping.
+ */
+function macola_connect_update_7016() {
+  db_truncate('field_data_field_upc')->execute();
+  db_truncate('field_revision_field_upc')->execute();
+
+  db_truncate('field_data_field_inner_pack_upc')->execute();
+  db_truncate('field_revision_field_inner_pack_upc')->execute();
+
+  db_truncate('field_data_field_case_upc')->execute();
+  db_truncate('field_revision_field_case_upc')->execute();
+
+  $query = db_update('bluemarble_mapping');
+  $query->fields(array(
+    'toField'              => 'field_upc_code_macola',
+    'customProcessing'     => 'macola_connect_map_proxy_field_value',
+    'customProcessingArgs' => serialize(array(
+      'processing_function' => 'macola_connect_map_upc',
+      'default_field_name'  => 'field_case_upc',
+    ))
+  ));
+  $query->condition('source', 'macola_connect');
+  $query->condition('destination', 'product_details');
+  $query->condition('fromField', 'upc_cd');
+  $query->execute();
+
+
+  // SNUCK THIS IN, because this table is legacy from the UNFI Digital Core
+  // project from which this was forked and this table had ~150k products in it
+  // just causing useless bloat
+  db_truncate('digital_core_data_products');
+}
+
+/**
+ * Remove any field collection sub-fields that were left mapped to product_details.
+ */
+function macola_connect_update_7017() {
+  $fields = array(
+    'field_vendors',
+    'field_vendor_item_number',
+    'field_supplier_cost',
+    'field_cost_effective_date',
+  );
+  db_delete('bluemarble_mapping')
+    ->condition('source', 'macola_connect')
+    ->condition('destination', 'product_details')
+    ->condition('toField', $fields)
+    ->execute();
+}
+
+/**
+ * Remove field_manufacturer_part_number that was added because of naming confusion.
+ */
+function macola_connect_update_7018() {
+  if (db_table_exists('field_data_field_manufacturer_part_number')) {
+    db_truncate('field_data_field_manufacturer_part_number')->execute();
+    db_truncate('field_revision_field_manufacturer_part_number')->execute();
+  }
+
+  db_delete('bluemarble_mapping')
+    ->condition('source', 'macola_connect')
+    ->condition('destination', 'product_details')
+    ->condition('toField', 'field_manufacturer_part_number')
+    ->execute();
+
+  field_delete_field('field_manufacturer_part_number');
+}
+
+/**
+ * Update macola name for Freight Protection Level terms.
+ */
+function macola_connect_update_7019() {
+  $term_map = array(
+    'Chill' => 'CHILLED',
+    'Dry' => 'DRY',
+    'Frozen' => 'FROZEN',
+    'Grain Room' => 'DRY-GRAIN ROOM',
+  );
+  foreach ($term_map as $term_name => $macola_name) {
+    $terms = taxonomy_get_term_by_name($term_name, 'freight_protection_level');
+    if ($terms) {
+      $term = array_shift($terms);
+      $term->field_macola_name[LANGUAGE_NONE][0]['value'] = $macola_name;
+      taxonomy_term_save($term);
+    }
+  }
+}
+
+/**
+ * Correct Boolean fields.
+ */
+function macola_connect_update_7020() {
+  $fields = array(
+    'field_controlled',
+    'field_stocked',
+    'field_inv_transaction_audit',
+    'field_po_req_fg',
+  );
+  db_update('bluemarble_mapping')
+    ->fields(array('customProcessing' => 'macola_connect_map_boolean'))
+    ->condition('toField', $fields)
+    ->condition('source', 'macola_connect')
+    ->condition('destination', 'product_details')
+    ->execute();
+}

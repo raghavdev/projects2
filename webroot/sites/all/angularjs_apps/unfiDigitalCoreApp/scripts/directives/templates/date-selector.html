@@ -1,0 +1,32 @@
+<div id="{{id}}" class="container-inline">
+  <div class="form-item form-type-select">
+    <div ng-if="section_meta.marketing_icons != ''" class="marketing-icons">
+      <i ng-repeat="icon in section_meta.marketing_icons" class="{{icon}}"></i>
+    </div>
+    <label class="element-invisible" for="{{id}}-month">Month </label>
+    <select ng-disabled="{{nopermission}}" ng-show="scope == 'record'" record="{{monthrecord}}" ng-model="record[selectormodel + '_month']" id="{{id}}-month" name="{{id}}[month]" class="form-select form-select-special">
+      <option ng-repeat="(idx, abv) in months" ng-selected="idx == (record[selectormodel + '_month'] ? record[selectormodel + '_month'] : defaultmonth)" value="{{idx}}">{{abv}}</option>
+    </select>
+    <select ng-disabled="{{nopermission}}" ng-hide="scope == 'record'" record="{{monthrecord}}" ng-model="monthrecord" id="alt-{{id}}-month" name="{{id}}[month]" class="form-select form-select-special">
+      <option ng-repeat="(idx, abv) in months" value="{{idx}}">{{abv}}</option>
+    </select>
+  </div>
+  <div class="form-item form-type-select">
+    <label class="element-invisible" for="{{id}}-day">Day </label>
+    <select ng-disabled="{{nopermission}}" ng-show="scope == 'record'" record="{{(dayrecord)}}" ng-model="record[selectormodel + '_day']" id="{{id}}-day" name="{{id}}[day]" class="form-select form-select-special">
+      <option ng-repeat="day in days track by $index" ng-selected="($index + 1) == (record[selectormodel + '_day'] ? record[selectormodel + '_day'] : defaultday)" value="{{$index + 1}}">{{$index + 1}}</option>
+    </select>
+    <select ng-disabled="{{nopermission}}" ng-hide="scope == 'record'" record="{{dayrecord}}" ng-model="dayrecord" id="alt-{{id}}-day" name="{{id}}[day]" class="form-select form-select-special">
+      <option ng-repeat="day in days track by $index">{{$index + 1}}</option>
+    </select>
+  </div>
+  <div class="form-item form-type-select">
+    <label class="element-invisible" for="{{id}}-year">Year </label>
+    <select ng-disabled="{{nopermission}}" ng-show="scope == 'record'" record="{{(yearrecord)}}" ng-model="record[selectormodel + '_year']" id="{{id}}-year" name="{{id}}[year]" class="form-select form-select-special">
+      <option ng-repeat="y in years track by $index" ng-selected="($index + 1900) == (record[selectormodel + '_year'] ? record[selectormodel + '_year'] : defaultyear)" value="{{$index + 1900}}">{{$index + 1900}}</option>
+    </select>
+    <select ng-disabled="{{nopermission}}" ng-hide="scope == 'record'" record="{{yearrecord}}" ng-model="yearrecord" id="alt-{{id}}-year" name="{{id}}[year]" class="form-select form-select-special">
+      <option ng-repeat="y in years track by $index">{{$index + 1900}}</option>
+    </select>
+  </div>
+</div>

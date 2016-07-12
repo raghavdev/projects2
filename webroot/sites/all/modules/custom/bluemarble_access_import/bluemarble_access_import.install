@@ -1,0 +1,1513 @@
+<?php
+/**
+ * @file
+ * Blue Marble Access Import installation and update functions.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function bluemarble_access_import_schema() {
+  // ---- ALL COMMENTED FIELD NAMES WERE NOT IN PRIOR VERSIONS OF THE ACCESS
+  // EXPORT AND DO NOT EXIST IN THE FIELD MAPPING SPREADSHEET ---- //
+  $schema['bluemarble_access_products'] = array(
+    'description' => 'Staging table for csv file uploads.',
+    'fields' => array(
+      'UPC' => array(
+        'description' => 'UPC',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      // Brand
+      'Description' => array( // new
+        'description' => 'Description',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'Casepack' => array(
+        'description' => 'Casepack',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'Size' => array(
+        'description' => 'Size',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'UOM' => array(
+        'description' => 'UOM',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      // CategoryID (did not exist before), should it be CategoryName?
+      // SRPDiscTier1, SRPDiscTier2, SRPDiscTier3, SRPDiscTier4
+      'HICFOB' => array( // new
+        'description' => 'HICFOB',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      // HICLand
+      // DutyAmtLB, DutyPercent, DutyCase
+      // FreightInboundCase
+      'EastFOBPoint' => array(
+        'description' => 'EastFOBPoint',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      // EastManFOB, EastManLand, EastDistFOB
+      'EastDistLand' => array(
+        'description' => 'EastDistLand',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'EastRegCase' => array(
+        'description' => 'EAstRegCase',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'EastRegSRP' => array(
+        'description' => 'EastRegSRP',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'WestFOBPoint' => array(
+        'description' => 'WestFOBPoint',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      // WestManFOB, WestManLand, WestDistFOB
+      'WestDistLand' => array(
+        'description' => 'WestDistLand',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'WestRegCase' => array(
+        'description' => 'WestRegCase',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'WestRegSRP' => array(
+        'description' => 'WestRegSRP',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      // MPWItemNo
+      // HICItemNo
+      'UNFIItemNo' => array(
+        'description' => 'UNFIItemNo',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'RainbowItemNo' => array(
+        'description' => 'RainbowItemNo',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      // ModifiedBy, ActEast, ActWest
+      'NetCaseWeight' => array(
+        'description' => 'NetCaseWeight',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'GrossCaseWeight' => array( // new
+        'description' => 'GrossCaseWeight',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      // CaseDimensions, CaseDimensionsCent
+      'RetailDimensions' => array(
+        'description' => 'RetailDimensions',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      // CasesPerLayer, LayersPerPallet, PalletCharge, PalletType
+      'PalletHeight' => array( // new
+        'description' => 'PalletHeight',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'PalletWeight' => array( // new
+        'description' => 'PalletWeight',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      // CubeFt
+      // Terms -- This says read-only from Macola, but it looks like it's coming from Access
+      'IsOrganic' => array(
+        'description' => 'IsOrganic',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      // OrganicPercent
+      'OrgCertifier' => array(
+        'description' => 'OrgCertifier',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'BottleDeposit' => array(
+        'description' => 'BottleDeposit',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'BottleBillStates' => array(
+        'description' => 'BottleBillStates',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'ProdIntroDate' => array(
+        'description' => 'ProdIntroDate',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      // SalesReporting, UpdateServer, ModifyDate, Modified, RegionalPricing, PrintSelect, LeadTime
+      'IsDiscontinued' => array(
+        'description' => 'IsDiscontinued',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      // IsLanded
+      'IsKosher' => array(
+        'description' => 'IsKosher',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'KosherAgency' => array(
+        'description' => 'KosherAgency',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      // IsDirectPriceList, IsDistributorPriceList
+      'CountryOfOrigin' => array(
+        'description' => 'CountryOfOrigin',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      // OnlineShop, Buyer, HICComp, GTIN, DistID, VenID, ManID, IngredientID, tblWhlDiscID, tblCPDiscID, tblWarehouseID, UPC_Check
+
+      // ---- The following fields were missing from the latest export ---- //
+      'Cholesterol_percent' => array(
+        'description' => '[Cholesterol%]',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'Cholesterol' => array(
+        'description' => '[Cholesterol]',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'DietaryFiber_percent' => array(
+        'description' => '[DietaryFiber%]',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'Iron_percent' => array(
+        'description' => '[Iron%]',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'SaturatedFat_percent' => array(
+        'description' => '[SaturatedFat%]',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'Sodium_percent' => array(
+        'description' => '[Sodium%]',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'TotalCarbohydrate_percent' => array(
+        'description' => '[TotalCarbohydrate%]',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'TotalFat_percent' => array(
+        'description' => '[TotalFat%]',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'Allergens' => array(
+        'description' => 'Allergens',
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
+      'Calcium' => array(
+        'description' => 'Calcium',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'Calories' => array(
+        'description' => 'Calories',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'CaloriesfromFat' => array(
+        'description' => 'CaloriesfromFat',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'CategoryName' => array(
+        'description' => 'CategoryName',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'DietaryFiber' => array(
+        'description' => 'DietaryFiber',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'Ingredients' => array(
+        'description' => 'Ingredients',
+        'type' => 'text',
+        'not null' => FALSE,
+      ),
+      'IsBPAFree' => array(
+        'description' => 'IsBPAFree',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'IsDairyFree' => array(
+        'description' => 'IsDairyFree',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'IsEggFree' => array(
+        'description' => 'IsEggFree',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'IsFishFree' => array(
+        'description' => 'IsFishFree',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'IsGlutenFree' => array(
+        'description' => 'IsGlutenFree',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'IsPeanutFree' => array(
+        'description' => 'IsPeanutFree',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'IsShellfishFree' => array(
+        'description' => 'IsShellfishFree',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'IsSoyFree' => array(
+        'description' => 'IsSoyFree',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'IsTreeNutFree' => array(
+        'description' => 'IsTreeNutFree',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'IsVegan' => array(
+        'description' => 'IsVegan',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'IsVegetarian' => array(
+        'description' => 'IsVegetarian',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'IsWheatFree' => array(
+        'description' => 'IsWheatFree',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'NonGMOEnrolled' => array(
+        'description' => 'NonGMOEnrolled',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'NonGMOItem' => array(
+        'description' => 'NonGMOItem',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'NonGMOVerified' => array(
+        'description' => 'NonGMOVerified',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'Protein' => array(
+        'description' => 'Protein',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'SaturatedFat' => array(
+        'description' => 'SaturatedFat',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'ServingSize' => array(
+        'description' => 'ServingSize',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'ServingsPerContainer' => array(
+        'description' => 'ServingsPerContainer',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'Sodium' => array(
+        'description' => 'Sodium',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'Sugar' => array(
+        'description' => 'Sugar',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'TotalCarbohydrates' => array(
+        'description' => 'TotalCarbohydrates',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'TotalFat' => array(
+        'description' => 'TotalFat',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'Transfat' => array(
+        'description' => 'Transfat',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'VitaminA' => array(
+        'description' => 'VitaminA',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'VitaminC' => array(
+        'description' => 'VitaminC',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+      'WebCategory' => array(
+        'description' => 'WebCategory',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => FALSE,
+      ),
+    ),
+  );
+
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function bluemarble_access_import_install() {
+  // Insert mappings.
+  $mappings = array(
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'Cholesterol_percent',
+      'toField' => 'field_cholesterol_percent',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'Cholesterol',
+      'toField' => 'field_cholesterol_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'DietaryFiber_percent',
+      'toField' => 'field_fiber_percent',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'Iron_percent',
+      'toField' => 'field_iron_percent',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'SaturatedFat_percent',
+      'toField' => 'field_saturated_fat_percent',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'Sodium_percent',
+      'toField' => 'field_sodium_percent',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'TotalCarbohydrate_percent',
+      'toField' => 'field_carbohydrate_percent',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'TotalFat_percent',
+      'toField' => 'field_fat_percent',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'Allergens',
+      'toField' => 'field_allergens',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'BottleBillStates',
+      'toField' => 'field_beverage_container',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_bottle_bill_states',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'BottleDeposit',
+      'toField' => '', // Current data not needed
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'Calcium',
+      'toField' => 'field_calcium_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'Calories',
+      'toField' => 'field_calories_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'CaloriesfromFat',
+      'toField' => 'field_calories_from_fat_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'Casepack',
+      'toField' => 'field_case_qty',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'CategoryName',
+      'toField' => 'field_product_category',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_product_category',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'CountryOfOrigin',
+      'toField' => 'field_country_of_origin',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'DietaryFiber',
+      'toField' => 'field_dietary_fiber_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'EastDistLand',
+      'toField' => 'field_case_cost_del_east',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'EastFOBPoint',
+      'toField' => '', // @todo waiting on list and clarification of what this is an association to
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_east_fob_point',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'EAstRegCase',
+      'toField' => 'field_east_customer_wholesale',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'EastRegSRP',
+      'toField' => 'field_east_srp',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'Ingredients',
+      'toField' => 'field_ingredients',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'IsDairyFree',
+      'toField' => 'field_major_allergen_attributes',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_dairy_free',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'IsDiscontinued',
+      'toField' => '', // Not needed
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'IsEggFree',
+      'toField' => 'field_major_allergen_attributes',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_egg_free',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'IsFishFree',
+      'toField' => 'field_major_allergen_attributes',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_fish_free',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'IsGlutenFree',
+      'toField' => 'field_gluten_free',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_boolean',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'IsKosher',
+      'toField' => 'field_kosher',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_kosher',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'IsOrganic',
+      'toField' => 'field_nop_organic',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_boolean',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'IsPeanutFree',
+      'toField' => 'field_major_allergen_attributes',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_peanut_free',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'IsShellfishFree',
+      'toField' => 'field_major_allergen_attributes',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_shellfish_free',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'IsSoyFree',
+      'toField' => 'field_major_allergen_attributes',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_soy_free',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'IsTreeNutFree',
+      'toField' => 'field_major_allergen_attributes',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_treenut_free',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'IsVegan',
+      'toField' => 'field_certified_vegan',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_boolean',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'IsVegetarian',
+      'toField' => 'field_is_vegetarian',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_boolean',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'IsWheatFree',
+      'toField' => 'field_major_allergen_attributes',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_wheat_free',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'KosherAgency',
+      'toField' => 'field_kosher_agency',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'NetCaseWeight',
+      'toField' => 'field_net_weight',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'NonGMOEnrolled',
+      'toField' => 'field_non_gmo_product',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'NonGMOItem',
+      'toField' => 'field_non_gmo',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'NonGMOVerified',
+      'toField' => 'field_non_gmo_verified',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'OrgCertifier',
+      'toField' => 'field_organic_certifier',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'ProdIntroDate',
+      'toField' => 'field_product_intro_date',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_product_intro_date',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'Protein',
+      'toField' => 'field_protein_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'RainbowItemNo',
+      'toField' => 'field_rbw_item_number',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'RetailDimensions',
+      'toField' => 'field_item_length',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_item_length',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'RetailDimensions',
+      'toField' => 'field_item_width',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_item_width',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'RetailDimensions',
+      'toField' => 'field_item_height',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_item_height',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'SaturatedFat',
+      'toField' => 'field_saturated_fat_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'ServingSize',
+      'toField' => 'field_serving_size_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'ServingsPerContainer',
+      'toField' => 'field_servings_per_cont_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'Size',
+      'toField' => 'field_item_size',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'Sodium',
+      'toField' => 'field_sodium_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'Sugar',
+      'toField' => 'field_sugar_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'TotalCarbohydrates',
+      'toField' => 'field_total_carbohydrate_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'TotalFat',
+      'toField' => 'field_total_fat_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'Transfat',
+      'toField' => 'field_trans_fat_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'UNFIItemNo',
+      'toField' => 'field_unfi_east_id',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'UOM',
+      'toField' => 'field_item_size_uom',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_item_size_uom',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'UPC',
+      'toField' => 'field_item_num',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'VitaminA',
+      'toField' => 'field_vitamin_a_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'VitaminC',
+      'toField' => 'field_vitamin_c_value',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'WebCategory',
+      'toField' => 'field_web_category',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_web_category',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'WestDistLand',
+      'toField' => 'field_case_cost_del_west',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'WestFOBPoint',
+      'toField' => '', // @todo waiting on list and clarification of what this is an association to
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_west_fob_point',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'WestRegCase',
+      'toField' => 'field_west_customer_wholesale',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'WestRegSRP',
+      'toField' => 'field_west_srp',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => NULL,
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'RetailDimensions',
+      'toField' => 'field_item_length_uom',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_item_units',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'RetailDimensions',
+      'toField' => 'field_item_width_uom',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_item_units',
+    ),
+    array(
+      'source' => 'csv',
+      'destination' => 'product_details',
+      'dataType' => 'bluemarble_access_products',
+      'fromField' => 'RetailDimensions',
+      'toField' => 'field_item_height_uom',
+      'fromAlt' => NULL,
+      'primary_key' => 0,
+      'customProcessing' => 'bluemarble_access_import_map_item_units',
+    ),
+  );
+
+  $query = db_insert('bluemarble_mapping')
+    ->fields(array_keys($mappings[0]));
+  foreach ($mappings as $values) {
+    $query->values($values);
+  }
+  $query->execute();
+}
+
+/**
+ * Implement hook_uninstall().
+ */
+function bluemarble_access_import_uninstall() {
+  db_delete('bluemarble_mapping')
+    ->condition('dataType', 'bluemarble_access_products')
+    ->execute();
+}
+
+/**
+ * Update field mappings.
+ */
+function bluemarble_access_import_update_7001() {
+  $base_conditions = db_and()
+    ->condition('source', 'csv')
+    ->condition('destination', 'product_details')
+    ->condition('dataType', 'bluemarble_access_products');
+
+  $deletes = array(
+    'fromField' => array(
+      'IsOrganic',
+      'UPC',
+      'Cholesterol_percent',
+      'DietaryFiber_percent',
+      'Iron_percent',
+      'SaturatedFat_percent',
+      'Sodium_percent',
+      'TotalCarbohydrate_percent',
+      'TotalFat_percent',
+      'Allergens',
+      'BottleBillStates',
+      'Casepack',
+      'CategoryName',
+      'CountryOfOrigin',
+      'EastDistLand',
+      'EAstRegCase',
+      'IsKosher',
+      'IsVegan',
+      'IsVegetarian',
+      'KosherAgency',
+      'NetCaseWeight',
+      'NonGMOEnrolled',
+      'NonGMOItem',
+      'NonGMOVerified',
+      'RainbowItemNo',
+      'UNFIItemNo',
+      'WebCategory',
+      'WestDistLand',
+      'WestRegCase',
+      'WestRegSRP',
+    ),
+    'toField' => array(
+      'field_item_length',
+      'field_item_width',
+      'field_item_height',
+    ),
+  );
+
+  $delete_or = db_or();
+  foreach ($deletes as $field_name => $field_values) {
+    $delete_or->condition($field_name, $field_values);
+  }
+
+  db_delete('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition($delete_or)
+    ->execute();
+
+  // Since these field updates could be the to or from fields or something else,
+  // I am going to handle each on a case-by-case basis rather than processing
+  // an array
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'OrgCertifier')
+    ->fields(array(
+      'toField'          => 'field_organic_certifier',
+      'customProcessing' => 'bluemarble_access_import_map_entityreference_field',
+    ))
+    ->execute();
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'ServingSize')
+    ->condition('toField', 'field_serving_size_value')
+    ->fields(array(
+      'customProcessing'     => 'bluemarble_access_import_map_regex_number_with_uom',
+      'customProcessingArgs' => serialize(array('preg_match_key' => 1)),
+    ))
+    ->execute();
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'ServingsPerContainer')
+    ->fields(array(
+      'customProcessing' => 'bluemarble_access_import_map_regex_number',
+    ))
+    ->execute();
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'TotalFat')
+    ->fields(array(
+      'customProcessing' => 'bluemarble_access_import_map_regex_number',
+    ))
+    ->execute();
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'SaturatedFat')
+    ->fields(array(
+      'customProcessing' => 'bluemarble_access_import_map_regex_number',
+    ))
+    ->execute();
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'Cholesterol')
+    ->fields(array(
+      'customProcessing' => 'bluemarble_access_import_map_regex_number',
+    ))
+    ->execute();
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'Sodium')
+    ->fields(array(
+      'customProcessing' => 'bluemarble_access_import_map_regex_number',
+    ))
+    ->execute();
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'TotalCarbohydrates')
+    ->fields(array(
+      'customProcessing' => 'bluemarble_access_import_map_regex_number',
+    ))
+    ->execute();
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'DietaryFiber')
+    ->fields(array(
+      'customProcessing' => 'bluemarble_access_import_map_regex_number',
+    ))
+    ->execute();
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'Sugar')
+    ->fields(array(
+      'customProcessing' => 'bluemarble_access_import_map_regex_number',
+    ))
+    ->execute();
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'Protein')
+    ->fields(array(
+      'customProcessing' => 'bluemarble_access_import_map_regex_number',
+    ))
+    ->execute();
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'RetailDimensions')
+    ->condition('toField', 'field_item_height_uom')
+    ->fields(array(
+      'toField'              => 'field_pack_height',
+      'customProcessing'     => 'bluemarble_access_import_map_regex_number',
+      'customProcessingArgs' => serialize(array('preg_match_key' => 0)),
+    ))
+    ->execute();
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'RetailDimensions')
+    ->condition('toField', 'field_item_width_uom')
+    ->fields(array(
+      'toField'              => 'field_pack_width',
+      'customProcessing'     => 'bluemarble_access_import_map_regex_number',
+      'customProcessingArgs' => serialize(array('preg_match_key' => 1)),
+    ))
+    ->execute();
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'RetailDimensions')
+    ->condition('toField', 'field_item_length_uom')
+    ->fields(array(
+      'toField'              => 'field_pack_length',
+      'customProcessing'     => 'bluemarble_access_import_map_regex_number',
+      'customProcessingArgs' => serialize(array('preg_match_key' => 2)),
+    ))
+    ->execute();
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'EastFOBPoint')
+    ->fields(array(
+      'toField' => 'field_east_fob_location',
+    ))
+    ->execute();
+
+  db_update('bluemarble_mapping')
+    ->condition($base_conditions)
+    ->condition('fromField', 'WestFOBPoint')
+    ->fields(array(
+      'toField' => 'field_west_fob_location',
+    ))
+    ->execute();
+
+  // Multiple inserts can be handled in one call though
+
+  $inserts = array(
+    array(
+      'fromField' => 'Description',
+      'toField'   => 'field_short_description',
+    ),
+    array(
+      'fromField'            => 'ServingSize',
+      'toField'              => 'field_serving_size_uom',
+      'customProcessing'     => 'bluemarble_access_import_map_regex_number_with_uom',
+      'customProcessingArgs' => serialize(array('preg_match_key' => 2)),
+    ),
+  );
+
+  foreach ($inserts as $insert_values) {
+    $query = db_merge('bluemarble_mapping');
+    $query->key(array(
+      'source'      => 'csv',
+      'destination' => 'product_details',
+      'dataType'    => 'bluemarble_access_products',
+      'fromField'   => $insert_values['fromField'],
+      'toField'     => $insert_values['toField'],
+    ));
+    $query->fields($insert_values);
+    $query->execute();
+  }
+}
+
+/**
+ * Alter schema to add new fields.
+ */
+function bluemarble_access_import_update_7002() {
+  $schema = bluemarble_access_import_schema();
+
+  $new_fields = array(
+    'Description',
+    'HICFOB',
+    'GrossCaseWeight',
+    'PalletHeight',
+    'PalletWeight',
+  );
+
+  foreach ($new_fields as $field) {
+    db_add_field('bluemarble_access_products', $field, $schema['bluemarble_access_products']['fields'][$field]);
+  }
+}
+
+/**
+ * Add missing field mappings.
+ */
+function bluemarble_access_import_update_7003() {
+  $inserts = array(
+    array(
+      'fromField' => 'HICFOB',
+      'toField'   => 'field_supplier_cost',
+    ),
+    array(
+      'fromField' => 'GrossCaseWeight',
+      'toField'   => 'field_case_weight',
+    ),
+    array(
+      'fromField' => 'PalletHeight',
+      'toField'   => 'field_pallet_height',
+    ),
+    array(
+      'fromField' => 'PalletWeight',
+      'toField'   => 'field_pallet_weight',
+    ),
+  );
+
+  foreach ($inserts as $insert_values) {
+    $query = db_merge('bluemarble_mapping');
+    $query->key(array(
+      'source'      => 'csv',
+      'destination' => 'product_details',
+      'dataType'    => 'bluemarble_access_products',
+      'fromField'   => $insert_values['fromField'],
+      'toField'     => $insert_values['toField'],
+    ));
+    $query->fields($insert_values);
+    $query->execute();
+  }
+}
+
+/**
+ * Remove BPA free mapping
+ */
+function bluemarble_access_import_update_7004() {
+  db_delete('bluemarble_mapping')
+    ->condition('toField', 'field_is_bpa_free')
+    ->execute();
+}
+
+/**
+ * Remove Gluten free mapping
+ */
+function bluemarble_access_import_update_7005() {
+  db_delete('bluemarble_mapping')
+    ->condition('toField', 'field_gluten_free')
+    ->execute();
+}

@@ -1,0 +1,47 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function content_uri_schema() {
+  $schema = array();
+
+  //staging tables
+  
+  //mapping table
+  $schema['content_uri'] = array(
+    'description' => 'Table for the content uri definitions',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Primary ID',
+        'type'        => 'serial',
+        'length'      => 11,
+        'not null'    => TRUE,
+      ),
+      'url' => array(
+        'description' => 'Url of the URI',
+        'type'        => 'varchar',
+        'length'      => 300,
+        'not null'    => TRUE,
+      ),
+      'contentData' => array(
+        'description' => 'URI Options for exposed content',
+        'type'        => 'text',
+        'size'        => 'big',
+        'not null'    => TRUE,
+      ),
+    ),
+    'primary key' => array('id'),
+  );
+  
+  return $schema;
+}
+
+function content_uri_update_7001() {
+  db_change_field('content_uri', 'contentData', 'contentData', array(
+    'description' => 'URI Options for exposed content',
+    'type'        => 'text',
+    'size'        => 'big',
+    'not null'    => TRUE,
+  ));
+}

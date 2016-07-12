@@ -1,0 +1,24 @@
+name = unfi_admin
+description = A responsive administration theme.
+package = Core
+version = VERSION
+core = 7.x
+
+; Stylesheets
+;stylesheets[screen][] = styles/normalize.css
+stylesheets[screen][] = styles/style.css
+
+; JavaScript
+scripts[] = js/unfi_admin.menu.js
+
+; Settings
+settings[shortcut_module_link] = 1
+
+; Regions
+regions[content] = Content
+regions[help] = Help
+regions[messages] = Messages
+regions[page_top] = Page top
+regions[page_bottom] = Page bottom
+regions[sidebar_first] = First sidebar
+regions_hidden[] = sidebar_first

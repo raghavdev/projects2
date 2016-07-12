@@ -1,0 +1,51 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ *
+ */
+function digital_core_image_serve_menu() {
+ $items = array();
+
+  // Create an administration block for the module and any submodules.
+  $items['service/digitalcore/products/image/%'] = array(
+    'page callback' => 'digital_core_image_serve_get_image',
+    'access arguments' => array('view files'),
+    'page arguments' => array(4),
+    'access callback' => 'user_access',
+    'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+/*
+ * retrieve the image file associated with the upc provided
+ */
+function digital_core_image_serve_get_image($upc) {
+
+  module_load_include('inc', 'digital_core_data', 'digital_core_data_products');
+  $product = digital_core_data_products_read(array("search" => $upc), array("upc"));
+
+  if($product['count'] > 0) {
+    $product = array_shift($product['results']);
+
+    $pathinfo = pathinfo($product['thumb_url']);
+
+    if($pathinfo['filename'] == "default_image") {
+      http_response_code(404);
+      exit();
+    }
+
+    $ext = substr($pathinfo['extension'], 0, 3);
+
+    $headers = get_headers($product['thumb_url'], 1);
+
+    header('Content-Type: '.$headers['Content-Type']);
+    header('Content-Disposition: attachment; filename="'.$pathinfo['filename'].".".$ext. '";' );
+    header('Content-Length: '.$headers['Content-Length']);
+    readfile($product['thumb_url']);
+
+    exit();
+  }
+}

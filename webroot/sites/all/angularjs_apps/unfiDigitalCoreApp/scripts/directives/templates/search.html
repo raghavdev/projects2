@@ -1,0 +1,8 @@
+<div id="search" class="search-form">
+  <form>
+    <span ng-if="search[view].search.length" ng-click="clearSelection()" class="button-icon button-close"></span>
+    <input type="text" value="" ng-model="search[view].search" placeholder="Keyword Search">
+    <input type="submit" name="" border="0" value="Search" ng-click="query($event)" class="search-form__submit button-icon button-search">
+  </form>
+  <div class="clearfix"></div>
+</div>

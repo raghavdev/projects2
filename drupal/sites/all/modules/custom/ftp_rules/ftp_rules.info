@@ -1,0 +1,5 @@
+name = FTP Rules
+description = Carry out ftp actions based on rules
+package = Digital Core
+core = 7.x
+dependencies[] = rules

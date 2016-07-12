@@ -1,0 +1,11 @@
+default:
+  extensions:
+    Behat\MinkExtension\Extension:
+      base_url: http://your_base_url #change to local project url
+      selenium2:
+        wd_host: http://10.0.2.2:4444/wd/hub #this is currently set to run with vagrant and needs to be changed for your project to http://localhost:4444/wd/hub
+    Drupal\DrupalExtension\Extension:
+      drush:
+        root: /var/www/sites/default/drupal #change this to point toward the the project drupal folder
+      drupal:
+        drupal_root: /var/www/sites/default/drupal #change this to point toward the the project drupal folder

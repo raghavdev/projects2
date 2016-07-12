@@ -1,0 +1,4 @@
+<div class="accordion-header width-enhancer">
+  <span class="filtered-accordion-toggle {{nochildren}} {{this.$id}}" ng-click="toggleState()"></span>
+  <p ng-click="onAccordionItemClick(acc_model.tid)" class="{{(acc_model.tid === currentFilter.tid)? 'selected': ''}}">{{toUpper(acc_model.name)}}</p>
+</div>

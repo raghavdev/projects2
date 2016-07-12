@@ -1,0 +1,233 @@
+<?php
+
+function pws_migrate_menu() {
+  $items = array();
+
+  // Create an administration block for the module and any submodules.
+  $items['admin/pws/import/products'] = array(
+    'page callback' => 'pws_migrate_import_products',
+    'type' => MENU_CALLBACK,
+    'access callback' => true,
+  );
+
+  $items['admin/pws/import/products_details'] = array(
+    'page callback' => 'pws_migrate_import_details',
+    'type' => MENU_CALLBACK,
+    'access callback' => true,
+  );
+
+  $items['admin/pws/import/products_nutrition'] = array(
+    'page callback' => 'pws_migrate_import_nutrition',
+    'type' => MENU_CALLBACK,
+    'access callback' => true,
+  );
+
+  $items['admin/pws/import/cleanupc'] = array(
+    'page callback' => 'pws_migrate_clean_upc',
+    'type' => MENU_CALLBACK,
+    'access callback' => true,
+  );
+
+  return $items;
+}
+
+//take the first 2 characters off the upc so its MUCH faster to match to
+//due to those being check digits and they done match otherwise, wildcards are SLOW
+
+//need to run this before doing the import, it will clean up the upcs on the data coming in so they match
+function pws_migrate_clean_upc() {
+
+  $upcs2 = db_select("digital_core_data_products")
+            ->fields("digital_core_data_products", array("upc"))
+            ->condition("upc", "", "<>")
+            ->execute()
+            ->fetchAll();
+
+    foreach($upcs2 as $upc2) {
+      $upc = substr($upc2->upc, 2, strlen($upc2->upc) - 2);
+
+      db_update("pws_products")
+        ->fields(array("upc" => $upc2->upc))
+        ->condition("upc", $upc)
+        ->execute();
+
+//      db_update("pws_productnutrition")
+//        ->fields(array("upc" => $upc2->upc))
+//        ->condition("upc", $upc)
+//        ->execute();
+
+//        db_update("pws_productdetails")
+//        ->fields(array("upc" => $upc2->upc))
+//        ->condition("upc", $upc)
+//        ->execute();
+    }
+}
+
+function pws_migrate_import_products() {
+  $mapping = array();
+  //$mapping['productName'] = array("title");
+  $mapping['masterCaseUPC'] = "field_master_case_upc";
+  //$mapping['brand'] = "brand";
+
+  $page = pws_migrate_get_page("pws_products");
+
+  //$mapping['brand'] ;
+
+  //Are these used?
+  //$mapping['organicCode'];
+  //$mapping['caseUPC'] = "";
+  //$mapping['productOwner']; = ""
+
+  pws_migrate_batch_process($mapping, "pws_products", "node", "product_details", $page, "admin/pws/import/products");
+}
+
+function pws_migrate_import_nutrition() {
+  $mapping = array();
+  $mapping['servingSize'] = "field_serving_size";
+  $mapping['servingsContainer'] = "field_servings_per_container";
+  $mapping['calories'] = "field_calories";
+  //$mapping['fromFat'] = "field_;
+  $mapping['totalFat'] = "field_total_fat";
+  $mapping['saturatedFat'] = "field_saturated_fat";
+  $mapping['transFat'] = "field_trans_fat";
+  $mapping['cholesterol'] = "field_cholesterol";
+  $mapping['sodium'] = "field_sodium";
+  $mapping['totalCarbs'] = "field_total_carbs";
+  $mapping['dietaryFiber'] = "field_dietary_fiber";
+  $mapping['sugars'] = "field_sugars";
+  $mapping['protein'] = "field_protein";
+  $mapping['vitaminA'] = "field_vitamin_a";
+  $mapping['vitaminC'] = "field_vitamin_c";
+  $mapping['calcium'] = "field_calcium";
+  $mapping['iron'] = "field_iron";
+  $mapping['totalFatPDV'] = "field_total_fat_pdv";
+  $mapping['saturatedFatPDV'] = "field_saturated_fat_pdv";
+  $mapping['cholesterolPDV'] = "field_cholesterol_pdv";
+  $mapping['sodiumPDV'] = "field_sodium_pdv";
+  $mapping['totalCarbsPDV'] = "field_total_carbs_pdv";
+  $mapping['dietaryFiberPDV'] = "field_dietary_fiber_pdv";
+  $mapping['sugarsPDV'] = "field_sugars_pdv";
+  $mapping['proteinPDV'] = "field_protein_pdv";
+  $mapping['displayPanel'] = "field_display_panel";
+
+  $page = pws_migrate_get_page("pws_productnutrition");
+
+  pws_migrate_batch_process($mapping, "pws_productnutrition", "node", "product_details", $page, "admin/pws/import/products_nutrition");
+}
+
+function pws_migrate_import_details() {
+  $mapping = array();
+
+  //$mapping['itemsPerPackage'];
+  //$mapping['packaging'];
+  //$mapping['misc'];
+  //$mapping['productSource'];
+  //$mapping['preparation'];
+  //$mapping['codeDating'];
+  //$mapping['recommend'];
+  $mapping['ingredients'] = "field_ingredients";
+  //$mapping['ingredientsUpdated'];
+  $mapping['advertisingText'] = "field_flyer_description";
+  //$mapping['advertisingDescription'];
+  //$mapping['dateUpdated'];
+
+  $page = pws_migrate_get_page("pws_productdetails");
+
+  pws_migrate_batch_process($mapping, "pws_productdetails", "node", "product_details", $page, "admin/pws/import/products_details");
+}
+
+function pws_migrate_get_page($from) {
+  $page = 0;
+
+  $r = db_select("pws_import")
+        ->fields("pws_import")
+        ->condition("source", $from)
+        ->execute()
+        ->fetchAssoc();
+
+  if($r) {
+    $page = (int) $r['page'];
+  }
+
+  db_merge("pws_import")
+      ->key(array("source" => $from))
+      ->fields(array("source" => $from, "page" => ($page+1)))
+      ->execute();
+
+  return $page;
+}
+
+function pws_migrate_batch_process($mapping, $table, $entity_type, $content_type, $page, $callback) {
+
+  //$offset = ($page * 1000);
+
+  $rows = db_query("SELECT d.*, s.entity_id AS entity_id FROM  {$table} d
+                    INNER JOIN digital_core_data_products p ON p.upc = d.upc
+                    INNER JOIN field_data_field_productsid s ON s.field_productsid_value = p.productsid")->fetchAll();
+
+  //convert the upc to an id, if there is an id available to match to then add it to the batch
+  $operations = array();
+
+  if(count($rows) > 0) {
+
+    foreach ($rows as $row) {
+      $operations[] = array("pws_migrate_processing", array($row, $entity_type, $mapping, $content_type, $page));
+    }
+
+    batch_set(array(
+                  'title' => t('Importing Data'),
+                  'operations' => $operations,
+                  'finished' => 'pws_migrate_finish', // Finished batch callback.
+                )
+    );
+
+    batch_process($callback);
+  }
+}
+
+function pws_migrate_processing($data, $entity_type, $mapping, $content_type, $page, $context) {
+  $entity = array();
+
+  foreach($mapping as $org => $new) {
+    if(isset($data->$org)) {
+//enable if they change their minds
+//      if($org == 'brand') {
+//        //need to look up the brand
+//        $nid = db_select("node")
+//                ->fields("node", array("nid"))
+//                ->condition("title", $data->$org)
+//                ->execute()
+//                ->fetchField();
+//
+//        if($nid) {
+//          $entity['brand'] = $nid;
+//        }
+//
+//      }
+//      else
+      if(is_array($new)) {
+        foreach($new as $f) {
+          if($data->$org != "") {
+            $entity[$f] = $data->$org;
+          }
+        }
+      }
+      else {
+
+        if($data->$org != "") {
+          $entity[$new] = $data->$org;
+        }
+      }
+    }
+  }
+
+  //FASTER
+  digital_core_data_update_direct("node", "product_details", $data->entity_id, $entity, false);
+
+  //SLOWER
+  //tom_update_drupal_entity($id, $entity_type, $entity);
+}
+
+function pws_migrate_finish($success, $results, $operations) {
+  return "Done";
+}

@@ -1,0 +1,9 @@
+<fieldset ng-disabled="{{nopermission}}" class="{{section_meta.class}}">
+  <legend>{{section_meta.legend}}</legend>
+  <div ng-if="section_meta.marketing_icons != ''" class="marketing-icons">
+    <i ng-repeat="icon in section_meta.marketing_icons" class="{{icon}}"></i>
+  </div>
+  <label ng-show="section_meta.prelabel">{{section_meta.prelabel}}</label>
+  <md-checkbox resource="{{resource}}" value="{{record[section_meta.record]}}" record="{{section_meta.record}}" ng-model="record[section_meta.record]" >{{section_meta.label}}
+  </md-checkbox>
+</fieldset>

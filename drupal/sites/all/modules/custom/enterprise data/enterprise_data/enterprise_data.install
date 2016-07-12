@@ -1,0 +1,67 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function enterprise_data_schema() {
+  $schema = array();
+
+  //mapping table
+  //digital_core_mapping
+  $schema['enterprise_data_poll_log'] = array(
+    'description' => 'Log of the enterprise data',
+    'fields' => array(
+      'source' => array(
+        'polling_id' => 'polling_id',
+        'type'        => 'serial',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'start' => array(
+        'description' => 'start',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'finish' => array(
+        'description' => 'finish',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'task' => array(
+        'description' => 'task',
+        'type'        => 'varchar',
+        'length'      => 100,
+        'not null'    => FALSE,
+      ),
+      'message' => array(
+        'description' => 'message',
+        'type'        => 'varchar',
+        'length'      => 1000,
+        'not null'    => FALSE,
+      ),
+      'DataExtractSid' => array(
+        'description' => 'DataExtractSid',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'JobExecSid' => array(
+        'description' => 'JobExecSid',
+        'type'        => 'int',
+        'length'      => 11,
+        'not null'    => FALSE,
+      ),
+      'status' => array(
+        'description' => 'status',
+        'type'        => 'int',
+        'length'      => 1,
+        'not null'    => FALSE,
+      ),
+    ),
+    'primary key' => array('polling_id')
+  );
+
+  return $schema;
+}

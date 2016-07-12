@@ -1,0 +1,239 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function bluemarble_feed_export_menu() {
+  $items = array();
+
+  $items['service/digitalcore/feeds/%/csv'] = array(
+    'title' => t('Export feed csv'),
+    'description' => t('Export the feed to csv'),
+    'page arguments' => array(3),
+    'page callback' => 'bluemarble_data_feed_create_csv',
+    'access arguments' => array('read blue marble products'),
+  );
+
+  $items['service/digitalcore/feeds/%/xls'] = array(
+      'title' => t('Export feed xls'),
+      'description' => t('Export the feed to xls'),
+      'page arguments' => array(3),
+      'page callback' => 'bluemarble_data_feed_create_xls',
+      'access arguments' => array('read blue marble products'),
+  );
+
+  $items['service/digitalcore/feeds/%/xlsx'] = array(
+      'title' => t('Export feed xlsx'),
+      'description' => t('Export the feed to xlsx'),
+      'page arguments' => array(3),
+      'page callback' => 'bluemarble_data_feed_create_xlsx',
+      'access arguments' => array('read blue marble products'),
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_rules_event_info().
+ * @ingroup rules
+ */
+function bluemarble_feed_export_rules_event_info() {
+  return array(
+      'bluemarble_feed_export_complete' => array(
+          'label' => t('Feed has been exported'),
+          'module' => 'bluemarble_feed_export',
+          'arguments' => array(
+              'zip_name' => array('type' => 'text', 'label' => t('Name of the resultant feed file')),
+          ),
+      ),
+  );
+}
+
+
+//add rules that generate the csv
+/**
+ * Implements hook_rules_action_info().
+ */
+function bluemarble_feed_export_rules_action_info() {
+  $actions = array(
+    'bluemarble_data_feed_create_csv' => array(
+      'label' => t('Generate Product feed CSV'),
+      'group' => t('Blue Marble'),
+      'parameter' => array(
+          'feed_owner' => array(
+            'type' => 'text',
+            'label' => 'Feed ID'
+          ),
+          'filename' => array(
+            'type' => 'text',
+            'label' => 'filename'
+          ),
+      ),
+    ),
+    'bluemarble_data_feed_create_xls' => array(
+        'label' => t('Generate Product feed XLS'),
+        'group' => t('Blue Marble'),
+        'parameter' => array(
+            'feed_owner' => array(
+                'type' => 'text',
+                'label' => 'Feed ID'
+            ),
+            'filename' => array(
+                'type' => 'text',
+                'label' => 'filename'
+            ),
+        ),
+    ),
+    'bluemarble_data_feed_create_xlsx' => array(
+          'label' => t('Generate Product feed XLSX'),
+          'group' => t('Blue Marble'),
+          'parameter' => array(
+              'feed_owner' => array(
+                  'type' => 'text',
+                  'label' => 'Feed ID'
+              ),
+              'filename' => array(
+                  'type' => 'text',
+                  'label' => 'filename'
+              ),
+          ),
+    ),
+  );
+  return $actions;
+}
+
+function bluemarble_feed_export_get_data($feed_id_data) {
+  module_load_include('inc', 'bluemarble_data', 'bluemarble_data_feeds');
+
+  //get the column headers
+  $headerdata =  bluemarble_feed_export_get_column_headers($feed_id_data);
+
+  $feeds = array();
+  $feeds[] = bluemarble_data_feeds_read($feed_id_data, array("page" => 0, "perPage" => 100));
+
+  //check if there are multiple pages
+  if($feeds[0]['total'] < $feeds[0]['count']) {
+    //get a page count
+    $pages = $feeds[0]['total'] / $feeds[0]['count'];
+
+    for($i = 1; $i < $pages; $i++) {
+      $feeds[] = bluemarble_data_feeds_read($feed_id_data, array("page" => 0, "perPage" => 100));
+    }
+  }
+
+  //need to reorganize the data into the columns provided
+  $data = array();
+  foreach($feeds as $feed) {
+    foreach ($feed['results'] as $result) {
+      $row = array();
+      foreach ($headerdata as $field) {
+
+        //check if the field is an image field, these require special handling
+        if (strpos($field, "_image_url")) {
+          //get the image field name
+          $imgfield = str_replace("_image_url", "", $field);
+
+          if (array_key_exists("url", $result['image_urls'][$imgfield])) {
+            $row[$field] = $result['image_urls'][$imgfield]['url'];
+          } else {
+            $row[$field] = "";
+          }
+        } else {
+          if (array_key_exists($field, $result)) {
+            $row[$field] = $result[$field];
+          } else {
+            $row[$field] = "";
+          }
+        }
+      }
+      $data[] = $row;
+    }
+  }
+  return array("rows" => $data, "headers" => $headerdata);
+}
+
+function bluemarble_feed_export_get_column_headers($feed_id_data) {
+  $feed = bluemarble_data_feeds_get_feed($feed_id_data);
+
+  //get the list of fields that are to be returned
+  $returned_fields = array();
+  if(count($feed->field_included_fields) > 0) {
+    foreach ($feed->field_included_fields['und'] as $field) {
+      $returned_fields[] = $field['value'];
+    }
+  }
+
+  if(count($feed->field_included_renditions) > 0) {
+    foreach ($feed->field_included_renditions['und'] as $field) {
+      $returned_fields[] = $field['value'] . "_image_url";
+    }
+  }
+
+  return $returned_fields;
+}
+
+//generate a xls feed
+function bluemarble_data_feed_create_xlsx($feed_id_data, $filename = false) {
+  bluemarble_data_feed_create_xls($feed_id_data, $filename, "xlsx");
+}
+
+//generate a xls feed
+function bluemarble_data_feed_create_xls($feed_id_data, $filename = false, $format = 'xls') {
+  module_load_include('inc', 'phpexcel');
+
+  if(!$filename) {
+    $filename = $feed_id_data . "." . $format;
+  }
+
+  $fileuri = "public://" . $filename;
+
+  if($format == "xlsx") {
+    $fileuri = drupal_realpath($fileuri);
+  }
+
+  $data = bluemarble_feed_export_get_data($feed_id_data);
+
+  if(count($data['rows']) > 0) {
+    phpexcel_export($data['headers'], $data['rows'], $fileuri, array("format" => $format));
+  }
+
+  //call the completed event
+  rules_invoke_event('bluemarble_feed_export_complete', $fileuri);
+
+  return "<a href='" . file_create_url($fileuri) . "'>Feed Generated Click here to Download</a>";
+}
+
+//generate a csv feed
+function bluemarble_data_feed_create_csv($feed_id_data, $filename = false) {
+
+  if(!$filename) {
+    $filename = $feed_id_data . ".csv";
+  }
+
+  $fileuri = "public://" . $filename;
+
+  $data = bluemarble_feed_export_get_data($feed_id_data);
+
+  //write the arrays to a csv file
+  $fh = fopen($fileuri, 'w');
+
+  $header = false;
+
+  foreach($data['rows'] as $row) {
+    //write the header row if we havent
+    if(!$header) {
+      fputcsv($fh, $data['headers']);
+      $header = true;
+    }
+
+    //write the row
+    fputcsv($fh, $row);
+  }
+
+  fclose($fh);
+
+  //call the completed event
+  rules_invoke_event('bluemarble_feed_export_complete', $fileuri);
+
+  return "<a href='" . file_create_url($fileuri) . "'>Feed Generated Click here to Download</a>";
+}

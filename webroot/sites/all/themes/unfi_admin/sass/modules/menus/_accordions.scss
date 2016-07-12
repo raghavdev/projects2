@@ -1,0 +1,58 @@
+
+.accordion {
+  color: $white;
+}
+
+.accordion-header {
+  display: inline-block;
+  height:20px;
+  cursor: pointer;
+  p {
+    display: inline-block;
+  }
+  .selected {
+    color: $color-action-primary;
+  }
+}
+.acc-wrapper {
+  padding-bottom: 1px;
+
+  .collection-btn {
+    display: inline;
+    margin: 0px 0px 0px 5px;
+    padding: 0px 0px 0px 5px;
+    width: 30px;
+    height: 40px;
+    cursor: pointer;
+  }
+  a {
+      text-decoration: underline;
+      padding-left: $spacing-small;
+      cursor: pointer;
+    }
+  .download {
+    width: 30px;
+    height: 40px;
+    display: inline;
+    cursor: pointer;
+  }
+  .accordion-header {
+    width: 100%;
+  }
+  .accordion-content {
+    height: 100%;
+    width: 100%;
+    display: block;
+  }
+  .sm-modification {
+    padding-left: 8px;
+  }
+}
+
+.invisible {
+  visibility: hidden;
+}
+
+
+
+

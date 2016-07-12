@@ -1,0 +1,5 @@
+name = Digital Core Assets
+description = Digital Core asset handler.
+package = Digital Core
+core = 7.x
+dependencies[] = digital_core

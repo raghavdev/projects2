@@ -1,0 +1,5 @@
+core = "7.x"
+description = "Product Planogram Images processor"
+name = "buw_product_planogram_images"
+package = "Bulk Upload Wizard"
+php = "5.2.4"

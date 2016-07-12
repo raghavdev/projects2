@@ -1,0 +1,20 @@
+<span><a ng-show="viewModeVisible()" ng-click="actionMenuAction('show')">{{actionMenuLabel}}</a></span>
+<div class="cmp-popout" ng-show="popout_open">
+  <div><b>Customized Marketing Program</b><br>Set Inclusion for Selected:</div>
+  <md-radio-group>
+    <md-radio-button ng-model="cmpstatus" name="cmp-status" id="cmp-status" value="1">Always include Selected Products</md-radio-button>
+    <md-radio-button ng-model="cmpstatus" name="cmp-status" id="cmp-status" value="2">Include Selected Product Between:</md-radio-button>
+        <div class="cmpdate">
+          <label for="edit-range-start">Start Date <span class="form-required" title="This field is required.">*</span></label>
+          <div dateselector selectorid="start" selectormodel="cmp_start"></div>
+        </div>
+        <div class="cmpdate">
+          <label for="edit-range-end">End Date <span class="form-required" title="This field is required.">*</span></label>
+          <div dateselector defaultmonth="next" selectorid="end" selectormodel="cmp_end"></div>
+        </div>
+
+    <md-radio-button ng-model="cmpstatus" name="cmp-status" id="cmp-status" value="0">Selected Products</md-radio-button>
+    <button class="action-menu-apply" id="btn" ng-click="actionMenuAction('apply', cmpstatus)" >Submit</button>
+    <a ng-show="viewModeVisible()" ng-click="actionMenuAction('show')">Cancel</a>
+  </md-radio-group>
+</div>

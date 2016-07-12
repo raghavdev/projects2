@@ -1,0 +1,10 @@
+<fieldset ng-disabled="{{nopermission}}" class="{{section_meta.class}}">
+  <legend>{{section_meta.legend}}</legend>
+  <ol class="inputs-list">
+    <li ng-repeat="bullet in section_meta.bullets">
+      <md-input-container>
+      <input type="text" record="{{bullet.record}}" ng-model="record[bullet.record]" value="{{record[bullet.record]}}">
+      </md-input-container>
+    </li>
+  </ol>
+</fieldset>

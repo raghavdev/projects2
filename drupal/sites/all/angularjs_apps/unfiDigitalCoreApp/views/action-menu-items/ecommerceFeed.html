@@ -1,0 +1,9 @@
+<span><a ng-show="viewModeVisible()" ng-click="actionMenuAction('show')">{{actionMenuLabel}}</a></span>
+<div class="cmp-popout" ng-show="popout_open">
+  <div><b>eCommerce Feed</b><br>Set Inclusion for Selected Products:</div>
+  <div>
+    <md-checkbox ng-model="ecomstatus" name="ecom-status" id="ecom-status">include in eComm Feed</md-checkbox>
+    <button class="action-menu-apply" id="btn" ng-click="actionMenuAction('apply', ecomstatus)" >Submit</button>
+    <a ng-show="viewModeVisible()" ng-click="actionMenuAction('show')">Cancel</a>
+  </div>
+</div>

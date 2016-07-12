@@ -1,0 +1,86 @@
+<?php
+
+/**
+ * Enable Chosen module and set default settings.
+ */
+function unfi_custom_update_7000() {
+  module_enable(array('chosen'));
+  variable_set('chosen_minimum_multiple', '0');
+}
+
+/**
+ * Enable revisioning_ux module
+ */
+function unfi_custom_update_7001() {
+  module_enable(array('revisioning_ux'));
+}
+
+/**
+ * Set Angular module settings to new angular version, Add google Material Design angular module
+ */
+function unfi_custom_update_7002() {
+  // Set to newer version
+  variable_set('angularjs_version', '1.3.4');
+
+  // Include Animate & Aria as dependencies of Material, make sure all needed are turned on
+  $files = array(
+    'angular-animate',
+    'angular-aria',
+    'angular-cookies',
+    'angular-loader',
+    'angular-messages',
+    'angular-resource',
+    'angular-route',
+    'angular-sanitize',
+  );
+  variable_set('angularjs_files', $files);
+
+  // Add Google's Material Design angular module to app cache
+  drangular_add_to_cache('unfiDigitalCoreApp', 'scripts', 'sites/all/angularjs_apps/unfiDigitalCoreApp/bower_components/angular-material/angular-material.js');
+}
+
+/**
+ * Add a governing angular directive for the filter pane, add advanced search directive
+ */
+function unfi_custom_update_7003() {
+  drangular_add_to_cache('unfiDigitalCoreApp', 'scripts', 'sites/all/angularjs_apps/unfiDigitalCoreApp/scripts/directives/action-pane.js');
+  drangular_add_to_cache('unfiDigitalCoreApp', 'scripts', 'sites/all/angularjs_apps/unfiDigitalCoreApp/scripts/directives/search-advanced.js');
+}
+/**
+ * Add editable table directive for products tab
+ */
+function unfi_custom_update_7004() {
+  drangular_add_to_cache('unfiDigitalCoreApp', 'scripts', 'sites/all/angularjs_apps/unfiDigitalCoreApp/scripts/directives/detail-editabletable.js');
+}
+
+function unfi_custom_update_7005() {
+  drangular_add_to_cache('unfiDigitalCoreApp', 'scripts', 'sites/all/angularjs_apps/unfiDigitalCoreApp/scripts/modules/products.js');
+}
+
+function unfi_custom_update_7006() {
+  drangular_add_to_cache('unfiDigitalCoreApp', 'scripts', 'sites/all/angularjs_apps/unfiDigitalCoreApp/scripts/directives/form-field.js');
+}
+
+function unfi_custom_update_7007() {
+  drangular_add_to_cache('unfiDigitalCoreApp', 'scripts', 'sites/all/angularjs_apps/unfiDigitalCoreApp/scripts/directives/drupal-validate.js');
+}
+
+function unfi_custom_update_7008() {
+  drangular_add_to_cache('unfiDigitalCoreApp', 'scripts', 'sites/all/angularjs_apps/unfiDigitalCoreApp/scripts/directives/auto-save.js');
+}
+
+function unfi_custom_update_7009() {
+  drangular_add_to_cache('unfiDigitalCoreApp', 'scripts', 'sites/all/angularjs_apps/unfiDigitalCoreApp/scripts/directives/checklist-model.js');
+}
+
+function unfi_custom_update_7010() {
+  drangular_add_to_cache('unfiDigitalCoreApp', 'scripts', 'sites/all/angularjs_apps/unfiDigitalCoreApp/bower_components/angular-tree-control/angular-tree-control.js');
+  drangular_add_to_cache('unfiDigitalCoreApp', 'styles', 'sites/all/angularjs_apps/unfiDigitalCoreApp/bower_components/angular-tree-control/css/tree-control.css');
+  drangular_add_to_cache('unfiDigitalCoreApp', 'styles', 'sites/all/angularjs_apps/unfiDigitalCoreApp/bower_components/angular-tree-control/css/tree-control-attribute.css');
+
+  drangular_add_to_cache('unfiDigitalCoreApp', 'scripts', 'sites/all/angularjs_apps/unfiDigitalCoreApp/scripts/directives/filter-field.js');
+}
+
+function unfi_custom_update_7011() {
+  drangular_add_to_cache('unfiDigitalCoreApp', 'scripts', 'sites/all/angularjs_apps/unfiDigitalCoreApp/scripts/directives/form-sub-field.js');
+}

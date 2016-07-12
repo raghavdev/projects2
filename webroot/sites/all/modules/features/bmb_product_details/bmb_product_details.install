@@ -1,0 +1,1518 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function bmb_product_details_install() {
+  db_drop_table('field_deleted_data_145');
+  db_drop_table('field_deleted_revision_145');
+
+  $field_names = array(
+    'field_active_date',
+    'field_activity_state',
+    'field_added_sugars_value',
+    'field_additional_images',
+    'field_additional_origin',
+    'field_alaska_seafood_cert',
+    'field_backorderable',
+    'field_baltimore_beverage_tax',
+    'field_berkeley_beverage_tax',
+    'field_beverage_container',
+    'field_biotin_value',
+    'field_bmb_category',
+    'field_bmb_product_type',
+    'field_bmb_sub_category',
+    'field_bottle_color',
+    'field_brand',
+    'field_buyer',
+    'field_calcium_value',
+    'field_calories_from_fat_value',
+    'field_calories_value',
+    'field_case_cube',
+    'field_case_gtin',
+    'field_case_gtin_type',
+    'field_case_height',
+    'field_case_length',
+    'field_case_net_weight',
+    'field_case_net_weight_uom',
+    'field_case_upc',
+    'field_case_weight',
+    'field_case_weight_uom',
+    'field_case_width',
+    'field_certified_humane',
+    'field_certified_vegan',
+    'field_chicago_water_tax',
+    'field_chloride_value',
+    'field_cholesterol_value',
+    'field_chromium_value',
+    'field_closed_code_life_dating',
+    'field_container_type',
+    'field_contract_number',
+    'field_controlled',
+    'field_copper_value',
+    'field_cost_effective_date',
+    'field_cost_end_date',
+    'field_country_of_origin',
+    'field_cube_height',
+    'field_cube_length',
+    'field_cube_width',
+    'field_dietary_fiber_value',
+    'field_dietary_preference',
+    'field_east_fob_location',
+    'field_east_freight_rate',
+    'field_enrobed_in_chocolate_',
+    'field_ethnic_attributes',
+    'field_fair_trade_certificate',
+    'field_folate_value',
+    'field_free_of_attributes',
+    'field_freight_protection_from',
+    'field_freight_protection_level',
+    'field_gluten_attributes',
+    'field_gluten_free',
+    'field_gluten_free_certificate',
+    'field_gtin',
+    'field_gtin_type',
+    'field_high',
+    'field_ingredients',
+    'field_ingredients_print',
+    'field_inner_pack_upc',
+    'field_inner_pack_gtin',
+    'field_inner_pack_gtin_type',
+    'field_insoluble_fiber_value',
+    'field_inv_transaction_audit',
+    'field_iodine_value',
+    'field_iron_value',
+    'field_item_category',
+    'field_item_description',
+    'field_item_description_2',
+    'field_item_size',
+    'field_item_size_uom',
+    'field_item_weight',
+    'field_item_weight_uom',
+    'field_itrade_export',
+    'field_ix_one_export',
+    'field_juice_percent',
+    'field_kosher_agency',
+    'field_kosher_certificate',
+    'field_kosher_daily',
+    'field_kosher_mbuf',
+    'field_kosher_pareve',
+    'field_kosher_passover',
+    'field_lead_time_customer',
+    'field_lead_time_printing',
+    'field_lead_time_shipping',
+    'field_magnesium_value',
+    'field_major_allergen_attributes',
+    'field_manganese_value',
+    'field_manufacturing_method',
+    'field_manufacturing_uom',
+    'field_marine_stewardship_cert',
+    'field_marine_stewardship_agency',
+    'field_material_cost_type',
+    'field_minimum_order_qty',
+    'field_molybdenum_value',
+    'field_monounsat_fat_value',
+    'field_net_carbohydrate_value',
+    'field_niacin_value',
+    'field_non_gmo',
+    'field_omega3_value',
+    'field_open_code_life_dating',
+    'field_organic_attributes',
+    'field_organic_certificate',
+    'field_organic_certifier',
+    'field_pack_height',
+    'field_pack_length',
+    'field_pack_width',
+    'field_pallet_height',
+    'field_pallet_weight',
+    'field_pantothenic_acid_value',
+    'field_paperb_recycle_percent',
+    'field_phosphorous_value',
+    'field_po_req_fg',
+    'field_polyunsat_fat_value',
+    'field_potassium_value',
+    'field_price_basis_code',
+    'field_price_uom',
+    'field_pricing_sheet',
+    'field_primary_image',
+    'field_primary_location',
+    'field_processing_attributes',
+    'field_product_intro_date',
+    'field_product_labels',
+    'field_protein_value',
+    'field_purchasing_uom',
+    'field_random_weight',
+    'field_riboflavin_value',
+    'field_salt_content_attributes',
+    'field_saturated_fat_value',
+    'field_secondary_allergen_attr',
+    'field_selenium_value',
+    'field_serving_size_uom',
+    'field_serving_size_value',
+    'field_servings_per_cont_value',
+    'field_shelf_life_days',
+    'field_short_description',
+    'field_sodium_value',
+    'field_soluble_fiber_value',
+    'field_spins_category',
+    'field_spins_product_type',
+    'field_spins_sub_category',
+    'field_state_of_origin',
+    'field_stocked',
+    'field_stocking_uom',
+    'field_sugar_value',
+    'field_supplier_cost',
+    'field_sweetener_attributes',
+    'field_target_export',
+    'field_taxable',
+    'field_terms',
+    'field_thiamin_value',
+    'field_tie',
+    'field_total_carbohydrate_value',
+    'field_total_fat_value',
+    'field_trans_fat_value',
+    'field_type_of_code_life_dating',
+    'field_unfi_east',
+    'field_unfi_east_id',
+    'field_unfi_west',
+    'field_unfi_west_id',
+    'field_unit_srp',
+    'field_upc',
+    'field_veg_attributes',
+    'field_vendor_item_number',
+    'field_vendors',
+    'field_vitamin_a_value',
+    'field_vitamin_b6_value',
+    'field_vitamin_b12_value',
+    'field_vitamin_c_value',
+    'field_vitamin_d_value',
+    'field_vitamin_e_value',
+    'field_vitamin_k_value',
+    'field_warranty_days',
+    'field_web_category',
+    'field_west_fob_location',
+    'field_west_freight_rate',
+    'field_whole_grain_council',
+    'field_whole_grain_per_serving',
+    'field_zinc_value',
+    // Old fields...
+    'field_allergens',
+    'field_animal_content',
+    'field_brandsid',
+    'field_carbohydrate_percent',
+    'field_case_cost_del_east',
+    'field_case_cost_del_west',
+    'field_case_cost_fob_east',
+    'field_case_cost_fob_west',
+    'field_case_height_uom',
+    'field_case_length_uom',
+    'field_case_qty',
+    'field_case_width_uom',
+    'field_cholesterol_percent',
+    'field_consumer_name',
+    'field_contains_attributes',
+    'field_cube_feet',
+    'field_cube_qty_per',
+    'field_east_customer_wholesale',
+    'field_east_srp',
+    'field_fair_trade',
+    'field_fat_content_attributes',
+    'field_fat_percent',
+    'field_fiber_percent',
+    'field_forecast',
+    'field_grocery_ty',
+    'field_grocery_type',
+    'field_gross_weight',
+    'field_hic_item_number',
+    'field_hpw_item_number',
+    'field_inner_pack',
+    'field_iron_percent',
+    'field_is_bpa_free',
+    'field_is_discontinued',
+    'field_is_vegetarian',
+    'field_item_height',
+    'field_item_height_uom',
+    'field_item_length',
+    'field_item_length_uom',
+    'field_item_num',
+    'field_item_width',
+    'field_item_width_uom',
+    'field_kosher',
+    'field_long_description',
+    'field_manufacturing_ratio',
+    'field_master_case_gtin',
+    'field_master_case_gtin_type',
+    'field_master_case_upc',
+    'field_material_cost_types',
+    'field_mc_pack',
+    'field_net_weight',
+    'field_net_weight_drained',
+    'field_net_weight_drained_uom',
+    'field_non_gmo_product',
+    'field_non_gmo_verified',
+    'field_nop_organic',
+    'field_other_attributes',
+    'field_pack_upc',
+    'field_package_type',
+    'field_packaging_claims',
+    'field_packaging_recyclability',
+    'field_pallet_charges',
+    'field_pallet_type',
+    'field_percent_organic',
+    'field_planning_lead_time',
+    'field_price_ratio',
+    'field_pricing_sheet_west',
+    'field_print_flag',
+    'field_product_category',
+    'field_purchasing_ratio',
+    'field_rbw_item_number',
+    'field_retail_dimensions_uom',
+    'field_report_sales',
+    'field_saturated_fat_percent',
+    'field_serial_lot',
+    'field_sodium_percent',
+    'field_temp_zone',
+    'field_third_party_certificates',
+    'field_ti_hi',
+    'field_unit_cost_del_east',
+    'field_unit_cost_del_west',
+    'field_unit_cost_fob_east',
+    'field_unit_cost_fob_west',
+    'field_unit_retail_del_east',
+    'field_unit_retail_del_west',
+    'field_unit_retail_fob_east',
+    'field_unit_retail_fob_west',
+    'field_use_oe_to_po',
+    'field_web_item',
+    'field_west_customer_wholesale',
+    'field_west_srp',
+    'field_yield_percentage',
+  );
+
+  $field_infos = field_info_fields();
+  $instance_infos = field_info_instances();
+
+  foreach ($field_names as $field_name) {
+    if (empty($field_infos[$field_name])) {
+      continue;
+    }
+    $field_info = $field_infos[$field_name];
+    if (!empty($field_info['bundles'])) {
+      foreach ($field_info['bundles'] as $entity_type => $bundles) {
+        foreach ($bundles as $bundle) {
+          if (isset($instance_infos[$entity_type][$bundle][$field_name])) {
+            $instance_info = $instance_infos[$entity_type][$bundle][$field_name];
+            module_invoke($field_info['storage']['module'], 'field_storage_delete_instance', $instance_info);
+          }
+        }
+      }
+    }
+  }
+
+  db_update('field_config_instance')
+    ->fields(array('deleted' => 1))
+    ->condition('field_name', $field_names, 'IN')
+    ->execute();
+
+  field_cache_clear();
+
+  foreach ($field_names as $field_name) {
+    if (empty($field_infos[$field_name])) {
+      continue;
+    }
+    $field_info = $field_infos[$field_name];
+    module_invoke($field_info['storage']['module'], 'field_storage_delete_field', $field_info);
+  }
+
+  db_update('field_config')
+    ->fields(array('deleted' => 1))
+    ->condition('field_name', $field_names, 'IN')
+    ->execute();
+
+  field_cache_clear();
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function bmb_product_details_uninstall() {
+  variable_del('bmb_product_details_update_7003_last_node_id');
+}
+
+/**
+ * Delete fields for old standalone
+ */
+function bmb_product_details_update_7001() {
+  field_delete_field('field_bmb_sub_category');
+  field_delete_field('field_spins_sub_category');
+}
+
+/**
+ * Delete fields again.
+ */
+function bmb_product_details_update_7002(&$sandbox) {
+  if (!isset($sandbox['field_names'])) {
+    $sandbox['field_names'] = array(
+      'field_added_sugars_value',
+      'field_biotin_value',
+      'field_calcium_value',
+      'field_calories_from_fat_value',
+      'field_calories_value',
+      'field_case_cube',
+      'field_case_height',
+      'field_case_length',
+      'field_case_net_weight',
+      'field_case_weight',
+      'field_case_width',
+      'field_chloride_value',
+      'field_cholesterol_value',
+      'field_chromium_value',
+      'field_copper_value',
+      'field_cube_height',
+      'field_cube_length',
+      'field_cube_width',
+      'field_dietary_fiber_value',
+      'field_east_freight_rate',
+      'field_folate_value',
+      'field_insoluble_fiber_value',
+      'field_iodine_value',
+      'field_iron_value',
+      'field_item_size',
+      'field_item_weight',
+      'field_juice_percent',
+      'field_magnesium_value',
+      'field_manganese_value',
+      'field_molybdenum_value',
+      'field_monounsat_fat_value',
+      'field_net_carbohydrate_value',
+      'field_niacin_value',
+      'field_omega3_value',
+      'field_pack_height',
+      'field_pack_length',
+      'field_pack_width',
+      'field_pallet_height',
+      'field_pallet_weight',
+      'field_pantothenic_acid_value',
+      'field_paperb_recycle_percent',
+      'field_phosphorous_value',
+      'field_polyunsat_fat_value',
+      'field_potassium_value',
+      'field_protein_value',
+      'field_riboflavin_value',
+      'field_saturated_fat_value',
+      'field_selenium_value',
+      'field_serving_size_value',
+      'field_servings_per_cont_value',
+      'field_sodium_value',
+      'field_soluble_fiber_value',
+      'field_sugar_value',
+      'field_supplier_cost',
+      'field_thiamin_value',
+      'field_total_carbohydrate_value',
+      'field_total_fat_value',
+      'field_trans_fat_value',
+      'field_unit_srp',
+      'field_vitamin_a_value',
+      'field_vitamin_b12_value',
+      'field_vitamin_b6_value',
+      'field_vitamin_c_value',
+      'field_vitamin_d_value',
+      'field_vitamin_e_value',
+      'field_vitamin_k_value',
+      'field_west_freight_rate',
+      'field_whole_grain_per_serving',
+      'field_zinc_value',
+    );
+
+    $sandbox['max'] = count($sandbox['field_names']);
+  }
+
+  if (($field_name = array_shift($sandbox['field_names']))) {
+    field_delete_field($field_name);
+  }
+
+  if (empty($sandbox['max'])) {
+    $sandbox['#finished'] = 1;
+  } else {
+    $sandbox['#finished'] = 1 - (count($sandbox['field_names']) / $sandbox['max']);
+  }
+}
+
+/**
+ * Save all nodes so that Macola-Only field defaults are properly set.
+ */
+function bmb_product_details_update_7003(&$sandbox) {
+  $last_node = variable_get('bmb_product_details_update_7003_last_node_id', FALSE);
+
+  if (!isset($sandbox['progress'])) {
+    $query = db_select('node', 'n');
+    $query->condition('n.type', 'product_details');
+    if ($last_node) {
+      $query->condition('n.nid', $last_node, '>');
+    }
+
+    $sandbox['progress'] = 0;
+    $sandbox['limit']    = 10;
+    $sandbox['max']      = (int) $query->countQuery()->execute()->fetchField();
+    // Turn off Macola reading & writing temporarily
+    $sandbox['macola_connect_write'] = variable_get('macola_connect_write', NULL);
+    $sandbox['macola_connect_read']  = variable_get('macola_connect_write', NULL);
+    variable_set('macola_connect_write', FALSE);
+    variable_set('macola_connect_read', FALSE);
+  }
+
+  try {
+    $query = db_select('node', 'n');
+    $query->fields('n', array('nid'));
+    $query->condition('n.type', 'product_details');
+    if ($last_node) {
+      $query->condition('n.nid', $last_node, '>');
+    }
+    $query->orderBy('n.nid');
+    $query->range(0, $sandbox['limit']);
+
+    $result = $query->execute();
+
+    $node_ids = $result->fetchCol();
+
+    if (!empty($node_ids)) {
+      foreach (entity_load('node', $node_ids) as $node_id => $node) {
+        // Simply run a save, the functions called from
+        // bmb_product_details_entity_presave() will correctly set defaults
+        entity_save('node', $node);
+        $sandbox['progress']++;
+        // Yes, high overhead, but this needs to be saved because this fails
+        // due to "MySQL server has gone away" error, and is not caught
+        variable_set('bmb_product_details_update_7003_last_node_id', $node_id);
+      }
+    }
+  }
+  catch (Exception $e) {
+    // Be sure to reset Macola read/write variables
+    variable_set('macola_connect_write', $sandbox['macola_connect_write']);
+    variable_set('macola_connect_read', $sandbox['macola_connect_write']);
+    throw $e;
+  }
+
+  if (!empty($sandbox['max'])) {
+    $sandbox['#finished'] = $sandbox['progress'] / $sandbox['max'];
+  }
+
+  if ($sandbox['#finished'] >= 1) {
+    // Be sure to reset Macola read/write variables
+    variable_set('macola_connect_write', $sandbox['macola_connect_write']);
+    variable_set('macola_connect_read', $sandbox['macola_connect_write']);
+    variable_del('bmb_product_details_update_7003_last_node_id');
+  }
+}
+
+/**
+ * Delete 'field_gtin_type', 'field_inner_pack_gtin_type', 'field_case_gtin_type'
+ */
+function bmb_product_details_update_7004() {
+  field_delete_field('field_gtin_type');
+  field_delete_field('field_inner_pack_gtin_type');
+  field_delete_field('field_case_gtin_type');
+}
+
+/**
+ * Update guaranteed shelf life values for new field.
+ */
+function bmb_product_details_update_7005(&$sandbox) {
+  if (!db_table_exists('field_data_field_guaranteed_shelf_life')) {
+    module_load_include('inc', 'features', 'features.export');
+    $fields = features_get_default('field_base', 'bmb_product_details');
+    if (isset($fields['field_guaranteed_shelf_life'])) {
+      try {
+        field_create_field($fields['field_guaranteed_shelf_life']);
+      }
+      catch (Exception $e) {
+        throw new DrupalUpdateException('Error creating field: ' . $e->getMessage());
+      }
+    }
+  }
+  if (!isset($sandbox['progress'])) {
+    $sandbox['progress'] = 0;
+    $sandbox['limit']    = 10;
+    $sandbox['max']      = (int) db_select('field_data_field_shelf_life_days', 'sld')
+      ->countQuery()
+      ->execute()
+      ->fetchField();
+  }
+
+  $query = db_select('field_data_field_shelf_life_days', 'sld');
+  $query->fields('sld');
+  $query->condition('sld.entity_type', 'node');
+  $query->condition('sld.deleted', 0);
+  $query->condition('sld.bundle', 'product_details');
+  $query->orderBy('sld.entity_id');
+  $query->orderBy('sld.revision_id');
+  $query->orderBy('sld.language');
+  $query->orderBy('sld.delta');
+  $query->range($sandbox['progress'], $sandbox['limit']);
+
+  $result = $query->execute();
+
+  while (($row = $result->fetchAssoc())) {
+    $calc_value = ceil($row['field_shelf_life_days_value'] * 0.75);
+
+    db_merge('field_data_field_guaranteed_shelf_life')
+      ->key(array(
+        'entity_type' => $row['entity_type'],
+        'entity_id'   => $row['entity_id'],
+        'deleted'     => $row['deleted'],
+        'delta'       => $row['delta'],
+        'language'    => $row['language'],
+      ))
+      ->fields(array(
+        'bundle'                            => $row['bundle'],
+        'revision_id'                       => $row['revision_id'],
+        'field_guaranteed_shelf_life_value' => $calc_value,
+      ))
+      ->execute();
+
+    db_merge('field_revision_field_guaranteed_shelf_life')
+      ->key(array(
+        'entity_type' => $row['entity_type'],
+        'entity_id'   => $row['entity_id'],
+        'revision_id' => $row['revision_id'],
+        'deleted'     => $row['deleted'],
+        'delta'       => $row['delta'],
+        'language'    => $row['language'],
+      ))
+      ->fields(array(
+        'bundle'                            => $row['bundle'],
+        'field_guaranteed_shelf_life_value' => $calc_value,
+      ))
+      ->execute();
+
+    $sandbox['progress']++;
+  }
+
+  if ($sandbox['max']) {
+    $sandbox['#finished'] = $sandbox['progress'] / $sandbox['max'];
+  }
+}
+
+/**
+ * Create Grocery Type Vocab and terms
+ */
+function bmb_product_details_update_7006() {
+
+  // Create vocab
+  $grocery_type = (object) array(
+    'name' => 'Grocery Type',
+    'description' => 'Grocery Type Vocabulary',
+    'machine_name' => 'grocery_type',
+  );
+  taxonomy_vocabulary_save($grocery_type);
+
+  // Create terms
+  $vocab = taxonomy_vocabulary_machine_name_load('grocery_type');
+  $terms = array(
+    '0' => (object) array(
+      'name' => 'Dry',
+      'description' => '',
+      'vid' => $vocab->vid,
+    ),
+    '1' => (object) array(
+      'name' => 'Chill',
+      'description' => '',
+      'vid' => $vocab->vid,
+    ),
+    '2' => (object) array(
+      'name' => 'Frozen',
+      'description' => '',
+      'vid' => $vocab->vid,
+    ),
+    '3' => (object) array(
+      'name' => 'Ingredient',
+      'description' => '',
+      'vid' => $vocab->vid,
+    ),
+    '4' => (object) array(
+      'name' => 'Packaging',
+      'description' => '',
+      'vid' => $vocab->vid,
+    ),
+  );
+
+  foreach ($terms as $key => $value) {
+    taxonomy_term_save($terms[$key]);
+  }
+
+}
+
+/**
+ * Remove East Freight Rate and West Freight Rate fields.
+ */
+function bmb_product_details_update_7007() {
+  field_delete_field('field_east_freight_rate');
+  field_delete_field('field_west_freight_rate');
+
+  // Remove mappings to these fields as well.
+  db_delete('bluemarble_mapping')
+    ->condition('toField', array(
+      'field_east_freight_rate',
+      'field_west_freight_rate',
+    ))
+    ->execute();
+}
+
+/**
+ * Remove "Free" from taxonomy terms in Free Of and Major Allergens taxonomies
+ */
+function bmb_product_details_update_7009() {
+  // Grab the free_of taxonomy and terms
+  $free_of = taxonomy_vocabulary_machine_name_load('free_of');
+  $terms = taxonomy_get_tree($free_of->vid, 0, NULL, TRUE);
+  // Remove the Freedom
+  foreach ($terms as $key => $value) {
+    $cleaned_name = preg_replace('/ Free/', '', $value->name);
+    $terms[$key]->name = $cleaned_name;
+    // Save term with altered name
+    taxonomy_term_save($terms[$key]);
+  }
+
+  // Grab the major_allergen taxonomy and terms
+  $major_allergens = taxonomy_vocabulary_machine_name_load('major_allergen');
+  $terms = taxonomy_get_tree($major_allergens->vid, 0, NULL, TRUE);
+  // Remove the Freedom
+  foreach ($terms as $key => $value) {
+    $cleaned_name = preg_replace('/ Free/', '', $value->name);
+    $terms[$key]->name = $cleaned_name;
+    // Save term with altered name
+    taxonomy_term_save($terms[$key]);
+  }
+}
+
+/**
+ * Create country terms in Countries of Origin taxonomy
+ */
+function bmb_product_details_update_7010() {
+  // Country list from spreadsheet provided by client
+  $country_strings = array(
+    'ARGENTINA',
+    'BAJA MEXICO',
+    'BELGIUM',
+    'BOLIVIA',
+    'BRAZIL',
+    'CANADA',
+    'CENTRAL AMERICA',
+    'CENTRAL MEXICO',
+    'CHILE',
+    'CHINA',
+    'COSTA RICA',
+    'DENMARK',
+    'DOMINICAN REPUBLIC',
+    'ECUADOR',
+    'EL SALVADOR',
+    'FRANCE',
+    'GREECE',
+    'GUATAMALA',
+    'INDIA',
+    'ITALY',
+    'KAZAKHSTAN',
+    'KENYA',
+    'MALAYSIA',
+    'MEXICO',
+    'MOROCCO',
+    'NETHERLANDS',
+    'NICARAGUA',
+    'PARAGUAY',
+    'PERU',
+    'PHILIPPINES',
+    'PRODUCED IN THE USA WITH DOMESTIC AND IMPORTED INGREDIENTS',
+    'PRODUCT OF MANY COUNTRIES',
+    'SERBIA',
+    'SPAIN',
+    'SRI LANKA',
+    'TAIWAN',
+    'TANZANIA',
+    'THAILAND',
+    'TURKEY',
+    'USA',
+    'VIETNAM',
+  );
+
+  // Get Country of origin vocabulary and insert terms
+  $vocab = taxonomy_vocabulary_machine_name_load('origin_country');
+  foreach ($country_strings as $key => $country) {
+    $term[$key] = new stdClass();
+    $term[$key]->vid = $vocab->vid;
+    $term[$key]->name = $country;
+    // Retain order designated in spreadsheet
+    $term[$key]->weight = $key;
+    taxonomy_term_save($term[$key]);
+  }
+}
+
+/**
+ * Delete old implementations of the fields: item_category, manufacturing_method
+ * and update the Macola mapping.
+ */
+function bmb_product_details_update_7011() {
+  // Store existing values in a temp table, so that they can be repopulated
+  // after the feature-revert creates the new field
+  db_create_table('aaa_temp_item_category', array(
+    'description' => '',
+    'fields'      => array(
+      'entity_id' => array(
+        'description' => '',
+        'type'        => 'int',
+      ),
+      'target_id' => array(
+        'description' => '',
+        'type'        => 'int',
+      ),
+    ),
+  ));
+  // Some MySQL magic
+  db_query(
+    'INSERT INTO aaa_temp_item_category (entity_id, target_id) ' .
+    'SELECT entity_id, field_item_category_target_id FROM field_data_field_item_category ' .
+    'WHERE entity_type=\'node\''
+  );
+
+  // Delete old fields
+  field_delete_field('field_item_category');
+  field_delete_field('field_manufacturing_method');
+
+  // Update mapping to the new field machine name: pur_or_mfg
+  db_update('bluemarble_mapping')
+    ->fields(array(
+      'toField'              => 'field_pur_or_mfg',
+      'customProcessing'     => 'macola_connect_map_entity',
+      'customProcessingArgs' => serialize(array(
+        'entity_type' => 'taxonomy_term',
+        'bundle'      => 'manufacturing_method',
+      )),
+    ))
+    ->condition('source', 'macola_connect')
+    ->condition('destination', 'product_details')
+    ->condition('dataType', 'macola_connect_products')
+    ->condition('fromField', 'pur_or_mfg')
+    ->execute();
+
+  // Update mapping to with filtering method
+  db_update('bluemarble_mapping')
+    ->fields(array(
+      'customProcessing'     => 'macola_connect_map_entity',
+      'customProcessingArgs' => serialize(array(
+        'entity_type' => 'taxonomy_term',
+        'bundle'      => 'manufacturing_method',
+        'field_name'  => 'field_enum_id',
+      )),
+    ))
+    ->condition('source', 'macola_connect')
+    ->condition('destination', 'product_details')
+    ->condition('dataType', 'macola_connect_products')
+    ->condition('toField', 'field_manufacturing_method')
+    ->execute();
+}
+
+/**
+ * Repopulate data for manufacturing method fields.
+ */
+function bmb_product_details_update_7012(&$sandbox) {
+  // This update can only run if the field has been created, which will not
+  // happen until the feature-revert occurs.
+  if (!db_table_exists('field_data_field_pur_or_mfg')) {
+    module_load_include('inc', 'features', 'features.export');
+    $fields = features_get_default('field_base', 'bmb_product_details');
+    if (isset($fields['field_pur_or_mfg'])) {
+      try {
+        field_create_field($fields['field_pur_or_mfg']);
+      }
+      catch (Exception $e) {
+        throw new DrupalUpdateException('Error creating field: ' . $e->getMessage());
+      }
+    }
+  }
+
+  if (!isset($sandbox['progress'])) {
+    $sandbox['progress'] = 0;
+    $sandbox['limit']    = 10;
+    $sandbox['max']      = (int) db_select('aaa_temp_item_category', 'tic')
+      ->countQuery()->execute()->fetchField();
+  }
+
+  // Set field field defaults (field 1: Drupal field, field 2: DB table field)
+  $defaults = array(
+    'entity_type' => 'node',
+    'bundle'      => 'product_details',
+    'deleted'     => 0,
+    'language'    => LANGUAGE_NONE,
+    'delta'       => 0,
+  );
+
+  // Gather the stored values to be populated in the two fields:
+  // field_pur_or_mfg & field_manufacturing_method
+  $query = db_select('aaa_temp_item_category', 'tic');
+  $query->fields('tic');
+  $query->orderBy('tic.entity_id');
+  $query->range($sandbox['progress'], $sandbox['limit']);
+
+  $results = $query->execute();
+
+  $values = array();
+  while (($row = $results->fetchAssoc())) {
+    $values[] = array(
+        'entity_id'                  => $row['entity_id'],
+        'revision_id'                => $row['entity_id'],
+        'field_pur_or_mfg_target_id' => $row['target_id'],
+      ) + $defaults;
+
+    $sandbox['progress']++;
+  }
+
+  if (!empty($values)) {
+    // Set the keys for the two fields for inserting
+    $keys_pur    = array_merge(array_keys($defaults), array(
+      'entity_id',
+      'revision_id',
+      'field_pur_or_mfg_target_id',
+    ));
+    $keys_method = array_merge(array_keys($defaults), array(
+      'entity_id',
+      'revision_id',
+      'field_manufacturing_method_target_id',
+    ));
+
+    // Since field_manufacturing_method is calculated from field_pur_or_mfg,
+    // the same values could be used for both fields.
+
+    // Build queries for both the data & revision tables for field_pur_or_mfg
+    $query1 = db_insert('field_data_field_pur_or_mfg');
+    $query1->fields($keys_pur);
+
+    $query2 = db_insert('field_revision_field_pur_or_mfg');
+    $query2->fields($keys_pur);
+
+    // Build queries for both the data & revision tables for field_manufacturing_method
+    $query3 = db_insert('field_data_field_manufacturing_method');
+    $query3->fields($keys_method);
+
+    $query4 = db_insert('field_revision_field_manufacturing_method');
+    $query4->fields($keys_method);
+
+    // Fill the queries with values
+    foreach ($values as $value) {
+      $query1->values($value);
+      $query2->values($value);
+
+      // Change the target_id field name for field_manufacturing_method
+      $value['field_manufacturing_method_target_id'] = $value['field_pur_or_mfg_target_id'];
+      unset($value['field_pur_or_mfg_target_id']);
+
+      $query3->values($value);
+      $query4->values($value);
+    }
+
+    // Execute all the queries
+    $query1->execute();
+    $query2->execute();
+    $query3->execute();
+    $query4->execute();
+  }
+
+  if (empty($sandbox['max'])) {
+    $sandbox['#finished'] = 1;
+  }
+  else {
+    $sandbox['#finished'] = $sandbox['progress'] / $sandbox['max'];
+  }
+
+  // Remember to clean up
+  if ($sandbox['#finished'] >= 1) {
+    db_drop_table('aaa_temp_item_category');
+  }
+}
+
+/**
+ * Remove Retail Dimensions UOM field
+ */
+function bmb_product_details_update_7013() {
+  field_delete_field('field_pack_uom');
+}
+
+/**
+ * Delete old implementations of the fields: field_east_fob_location,field_west_fob_location
+ */
+function bmb_product_details_update_7014() {
+  // Delete old fields
+  field_delete_field('field_east_fob_location');
+  field_delete_field('field_west_fob_location');
+}
+
+/**
+ * Delete Vendor Id, Vendor Item Number and Payment Terms fields from Product Details.
+ */
+function bmb_product_details_update_7015() {
+  // Moved from bmb_product_details_update_7021() since features_revert will fail
+  // on environments with older databases.
+  field_delete_field('field_additional_origin');
+  // Moved from bmb_product_details_update_7023()
+  field_delete_field('field_bottle_color');
+  field_delete_field('field_secondary_allergen_attr');
+  field_delete_field('field_gluten_attributes');
+
+  module_enable(array('field_collection'));
+  features_revert_module('bmb_product_details');
+
+  if ($instance = field_info_instance('node', 'field_vendors', 'product_details')) {
+    field_delete_instance($instance);
+  }
+  if ($instance = field_info_instance('node', 'field_vendor_item_number', 'product_details')) {
+    field_delete_instance($instance);
+  }
+  if ($instance = field_info_instance('node', 'field_terms', 'product_details')) {
+    field_delete_instance($instance);
+  }
+}
+
+/**
+ * Remove "Allergen" from Major Allergen vocabulary
+ */
+function bmb_product_details_update_7016() {
+  taxonomy_term_delete(23695);
+}
+
+/**
+ * Delete Additional Allergens field so that it can be reconfigured.
+ */
+function bmb_product_details_update_7017() {
+  field_delete_field('field_secondary_allergen_attr');
+}
+
+/**
+ * Delete Gluten Attributes field so that it can be reconfigured.
+ */
+function bmb_product_details_update_7018() {
+  field_delete_field('field_gluten_attributes');
+}
+
+/**
+ * Insert countries for Primary Country of Origin field
+ */
+function bmb_product_details_update_7019() {
+  $countries = array(
+    'AF' => 'Afghanistan',
+    'AX' => 'Aland Islands',
+    'AL' => 'Albania',
+    'DZ' => 'Algeria',
+    'AS' => 'American Samoa',
+    'AD' => 'Andorra',
+    'AO' => 'Angola',
+    'AI' => 'Anguilla',
+    'AQ' => 'Antarctica',
+    'AG' => 'Antigua and Barbuda',
+    'AR' => 'Argentina',
+    'AM' => 'Armenia',
+    'AW' => 'Aruba',
+    'AU' => 'Australia',
+    'AT' => 'Austria',
+    'AZ' => 'Azerbaijan',
+    'BS' => 'Bahamas',
+    'BH' => 'Bahrain',
+    'BD' => 'Bangladesh',
+    'BB' => 'Barbados',
+    'BY' => 'Belarus',
+    'BE' => 'Belgium',
+    'BZ' => 'Belize',
+    'BJ' => 'Benin',
+    'BM' => 'Bermuda',
+    'BT' => 'Bhutan',
+    'BO' => 'Bolivia',
+    'BQ' => 'Bonaire, Saint Eustatius and Saba',
+    'BA' => 'Bosnia and Herzegovina',
+    'BW' => 'Botswana',
+    'BV' => 'Bouvet Island',
+    'BR' => 'Brazil',
+    'IO' => 'British Indian Ocean Territory',
+    'VG' => 'British Virgin Islands',
+    'BN' => 'Brunei',
+    'BG' => 'Bulgaria',
+    'BF' => 'Burkina Faso',
+    'BI' => 'Burundi',
+    'KH' => 'Cambodia',
+    'CM' => 'Cameroon',
+    'CA' => 'Canada',
+    'CV' => 'Cape Verde',
+    'KY' => 'Cayman Islands',
+    'CF' => 'Central African Republic',
+    'TD' => 'Chad',
+    'CL' => 'Chile',
+    'CN' => 'China',
+    'CX' => 'Christmas Island',
+    'CC' => 'Cocos Islands',
+    'CO' => 'Colombia',
+    'KM' => 'Comoros',
+    'CK' => 'Cook Islands',
+    'CR' => 'Costa Rica',
+    'HR' => 'Croatia',
+    'CU' => 'Cuba',
+    'CW' => 'Curacao',
+    'CY' => 'Cyprus',
+    'CZ' => 'Czech Republic',
+    'CD' => 'Democratic Republic of the Congo',
+    'DK' => 'Denmark',
+    'DJ' => 'Djibouti',
+    'DM' => 'Dominica',
+    'DO' => 'Dominican Republic',
+    'TL' => 'East Timor',
+    'EC' => 'Ecuador',
+    'EG' => 'Egypt',
+    'SV' => 'El Salvador',
+    'GQ' => 'Equatorial Guinea',
+    'ER' => 'Eritrea',
+    'EE' => 'Estonia',
+    'ET' => 'Ethiopia',
+    'FK' => 'Falkland Islands',
+    'FO' => 'Faroe Islands',
+    'FJ' => 'Fiji',
+    'FI' => 'Finland',
+    'FR' => 'France',
+    'GF' => 'French Guiana',
+    'PF' => 'French Polynesia',
+    'TF' => 'French Southern Territories',
+    'GA' => 'Gabon',
+    'GM' => 'Gambia',
+    'GE' => 'Georgia',
+    'DE' => 'Germany',
+    'GH' => 'Ghana',
+    'GI' => 'Gibraltar',
+    'GR' => 'Greece',
+    'GL' => 'Greenland',
+    'GD' => 'Grenada',
+    'GP' => 'Guadeloupe',
+    'GU' => 'Guam',
+    'GT' => 'Guatemala',
+    'GG' => 'Guernsey',
+    'GN' => 'Guinea',
+    'GW' => 'Guinea-Bissau',
+    'GY' => 'Guyana',
+    'HT' => 'Haiti',
+    'HM' => 'Heard Island and McDonald Islands',
+    'HN' => 'Honduras',
+    'HK' => 'Hong Kong',
+    'HU' => 'Hungary',
+    'IS' => 'Iceland',
+    'IN' => 'India',
+    'ID' => 'Indonesia',
+    'IR' => 'Iran',
+    'IQ' => 'Iraq',
+    'IE' => 'Ireland',
+    'IM' => 'Isle of Man',
+    'IL' => 'Israel',
+    'IT' => 'Italy',
+    'CI' => 'Ivory Coast',
+    'JM' => 'Jamaica',
+    'JP' => 'Japan',
+    'JE' => 'Jersey',
+    'JO' => 'Jordan',
+    'KZ' => 'Kazakhstan',
+    'KE' => 'Kenya',
+    'KI' => 'Kiribati',
+    'XK' => 'Kosovo',
+    'KW' => 'Kuwait',
+    'KG' => 'Kyrgyzstan',
+    'LA' => 'Laos',
+    'LV' => 'Latvia',
+    'LB' => 'Lebanon',
+    'LS' => 'Lesotho',
+    'LR' => 'Liberia',
+    'LY' => 'Libya',
+    'LI' => 'Liechtenstein',
+    'LT' => 'Lithuania',
+    'LU' => 'Luxembourg',
+    'MO' => 'Macao',
+    'MK' => 'Macedonia',
+    'MG' => 'Madagascar',
+    'MW' => 'Malawi',
+    'MY' => 'Malaysia',
+    'MV' => 'Maldives',
+    'ML' => 'Mali',
+    'MT' => 'Malta',
+    'MH' => 'Marshall Islands',
+    'MQ' => 'Martinique',
+    'MR' => 'Mauritania',
+    'MU' => 'Mauritius',
+    'YT' => 'Mayotte',
+    'MX' => 'Mexico',
+    'FM' => 'Micronesia',
+    'MD' => 'Moldova',
+    'MC' => 'Monaco',
+    'MN' => 'Mongolia',
+    'ME' => 'Montenegro',
+    'MS' => 'Montserrat',
+    'MA' => 'Morocco',
+    'MZ' => 'Mozambique',
+    'MM' => 'Myanmar',
+    'NA' => 'Namibia',
+    'NR' => 'Nauru',
+    'NP' => 'Nepal',
+    'NL' => 'Netherlands',
+    'NC' => 'New Caledonia',
+    'NZ' => 'New Zealand',
+    'NI' => 'Nicaragua',
+    'NE' => 'Niger',
+    'NG' => 'Nigeria',
+    'NU' => 'Niue',
+    'NF' => 'Norfolk Island',
+    'KP' => 'North Korea',
+    'MP' => 'Northern Mariana Islands',
+    'NO' => 'Norway',
+    'OM' => 'Oman',
+    'PK' => 'Pakistan',
+    'PW' => 'Palau',
+    'PS' => 'Palestinian Territory',
+    'PA' => 'Panama',
+    'PG' => 'Papua New Guinea',
+    'PY' => 'Paraguay',
+    'PE' => 'Peru',
+    'PH' => 'Philippines',
+    'PN' => 'Pitcairn',
+    'PL' => 'Poland',
+    'PT' => 'Portugal',
+    'PR' => 'Puerto Rico',
+    'QA' => 'Qatar',
+    'CG' => 'Republic of the Congo',
+    'RE' => 'Reunion',
+    'RO' => 'Romania',
+    'RU' => 'Russia',
+    'RW' => 'Rwanda',
+    'BL' => 'Saint Barthelemy',
+    'SH' => 'Saint Helena',
+    'KN' => 'Saint Kitts and Nevis',
+    'LC' => 'Saint Lucia',
+    'MF' => 'Saint Martin',
+    'PM' => 'Saint Pierre and Miquelon',
+    'VC' => 'Saint Vincent and the Grenadines',
+    'WS' => 'Samoa',
+    'SM' => 'San Marino',
+    'ST' => 'Sao Tome and Principe',
+    'SA' => 'Saudi Arabia',
+    'SN' => 'Senegal',
+    'RS' => 'Serbia',
+    'SC' => 'Seychelles',
+    'SL' => 'Sierra Leone',
+    'SG' => 'Singapore',
+    'SX' => 'Sint Maarten',
+    'SK' => 'Slovakia',
+    'SI' => 'Slovenia',
+    'SB' => 'Solomon Islands',
+    'SO' => 'Somalia',
+    'ZA' => 'South Africa',
+    'GS' => 'South Georgia and the South Sandwich Islands',
+    'KR' => 'South Korea',
+    'SS' => 'South Sudan',
+    'ES' => 'Spain',
+    'LK' => 'Sri Lanka',
+    'SD' => 'Sudan',
+    'SR' => 'Suriname',
+    'SJ' => 'Svalbard and Jan Mayen',
+    'SZ' => 'Swaziland',
+    'SE' => 'Sweden',
+    'CH' => 'Switzerland',
+    'SY' => 'Syria',
+    'TW' => 'Taiwan',
+    'TJ' => 'Tajikistan',
+    'TZ' => 'Tanzania',
+    'TH' => 'Thailand',
+    'TG' => 'Togo',
+    'TK' => 'Tokelau',
+    'TO' => 'Tonga',
+    'TT' => 'Trinidad and Tobago',
+    'TN' => 'Tunisia',
+    'TR' => 'Turkey',
+    'TM' => 'Turkmenistan',
+    'TC' => 'Turks and Caicos Islands',
+    'TV' => 'Tuvalu',
+    'VI' => 'U.S. Virgin Islands',
+    'UG' => 'Uganda',
+    'UA' => 'Ukraine',
+    'AE' => 'United Arab Emirates',
+    'GB' => 'United Kingdom',
+    'US' => 'United States',
+    'UM' => 'United States Minor Outlying Islands',
+    'UY' => 'Uruguay',
+    'UZ' => 'Uzbekistan',
+    'VU' => 'Vanuatu',
+    'VA' => 'Vatican',
+    'VE' => 'Venezuela',
+    'VN' => 'Vietnam',
+    'WF' => 'Wallis and Futuna',
+    'EH' => 'Western Sahara',
+    'YE' => 'Yemen',
+    'ZM' => 'Zambia',
+    'ZW' => 'Zimbabwe',
+  );
+  $country_vocab = taxonomy_vocabulary_machine_name_load('origin_country');
+  $country_old_terms = taxonomy_get_tree($country_vocab->vid, 0, NULL, FALSE);
+  // Remove all existing terms
+  foreach ($country_old_terms as $key => $value) {
+    taxonomy_term_delete($value->tid);
+  }
+
+  foreach ($countries as $key => $value) {
+    $term = new stdClass;
+    $term->vid = $country_vocab->vid;
+    $term->name = $value;
+    taxonomy_term_save($term);
+  }
+
+}
+
+/**
+ * Insert states for Primary State of Origin field
+ */
+function bmb_product_details_update_7020() {
+  $states = array(
+    // US
+    'AL' => 'Alabama',
+    'AK' => 'Alaska',
+    'AZ' => 'Arizona',
+    'AR' => 'Arkansas',
+    'CA' => 'California',
+    'CO' => 'Colorado',
+    'CT' => 'Connecticut',
+    'DE' => 'Delaware',
+    'FL' => 'Florida',
+    'GA' => 'Georgia',
+    'HI' => 'Hawaii',
+    'ID' => 'Idaho',
+    'IL' => 'Illinois',
+    'IN' => 'Indiana',
+    'IA' => 'Iowa',
+    'KS' => 'Kansas',
+    'KY' => 'Kentucky',
+    'LA' => 'Louisiana',
+    'ME' => 'Maine',
+    'MD' => 'Maryland',
+    'MA' => 'Massachusetts',
+    'MI' => 'Michigan',
+    'MN' => 'Minnesota',
+    'MS' => 'Mississippi',
+    'MO' => 'Missouri',
+    'MT' => 'Montana',
+    'NE' => 'Nebraska',
+    'NV' => 'Nevada',
+    'NH' => 'New Hampshire',
+    'NJ' => 'New Jersey',
+    'NM' => 'New Mexico',
+    'NY' => 'New York',
+    'NC' => 'North Carolina',
+    'ND' => 'North Dakota',
+    'OH' => 'Ohio',
+    'OK' => 'Oklahoma',
+    'OR' => 'Oregon',
+    'PA' => 'Pennsylvania',
+    'RI' => 'Rhode Island',
+    'SC' => 'South Carolina',
+    'SD' => 'South Dakota',
+    'TN' => 'Tennessee',
+    'TX' => 'Texas',
+    'UT' => 'Utah',
+    'VT' => 'Vermont',
+    'VA' => 'Virginia',
+    'WA' => 'Washington',
+    'WV' => 'West Virginia',
+    'WI' => 'Wisconsin',
+    'WY' => 'Wyoming',
+    'DC' => 'District of Columbia',
+    'AS' => 'American Samoa',
+    'GU' => 'Guam',
+    'MP' => 'Northern Mariana Islands',
+    'PR' => 'Puerto Rico',
+    'UM' => 'United States Minor Outlying Islands',
+    'VI' => 'Virgin Islands, U.S.',
+    //CANADIAN PROVINCES
+    'AB' => 'Alberta',
+    'BC' => 'British Columbia',
+    'MB' => 'Manitoba',
+    'NB' => 'New Brunswick',
+    'NL' => 'Newfoundland and Labrador',
+    'NS' => 'Nova Scotia',
+    'NT' => 'Northwest Territories',
+    'NU' => 'Nunavut',
+    'ON' => 'Ontario',
+    'PE' => 'Prince Edward Island',
+    'QC' => 'Quebec',
+    'SK' => 'Saskatchewan',
+    'YT' => 'Yukon',
+  );
+
+  $state_vocab = taxonomy_vocabulary_machine_name_load('origin_state');
+  $state_old_terms = taxonomy_get_tree($state_vocab->vid, 0, NULL, FALSE);
+  // Remove all existing terms
+  foreach ($state_old_terms as $key => $value) {
+    taxonomy_term_delete($value->tid);
+  }
+
+  foreach ($states as $key => $value) {
+    $term = new stdClass;
+    $term->vid = $state_vocab->vid;
+    $term->name = $value;
+    taxonomy_term_save($term);
+  }
+}
+
+/**
+ * Remove Additional Origin field so it can be reconfigured.
+ */
+function bmb_product_details_update_7021() {
+  field_delete_field('field_additional_origin');
+}
+
+/**
+ * Add Kosher; Hispanic; Indian; Asian terms to Ethnicity taxonomy.
+ */
+function bmb_product_details_update_7022() {
+  $ethnicities = array('Kosher', 'Hispanic', 'Indian', 'Asian');
+  $ethnicity_vocab = taxonomy_vocabulary_machine_name_load('ethnicity');
+  $ethnicity_old_terms = taxonomy_get_tree($ethnicity_vocab->vid, 0, NULL, FALSE);
+  // Remove all existing terms
+  foreach ($ethnicity_old_terms as $key => $value) {
+    taxonomy_term_delete($value->tid);
+  }
+
+  foreach ($ethnicities as $key => $value) {
+    $term = new stdClass;
+    $term->vid = $ethnicity_vocab->vid;
+    $term->name = $value;
+    taxonomy_term_save($term);
+  }
+}
+
+/**
+ * Remove Bottle Color field so it can be reconfigured.
+ */
+function bmb_product_details_update_7023() {
+  field_delete_field('field_bottle_color');
+}
+
+/**
+ * Remove unused Bottle Color vocabulary
+ */
+function bmb_product_details_update_7024() {
+  $vocab = taxonomy_vocabulary_machine_name_load('bottle_color');
+  taxonomy_vocabulary_delete($vocab->vid);
+}
+
+/**
+ * Destroy wrongly-mapped data and correct mappings for Master Case dimensions.
+ */
+function bmb_product_details_update_7026() {
+  db_truncate('field_data_field_cube_height')->execute();
+  db_truncate('field_data_field_cube_length')->execute();
+  db_truncate('field_data_field_cube_width')->execute();
+  db_truncate('field_revision_field_cube_height')->execute();
+  db_truncate('field_revision_field_cube_length')->execute();
+  db_truncate('field_revision_field_cube_width')->execute();
+
+  foreach (array('height', 'length', 'width') as $dimen) {
+    $query = db_update('bluemarble_mapping');
+    $query->fields(array('toField' => 'field_case_' . $dimen));
+    $query->condition('source', 'macola_connect');
+    $query->condition('destination', 'product_details');
+    $query->condition('fromField', 'cube_' . $dimen);
+    $query->execute();
+  }
+}
+
+/**
+ * Set default value for field_upc_code_macola to 'field_case_upc'.
+ */
+function bmb_product_details_update_7027(&$sandbox) {
+  // Initialize with quantities to determine progress
+  if (!isset($sandbox['progress'])) {
+    $sandbox['progress'] = 0;
+    $sandbox['limit']    = 10;
+    $sandbox['max']      = (int) db_select('node', 'n')
+      ->condition('n.type', 'product_details')
+      ->countQuery()->execute()->fetchField();
+  }
+  // Query existing products ten at a time
+  $query = db_select('node', 'n')
+    ->fields('n', array('nid', 'vid'))
+    ->condition('n.type', 'product_details')
+    ->orderBy('n.nid') // Guarantee unique sets each iteration
+    ->range($sandbox['progress'], $sandbox['limit']);
+  $result = $query->execute();
+  // For each product
+  while (($row = $result->fetchAssoc())) {
+    // Start an insert-if-not-exist query: field data
+    $insert_data = db_merge('field_data_field_upc_code_macola')
+      ->key(array(
+        'entity_type' => 'node',
+        'entity_id'   => $row['nid'],
+        'deleted'     => 0,
+        'delta'       => 0,
+        'language'    => LANGUAGE_NONE,
+      ));
+    // Start an insert-if-not-exist query: field's revision data
+    $insert_rev  = db_merge('field_revision_field_upc_code_macola')
+      ->key(array(
+        'entity_type' => 'node',
+        'entity_id'   => $row['nid'],
+        'revision_id' => $row['vid'],
+        'deleted'     => 0,
+        'delta'       => 0,
+        'language'    => LANGUAGE_NONE,
+      ));
+    // Both queries add this data
+    $insert_values = array(
+      'bundle'                      => 'product_details',
+      'field_upc_code_macola_value' => 'field_case_upc',
+    );
+    // ... only the field data doesn't have the revision as a key
+    $insert_data->fields($insert_values + array(
+      'revision_id' => $row['vid'],
+    ));
+    $insert_rev->fields($insert_values);
+    // Execute and progress
+    $insert_data->execute();
+    $insert_rev->execute();
+    $sandbox['progress']++;
+  }
+  // Careful when dividing by zero.
+  // If not set in this function during the first iteration, Drupal will assume
+  // that the update is finished ($sandbox['finished'] = 1)
+  if (!empty($sandbox['max'])) {
+    $sandbox['#finished'] = $sandbox['progress'] / $sandbox['max'];
+  }
+  // When finished, notify the developer that data was forced directly into the
+  // database and that the Solr index needs to be completely reindexed
+  if (empty($sandbox['max']) || $sandbox['#finished'] >= 1) {
+    drupal_set_message('ATTENTION: The Solr index needs to be cleared and re-indexed!', 'warning');
+  }
+}
+
+/**
+ * Add angular-ui-date to scripts cache
+ */
+function bmb_product_details_update_7029() {
+  // This is what happens when we build custom tables that don't follow drupalisms....
+  $query = db_select('drangular_apps', 'dr')
+  ->condition('dr.app_name', 'unfiDigitalCoreApp')
+  ->fields('dr', array('scripts_cache'));
+  $result = $query->execute();
+  $result = $result->fetchAssoc();
+  $scripts = unserialize($result['scripts_cache']);
+
+    // Add jQuery UI
+  array_unshift($scripts, 'sites/all/angularjs_apps/unfiDigitalCoreApp/bower_components/jquery-ui/jquery-ui.min.js');
+
+  // Add angular ui date
+  array_unshift($scripts, 'sites/all/angularjs_apps/unfiDigitalCoreApp/bower_components/angular-ui-date/dist/date.js');
+
+
+  // Insert updated array back into the db
+  $update = db_update('drangular_apps')
+  ->condition('app_name', 'unfiDigitalCoreApp')
+  ->fields(array(
+    'scripts_cache' => serialize($scripts),
+  ));
+  $update->execute();
+}

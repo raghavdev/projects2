@@ -1,0 +1,50 @@
+<?php
+/**
+ * @file
+ * Digital Core Assets module installation and update functions.
+ */
+
+/**
+ * Update file metadata, set channels.
+ */
+function digital_core_assets_update_7000(&$sandbox) {
+  if (!isset($sandbox['max'])) {
+    $sandbox['max'] = (int) db_select('file_managed', 'fm')
+      ->countQuery()
+      ->execute()
+      ->fetchField();
+    $sandbox['position'] = 0;
+  }
+
+  $limit = 50;
+  $query = db_select('file_managed', 'fm')
+    ->fields('fm', array('fid'))
+    ->orderBy('fm.fid');
+  $query->innerJoin('field_data_field_color_mode', 'cm', "fm.fid=cm.entity_id AND cm.entity_type='file'");
+  $file_modes = $query->fields('cm', array('field_color_mode_value'))
+    ->range($sandbox['position'], $limit)
+    ->execute()
+    ->fetchAllKeyed();
+  if (!empty($file_modes)) {
+    foreach ($file_modes as $fid => $mode) {
+      if ($mode == 'CMYK') {
+        $channels = 4;
+      }
+      else {
+        $channels = 3; // Default to 3 for RGB
+      }
+      db_merge('file_metadata')
+        ->key(array('fid' => $fid, 'name' => 'channels'))
+        ->fields(array('value' => serialize($channels)))
+        ->execute();
+    }
+  }
+  $sandbox['position'] += $limit;
+
+  if ($sandbox['position'] < $sandbox['max']) {
+    $sandbox['#finished'] = $sandbox['position'] / $sandbox['max'];
+  }
+  else {
+    $sandbox['#finished'] = 1;
+  }
+}

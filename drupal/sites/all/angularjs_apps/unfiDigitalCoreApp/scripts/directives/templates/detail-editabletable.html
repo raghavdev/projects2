@@ -1,0 +1,15 @@
+<div class="{{section_meta.class}}">
+  <fieldset class="fieldset-no-divider">
+    <legend>{{section_meta.legend}}</legend>
+    <table class="detail-table">
+      <tr ng-repeat="row in section_meta.rows">
+        <td class="table-data">
+          <md-input-container>
+          <label class="table-label" ng-show="row.label">{{row.label}}</label>
+          <input ng-disabled="{{permission}}" type="text" value="{{record[row.record]}}" record="{{record[row.record]}}" ng-model="record[row.record]" placeholder="{{record[row.record]}}" max-length="{{row.max_chars}}">
+          </md-input-container>
+        </td>
+      </tr>
+    </table>
+  </fieldset>
+</div>

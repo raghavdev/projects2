@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Blue Marble - Buyers / Planners / Macola Users feature.
+ */
+
+include_once 'bmb_buyers.features.inc';

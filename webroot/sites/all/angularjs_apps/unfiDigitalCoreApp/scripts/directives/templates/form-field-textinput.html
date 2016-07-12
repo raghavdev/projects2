@@ -1,0 +1,15 @@
+<div class="{{field_name}} form-field form-field-textinput">
+  <md-input-container>
+  <label>{{section_meta.label}}<span ng-show="{{section_meta.required}}"> *</span>
+  <div ng-if="section_meta.marketing_icons != ''" class="marketing-icons">
+    <i ng-repeat="icon in section_meta.marketing_icons" class="{{icon}}"></i>
+  </div></label>
+  <input name="{{field_name}}" type="text" value="{{record[field_name]}}" ng-model="record[field_name]" ng-model-options="{debounce:500,allowInvalid:true}" record="{{field_name}}" ng-required="{{section_meta.required}}" ng-maxlength="{{section_meta.config.settings.max_length}}" ng-disabled="nopermission" drupal-validate>
+  <div ng-messages="recordForm[field_name].$error">
+    <div ng-message="required">This is required!</div>
+    <div ng-message="maxlength">Exceeds {{section_meta.config.settings.max_length}}</div>
+    <div ng-message="drupal">{{drupal_messages}}</div>
+  </div>
+  </md-input-container>
+  <div class="field-description" ng-bind-html="section_meta.description"></div>
+</div>

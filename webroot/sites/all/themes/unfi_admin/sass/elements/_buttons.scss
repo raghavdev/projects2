@@ -1,0 +1,160 @@
+// ----------------
+// BUTTONS/ANGULAR MD BUTTONS
+// ----------------
+
+//
+// Regular button (using $color-action-secondary)
+//
+
+button, .md-button {
+  font-size: $font-size-base;
+  color: currentColor;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  outline: 0;
+  border: 0;
+  padding: 0 7px;
+  margin: 0;
+  background: 0 0;
+  white-space: nowrap;
+  text-align: center;
+  text-transform: uppercase;
+  font-weight: 500;
+  font-style: inherit;
+  font-variant: inherit;
+  font-family: inherit;
+  line-height: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+  @include border-radius(3px);
+  @extend %button-shadow;
+  &:hover {
+    color: $white;
+  }
+  & + button {
+    margin-left: $spacing-small;
+  }
+}
+button, .md-button, .md-button.md-default-theme,
+.md-button.md-default-theme.md-raised {
+  background-color: $color-action-secondary;
+  color: $white;
+}
+button:hover, button:focus,
+.md-button.md-default-theme:not([disabled]):hover,
+.md-button.md-default-theme:not([disabled]):focus,
+.md-button.md-default-theme.md-raised:not([disabled]):hover,
+.md-button.md-default-theme.md-raised:not([disabled]):focus {
+  background-color: $color-action-secondary-hover;
+  @extend %button-shadow;
+}
+.md-button:not([disabled]):focus,
+.md-button:not([disabled]):hover,
+.md-button:not([disabled]).md-raised:focus,
+.md-button:not([disabled]).md-raised:hover {
+  -webkit-transform: none;
+  -moz-transform: none;
+  transform: none;
+  box-shadow: inherit;
+}
+
+//
+// Primary button (using $color-action-primary)
+//
+
+.md-button.md-default-theme.md-primary,
+.md-button.md-default-theme.md-primary.md-raised {
+  background-color: $color-action-primary;
+  color: $white;
+}
+.md-button.md-default-theme.md-primary:not([disabled]):hover,
+.md-button.md-default-theme.md-primary:not([disabled]):focus,
+.md-button.md-default-theme.md-primary.md-raised:not([disabled]):hover,
+.md-button.md-default-theme.md-primary.md-raised:not([disabled]):focus {
+  background-color: lighten($color-action-primary, 15%);
+}
+
+//
+// Text only button
+//
+
+.md-button.button-text-only,
+.md-button.md-default-theme.button-text-only {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  color: $color-action-primary;
+  &:hover, &:focus {
+    background: transparent;
+    box-shadow: none;
+    color: $color-action-primary-hover;
+  }
+}
+
+//
+// Icon buttons
+//
+// Applicable to: <a>, <span>
+
+.button-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  overflow: hidden;
+  text-indent: 9000px;
+  background-color: transparent;
+  border: none;
+  background-repeat: no-repeat;
+  background-size: cover;
+  cursor: pointer;
+  &.button-download {
+    width: 22px;
+    background-image: url('../images/download-button.png');
+  }
+  &.button-delete {
+    width: 14px;
+    background-image: url('../images/remove-button.png');
+  }
+  &.button-close {
+    width: 14px;
+    height: 14px;
+    background-image: url('../images/close-button.png');
+    opacity: 0.44;
+    &:hover,
+    &:focus {
+      opacity: 1;
+    }
+  }
+  &.button-search {
+    background-image: url('../images/search-icon.png');
+  }
+
+  &.button-create {
+    background-image: url('../images/create-icon.png');
+  }
+
+  &.button-ingredient {
+    background-image: url('../images/ingredient-icon.png');
+  }
+  &.button-upc {
+    background-image: url('../images/upc-icon.png');
+  }
+}
+
+  // Tablet view
+  @include breakpoint($breakpoint-tablet-max) {
+    .button-icon {
+        &.button-close {
+          background-image: none;
+        }
+        &.button-left {
+          background-image: url('../images/arrow-left.png');
+        }
+        &.button-right {
+          background-image: url('../images/arrow-right.png');
+        }
+    }
+  }

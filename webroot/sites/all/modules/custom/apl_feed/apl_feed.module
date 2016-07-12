@@ -1,0 +1,203 @@
+<?php
+
+/**
+ * Implements hook_rules_action_info().
+ */
+function apl_feed_rules_action_info() {
+    $actions = array(
+        'apl_feed_sync' => array(
+            'label' => t('Update User APL'),
+            'group' => t('EIW'),
+            'parameter' => array(
+                'apl_nid' => array(
+                    'type' => 'text',
+                    'label' => 'Name of the feed owner'
+                ),
+            ),
+        ),
+        'apl_feed_sync_all' => array(
+            'label' => t('Update all APL'),
+            'group' => t('EIW'),
+        ),
+    );
+    return $actions;
+}
+
+//implements hook_menu
+function apl_feed_menu() {
+    $items = array();
+
+    //manual pull of the apl data
+    $items["admin/apl/update/%"] = array(
+        'title' => "Sync APL",
+        'description' => "",
+        'page callback' => 'apl_feed_sync',
+        'type' => MENU_CALLBACK,
+        'page arguments' => array(3),
+        'access arguments' => "manual APL feed update"
+    );
+
+    //basic apl feed management ui
+    $items['admin/apl/settings'] = array(
+        'title' => 'APL Feed Settings',
+        'description' => 'APL Feed Settings',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('apl_feed_form'),
+        'access arguments' => "apl feed settings"
+    );
+
+    return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function apl_feed_permission() {
+    return array(
+      'manual APL feed update' =>  array(
+          'title' => t('Manual APL Feed Update'),
+      ),
+      'apl feed settings' =>  array(
+          'title' => t('Manage APL Feed settings'),
+      ),
+    );
+};
+
+function apl_feed_form() {
+    $form = array();
+
+    $form['apl_server'] = array(
+        '#type' => 'textfield',
+        '#title' => t('APL Server address'),
+        '#description' => t('Apl Server URL'),
+        '#default_value' => variable_get('apl_server', ''),
+        '#size' => 60,
+        '#required' => TRUE,
+    );
+
+    $form['apl_login'] = array(
+        '#type' => 'textfield',
+        '#title' => t('APL Login'),
+        '#description' => t('Apl Login'),
+        '#default_value' => variable_get('apl_login', ''),
+        '#size' => 60,
+        '#required' => TRUE,
+    );
+
+    $form['apl_pass'] = array(
+        '#type' => 'textfield',
+        '#title' => t('APL Password'),
+        '#description' => t('Apl Password'),
+        '#default_value' => variable_get('apl_pass', ''),
+        '#size' => 60,
+        '#required' => TRUE,
+    );
+
+    $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => 'Submit',
+    );
+
+    return $form;
+}
+
+/**
+ * Handle the submission of the form and encrypt the data.
+ */
+function apl_feed_form_submit($form, &$form_state) {
+    variable_set('apl_server', $form_state['input']['apl_server']);
+    variable_set('apl_login', $form_state['input']['apl_login']);
+    variable_set('apl_pass', $form_state['input']['apl_pass']);
+}
+
+//update all apl feeds
+function apl_feed_sync_all()
+{
+    $nids = db_select("node")
+        ->fields("node", array("nid"))
+        ->condition("type", "apl")
+        ->execute()
+        ->fetchCol();
+
+    if ($nids) {
+        $operations = array();
+
+        foreach ($nids as $nid) {
+            $operations[] = array("apl_feed_sync", array($nid));
+        }
+
+        batch_set(array(
+                'title' => t('APL Import'),
+                'operations' => $operations,
+                'finished' => 'apl_sync_finish', // Finished batch callback.
+            )
+        );
+    }
+}
+
+function apl_sync_finish($success, $results, $operations) {
+
+}
+
+//update a specific apl feed
+function apl_feed_sync($apl_nid) {
+
+    if(!is_numeric($apl_nid)) {
+        //if its not numeric its the name of the user not the nid
+        //look up the user
+        $user = user_load_by_name($apl_nid);
+
+        $apl_nid = db_select("field_data_field_feed_owner")
+            ->fields("field_data_field_feed_owner", array("entity_id"))
+            ->condition("field_feed_owner_uid", $user->uid)
+            ->execute()
+            ->fetchField();
+    }
+
+    $serverurl = variable_get("apl_server");
+    $login = variable_get("apl_login");
+    $pass = variable_get("apl_pass");
+
+    //open up the apl in question
+    $apl = node_load($apl_nid);
+
+    //request the feed
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $serverurl . "/" . ($apl->field_customer_location['und'][0]['value'] == 0 ? "WBS" : "UBS") . "/" . $apl->field_account_number['und'][0]['value']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_USERPWD, "$login:$pass");
+    curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+    $data = curl_exec($ch);
+    curl_close($ch);
+
+    $apldata = json_decode($data);
+
+    if($apldata !== false) {
+
+        //update the apl
+        foreach($apldata->ApprovedProducts as $id) {
+            //look up the nid for this product
+            //$id->item is the east id
+
+            $q = db_select("digital_core_data_products");
+            $q->addJoin("inner", "field_data_field_productsid", "p", "p.field_productsid_value = digital_core_data_products.productsid");
+            $q->fields("p", array("entity_id"));
+
+            if($apl->field_customer_location['und'][0]['value'] === 0) {
+                $q->condition("digital_core_data_products.east_product_id", $id->Item);
+            }
+            else {
+                $q->condition("digital_core_data_products.west_product_id", $id->Item);
+            }
+
+            $nid = $q->execute()
+                     ->fetchField();
+            if($nid) {
+                $apl->field_product_filter['und'][] = array("target_id" => $nid);
+            }
+        }
+
+        //save the apl
+        node_save($apl);
+    }
+}

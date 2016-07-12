@@ -1,0 +1,295 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ *
+ */
+function unfi_reports_stale_assets_menu() {
+  // Create a page to manually run the report.
+  $items['reports/stale_assets'] = array(
+    'title'            => t('Stale Assets Report'),
+    'description'      => t('Display assets that may need an update.'),
+    'page callback'    => 'unfi_reports_stale_assets',
+    'access callback'  => 'unfi_reports_user_access',
+    'access arguments' => array('access unfi stale assets report'),
+  );
+  // Create a settings page.
+  $items['admin/config/unfi_reports/stale_assets_settings'] = array(
+    'title'            => t('Stale Assets Report Settings'),
+    'description'      => t('Configure the stale assets report settings.'),
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('unfi_reports_stale_assets_settings_form'),
+    'access callback'  => 'unfi_reports_user_access',
+    'access arguments' => array('access unfi stale assets report'),
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function unfi_reports_stale_assets_permission() {
+  return array(
+    'access unfi stale assets report' => array(
+      'title'           => t('Access UNFI Stale Assets Report'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_cron().
+ */
+function unfi_reports_stale_assets_cron() {
+  if (unfi_reports_check_cron_report_status('unfi_reports_stale_assets')) {
+    $cron_vars = variable_get('unfi_reports_stale_assets_cron_info', array());
+    unfi_reports_set_background_process('unfi_reports_stale_assets', $cron_vars['recipient'], $cron_vars['filter_params'], $cron_vars['download_type']);
+  }
+}
+
+/**
+ * Display the form page that allows the user to set some filtering options.
+ */
+function unfi_reports_stale_assets() {
+  return drupal_get_form('unfi_reports_form', unfi_reports_stale_assets_params());
+}
+
+/**
+ * Permit access to report files if the user has access permissions for this module.
+ */
+function unfi_reports_stale_assets_file_download($uri) {
+  $params    = unfi_reports_stale_assets_params();
+  $path_info = unfi_reports_build_download_path($params);
+
+  if (drupal_dirname($uri) == $path_info['export_path']) {
+    if (unfi_reports_user_access('access unfi stale assets report')) {
+      return array('Content-Type' => file_get_mimetype($uri));
+    }
+    else {
+      return -1;
+    }
+  }
+}
+
+/**
+ * Parse the filter params so that they can be used.
+ */
+function unfi_reports_stale_assets_parse_filters($filters) {
+  $parsed = unfi_reports_parse_filters($filters);
+
+  // The shared parse filters function will do most of the work, but additional adjustments can be done here.
+
+  return $parsed;
+}
+
+/**
+ * Return an array of params that will be used to build the filters form.
+ */
+function unfi_reports_stale_assets_params() {
+  $params = array(
+    'label'            => 'Stale Assets Report',
+    'module_name'      => 'unfi_reports_stale_assets',
+    'processor'        => 'unfi_reports_stale_assets_run',
+    'destination_path' => 'stale_assets',
+    'filename_prefix'  => 'stale_assets',  // NULL to use module_name.
+    'columns'          => array(
+      'asset' => array(
+        'format' => 'unfi_reports_image_format',
+        'name'   => 'Asset',
+      ),
+      'filename'   => 'File Name',
+      'asset_type' => 'Asset Type',
+      'title'      => 'Product Name',
+      // 'upc'        => 'UPC', // MAB TODO: remove? is UPC important for stale assets???
+      'updated'    => array(
+        'format' => 'unfi_reports_datetime_format',  // note: try to do formatting in SQL if possible, formatters work, but will ding performance.
+        'name'   => 'Created',
+      ),
+    ),
+    'filter_params' => array(
+      'date' => array(
+        'title'       => 'Enter a Stale Date',
+        'description' => 'The date that an asset must be older than to be considered stale.',
+      ),
+    ),
+  );
+
+  return $params;
+}
+
+/**
+ * Execute the report.
+ */
+function unfi_reports_stale_assets_run($filter_args, $page) {
+
+  $params = array('pagination' => FAlSE,);
+
+  $parameters = array();
+
+  if ($page >= 0) {
+    $params['pagination']['per_page'] = variable_get('unfi_reports_results_per_page', 100);
+    $params['pagination']['cur_page'] = $page;
+    $parameters['perPage'] = variable_get('unfi_reports_results_per_page', 100);
+    $parameters['page'] = $page;
+  }
+
+  $results = array('total' => 0, 'results' => array());
+
+  module_load_include('inc', 'digital_core_data', 'digital_core_data_products');
+  module_load_include('inc', 'digital_core_data', 'digital_core_data_assets');
+
+  if(array_key_exists('date', $filter_args)) {
+    // it returns the assets that have been modified after the timestamp, not before
+    $parameters['older'] = date('c', $filter_args['date']['timestamp']);
+  }
+
+  //get ethe list of assets that are stale, we need the product that it relates to.
+  // todo: this is prone to timing out.
+  $assets = digital_core_data_assets_read($parameters);
+
+  $results['total'] = $assets['total'];
+
+  //this sucks, have to query each table that it may be a part of to find if it is
+  $image_types = array();
+
+  $query = db_select("field_config_instance");
+  $query->fields("field_config_instance", array("field_name"));
+  $query->join("field_config", "field_config", "field_id = field_config.id");
+  $query->condition("bundle", "product_details");
+  $query->condition("field_config.type", "entityreference");
+  $image_fields = $query->execute()
+    ->fetchCol();
+
+  if (!empty($assets['results'])) {
+    foreach($assets['results'] as $asset) {
+
+      // Build a default array
+      $result = array(
+        'filename'   => 'file ' . $asset['fid'] . ' not found',
+        'asset'      => 'file ' . $asset['fid'] . ' not found',
+        'updated'    => $asset['timestamp'],
+        'fid'        => $asset['fid'],
+        'asset_type' => 'unknown',
+        'title'      => 'NOT ASSIGNED',
+        // 'upc'        => 'NOT ASSIGNED',
+      );
+
+      $file = file_load($asset['fid']);
+
+      if($file) {
+        $image_url = digital_core_assets_get_thumbnail_url($file);
+
+        $result['filename'] = $file->filename;
+        $result['asset'] = $image_url;
+        $result['updated'] = $asset['timestamp'];
+        $result['fid'] = $asset['fid'];
+        $result['asset_type'] = '';
+
+        foreach($image_fields as $type) {
+
+          $result['asset_type'] = str_replace('_', ' ', str_replace('field_', '', $type));
+
+          $entity_id = db_select("field_data_{$type}")
+            ->fields("field_data_{$type}", array("entity_id"))
+            ->condition("{$type}_target_id", $asset['fid'])
+            ->execute()
+            ->fetchField();
+
+          if($entity_id) {
+
+            //pull up just the data we need from the database
+            $query = db_select('node')
+              ->fields('node', array('title'));
+              // ->fields('field_data_field_upc', array('field_upc_value')); // MAB TODO: this field table no longer exists...
+
+            // $query->innerJoin('field_data_field_upc', 'field_data_field_upc', 'field_data_field_upc.entity_id = node.nid');
+            $query->condition('nid', $entity_id);
+            $data = $query->execute()->fetchObject();
+
+            //save this entry
+            // $result['upc'] = $data->field_upc_value;
+            $result['title'] = $data->title;
+          }
+        }
+      }
+
+      $results['results'][] = $result;
+    }
+  }
+
+  return $results;
+}
+
+/**
+ * Settings page for stale asset report settings.
+ */
+function unfi_reports_stale_assets_settings_form($form, &$form_state) {
+  $var = variable_get('unfi_reports_stale_assets_cron_info', array(
+    'enabled'       => '0',
+    'recipient'     => '',
+    'filter_params' => '',
+    'download_type' => 'csv',
+    'interval'      => '',
+  ));
+
+  $form['unfi_reports_stale_assets_cron_info'] = array(
+    '#type'        => 'fieldset',
+    '#title'       => t('Background Report Settings'),
+    '#collapsible' => TRUE,
+    '#collapsed'   => FALSE,
+    '#tree'        => TRUE,
+  );
+
+  $form['unfi_reports_stale_assets_cron_info']['enabled'] = array(
+    '#type'          => 'checkbox',
+    '#title'         => t('Enable'),
+    '#default_value' => $var['enabled'],
+  );
+
+  $form['unfi_reports_stale_assets_cron_info']['recipient'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Recipient(s)'),
+    '#default_value' => $var['recipient'],
+    '#description'   => unfi_reports_cron_setting_descriptions('recipient'),
+  );
+
+  $form['unfi_reports_stale_assets_cron_info']['filter_params'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Filter Parameter(s)'),
+    '#default_value' => $var['filter_params'],
+    '#description'   => unfi_reports_cron_setting_descriptions('filter_params'),
+  );
+
+  $form['unfi_reports_stale_assets_cron_info']['download_type'] = array(
+    '#type'          => 'select',
+    '#title'         => t('File Type'),
+    '#options'       => unfi_reports_download_options(),
+    '#default_value' => $var['download_type'],
+  );
+
+  $form['unfi_reports_stale_assets_cron_info']['interval'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Run Interval'),
+    '#default_value' => $var['interval'],
+    '#description'   => unfi_reports_cron_setting_descriptions('interval'),
+  );
+
+  return system_settings_form($form);
+}
+
+/**
+ * Form API validation of user input
+ */
+function unfi_reports_stale_assets_settings_form_validate($form, &$form_state) {
+  if (
+    isset($form_state['values']['unfi_reports_stale_assets_cron_info']['interval'])
+    && $form_state['values']['unfi_reports_stale_assets_cron_info']['interval'] != ''
+  ) {
+    if (strtotime($form_state['values']['unfi_reports_stale_assets_cron_info']['interval']) === FALSE) {
+      form_set_error('unfi_reports_stale_assets_cron_info][interval', t('Run Interval is not a valid format.'));
+    }
+    elseif (strtotime($form_state['values']['unfi_reports_stale_assets_cron_info']['interval']) >= REQUEST_TIME) {
+      form_set_error('unfi_reports_stale_assets_cron_info][interval', t('Run Interval should be a relative time in the past.'));
+    }
+  }
+}

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the enterprise data polling feature.
+ */
+
+include_once 'enterprise_data_polling.features.inc';

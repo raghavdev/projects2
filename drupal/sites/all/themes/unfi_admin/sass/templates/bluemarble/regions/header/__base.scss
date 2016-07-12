@@ -1,0 +1,26 @@
+#header {
+  background-color: $white;
+  box-shadow: 0 4px 5px 0 $g600;
+  height: $header-height-phone;
+  position: relative;
+  z-index: 500;
+  @include breakpoint($breakpoint-desktop) {
+    height: $header-height-desktop;
+  }
+}
+
+#logo {
+  float: left;
+  margin-left: $spacing-large;
+
+  img {
+    display: block;
+    height: $header-height-phone;
+  }
+
+  @include breakpoint($breakpoint-navigation) {
+    img {
+      height: $header-height-desktop;
+    }
+  }
+}

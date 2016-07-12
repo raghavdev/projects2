@@ -1,0 +1,10 @@
+<fieldset ng-disabled="{{nopermission}}" class="{{section_meta.class}}">
+  <legend>{{section_meta.legend}}</legend>
+  <md-input-container>
+  <div ng-if="section_meta.marketing_icons != ''" class="marketing-icons">
+    <i ng-repeat="icon in section_meta.marketing_icons" class="{{icon}}"></i>
+  </div>
+  <label ng-show="section_meta.label">{{section_meta.label}}</label>
+  <input type="text" value="{{record[section_meta.record]}}" record="{{section_meta.record}}" ng-model="record[section_meta.record]" placeholder= "{{section_meta.placeholder}}" max-length="{{section_meta.max_chars}}">
+  </md-input-container>
+</fieldset>

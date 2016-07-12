@@ -1,0 +1,50 @@
+#nutritional {
+  h4 {
+    font-size: 19px;
+    @extend %bold-font;
+    @extend %italic-font;
+    @extend %align-center;
+  }
+  .nutrition-row {
+   margin-bottom: $spacing-xsmall;
+   margin-top: $spacing-xsmall;
+   @extend .clearfix;
+  }
+  .nutrition-facts input {
+    width: auto;
+  }
+  .threes input {
+    width: 7em;
+    margin: $spacing-xsmall;
+  }
+  .label-bold {
+    @extend %bold-font;
+  }
+}
+
+.nutrition-facts {
+  width: 80%;
+  padding-bottom: 62px;
+  margin-left: auto;
+  margin-right: auto;
+  @extend %border-medium;
+  border-color: $black;
+  padding: $spacing-xsmall;
+  background: $white;
+  margin-top: $spacing-xsmall;
+  .daily-value-heading {
+    float: right;
+    @extend %bold-font;
+  }
+  .calories {
+    margin-bottom: $spacing-xsmall;
+  }
+  .indent {
+    max-width: 97%; //prevent border overflow
+  }
+}
+
+.relative-width {
+  max-width: 155px;
+  min-width: 126px;
+}

@@ -1,0 +1,8 @@
+name = Blue Marble - EXIF Customizations
+description = Image EXIF customizations.
+core = 7.x
+package = Blue Marble
+dependencies[] = exif_custom
+dependencies[] = features
+features[exif_custom][] = product image
+features[features_api][] = api:2

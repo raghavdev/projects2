@@ -1,0 +1,29 @@
+treecontrol {
+  font-family: inherit;
+  font-size: 18px;
+  display: block;
+  max-height: 180px;
+  overflow-y: scroll;
+  margin: 4px;
+
+  // The parent list items do not need to be indented, this allows children to be indented still.
+  & > ul > li {
+    padding: 0px;
+  }
+
+  li {
+    line-height: 26px;
+  }
+}
+
+.treecontrol-wrapper {
+  border: solid 1px $p50;
+}
+
+.dark-theme treecontrol {
+  color: $white80;
+
+  .tree-selected {
+    color: $white;
+  }
+}

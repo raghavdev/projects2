@@ -1,0 +1,6 @@
+name        = Blue Marble - Taxomony Admininstration
+description = Exposes taxonomy term create/edit/delete to front-end users.
+core        = 7.x
+package     = Blue Marble
+
+dependencies[] = taxonomy_access_fix

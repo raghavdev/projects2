@@ -1,0 +1,11 @@
+name = Blue Marble - Amazon S3
+description = Amazon S3 configuration and functionality.
+core = 7.x
+package = Blue Marble
+dependencies[] = ctools
+dependencies[] = features
+dependencies[] = strongarm
+features[ctools][] = strongarm:strongarm:1
+features[features_api][] = api:2
+features[variable][] = amazons3_presigned_urls
+features[variable][] = amazons3_useprivate

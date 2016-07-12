@@ -1,0 +1,618 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ */
+function image_bundler_menu()
+{
+    $items = array();
+    $items['admin/image_bundler'] = array(
+        'title' => 'Image Bundler Admin',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('image_bundler_admin_form'),
+        'access arguments' => array('access image bundler admin'),
+        'type' => MENU_NORMAL_ITEM,
+    );
+
+    $items['admin/image_bundler/add'] = array(
+        'title' => 'Add Image Bundle',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('image_bundler_add_form'),
+        'access arguments' => array('add image bundle'),
+        'type' => MENU_NORMAL_ITEM,
+    );
+
+    $items['admin/image_bundler/edit/%'] = array(
+        'title' => 'Edit Image Bundle',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('image_bundler_add_form', 3),
+        'access arguments' => array('edit image bundle'),
+        'type' => MENU_NORMAL_ITEM,
+    );
+
+    $items['admin/image_bundler/delete/%'] = array(
+        'title' => 'delete Image Bundle',
+        'page callback' => 'image_bundler_delete',
+        'page arguments' => array(3),
+        'access arguments' => array('remove image bundle'),
+        'type' => MENU_CALLBACK,
+    );
+
+    $items['admin/image_bundler/run/%'] = array(
+        'title' => 'Run Image Bundle',
+        'page callback' => 'image_bundler_run',
+        'page arguments' => array(3, true),
+        'access arguments' => array('access image bundler admin'),
+        'type' => MENU_CALLBACK,
+    );
+
+    return $items;
+}
+
+/**
+ * Implements hook_default_rules_configuration().
+ */
+
+function image_bundler_default_rules_configuration() {
+    $configs = array();
+
+    $ids = db_select("image_bundler")
+                ->fields("image_bundler", array("bundle_id"))
+                ->execute()
+                ->fetchCol();
+
+    foreach($ids as $id) {
+
+        $rule = '{ "rules_image_bundler_' . $id . '" : {
+                "LABEL" : "image_bundler_' . $id . '",
+                "PLUGIN" : "reaction rule",
+                "OWNER" : "rules",
+                "REQUIRES" : [ "image_bundler", "rules" ],
+                "ON" : { "cron" : [] },
+                "DO" : [ { "image_bundler_run" : { "bundler_id" : "' . $id . '" } } ]
+              }
+            }';
+
+        $configs["rules_image_bundler_{$id}"] = rules_import($rule);
+    }
+
+    return $configs;
+}
+/**
+ * Implements hook_rules_action_info().
+ */
+function image_bundler_rules_action_info() {
+    $actions = array(
+        'image_bundler_run' => array(
+            'label' => t('Bundle Image set'),
+            'group' => t('EIW'),
+            'parameter' => array(
+                'bundler_id' => array(
+                    'type' => 'text',
+                    'label' => 'Bundle ID'
+                ),
+            ),
+        ),
+    );
+    return $actions;
+}
+
+/**
+ * Implementation of hook_rules_event_info().
+ * @ingroup rules
+ */
+function image_bundler_rules_event_info() {
+    return array(
+        'image_bundle_complete' => array(
+            'label' => t('Image Bundler Finished running'),
+            'module' => 'image_bundler',
+            'arguments' => array(
+                'zip_name' => array('type' => 'text', 'label' => t('Name of the resultant Zip file')),
+            ),
+        ),
+    );
+}
+
+/**
+ * Implements hook_permission().
+ */
+function image_bundler_permission() {
+    return array(
+        'access image bundler admin' =>  array(
+            'title' => t('access image bundler admin'),
+        ),
+        'add image bundle' =>  array(
+            'title' => t('add image bundle'),
+        ),
+        'edit image bundle' =>  array(
+            'title' => t('edit image bundle'),
+        ),
+        'remove image bundle' =>  array(
+            'title' => t('remove image bundle'),
+        ),
+    );
+};
+
+function image_bundler_delete($id) {
+    db_delete("image_bundler")
+        ->condition("bundle_id", $id)
+        ->execute();
+
+    drupal_goto("/admin/image_bundler");
+}
+
+function image_bundler_add_form($form, $form_state, $id = false) {
+    $form = array();
+
+    if($id) {
+        //get the parameters for this id
+        $bundle = db_select("image_bundler")
+                    ->fields("image_bundler", array())
+                    ->condition("bundle_id", $id)
+                    ->execute()
+                    ->fetchAssoc();
+
+        $form['bundle_id'] = array(
+            '#type' => 'hidden',
+            '#value' => $bundle['bundle_id']
+        );
+    }
+
+    $form['bundle_file'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Bundle zip file name'),
+        '#description' => t('Name of the zip file that will be created'),
+        '#default_value' => ($id ? $bundle['zip_name'] : ""),
+        '#size' => 60,
+        '#required' => TRUE,
+    );
+
+    //uncomment if we want to actually use it this way
+//    $form['filter_parameters'] = array(
+//        '#type' => 'textfield',
+//        '#title' => t('Filter String'),
+//        '#description' => t('CSV filter string of parameters to filter the product list by, i.e. feed=ecom_feed or brand=xyz,available=true'),
+//        '#default_value' => ($id ? $bundle['filter_parameters'] : ""),
+//        '#size' => 60,
+//        '#required' => TRUE,
+//    );
+
+
+    $or = db_or()
+            ->condition("type", "product_feed")
+            ->condition("type", "apl");
+
+
+    $feeds = db_select("node")
+        ->fields("node", array("title"))
+        ->condition($or)
+        ->execute()
+        ->fetchCol();
+
+    $feed_list = array();
+    foreach($feeds as $feed) {
+        $feed_list["feed={$feed}"] = $feed;
+    }
+
+    $form['filter_parameters'] = array(
+        '#type' => 'select',
+        '#title' => t('Feed List'),
+        '#description' => t('List of feeds available to bundle images for'),
+        '#default_value' => ($id ? $bundle['filter_parameters'] : ""),
+        '#options' => $feed_list,
+        '#required' => TRUE,
+    );
+
+    $form['active'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Active'),
+        '#description' => t('Bundler active'),
+        '#default_value' => ($id ? $bundle['active'] : true),
+        '#required' => TRUE,
+    );
+
+    $form['frequency'] = array(
+        '#type' => 'select',
+        '#title' => t('Bundling Frequency'),
+        '#description' => t('Time frame to run the bundling during. This keys into cron so cant be specific. But will happen during that time frame if cron is set to run then.'),
+        '#default_value' => ($id ? $bundle['frequency'] : "latenight"),
+        '#options' => array("morning" => "Morning", "afternoon" => "Afternoon", "evening" => "Evening", "latenight" => "Late Night"),
+        '#required' => TRUE,
+    );
+
+    $selectedtypes = array();
+
+    if($id) {
+        $selectedtypes = explode(",", $bundle['image_types']);
+    }
+
+    $form['image_types'] = array(
+        '#type' => 'select',
+        '#multiple' => true,
+        '#title' => t('Image Types'),
+        '#description' => t('Image Types to include in the bundle'),
+        '#default_value' => $selectedtypes,
+        '#options' => array("primary" => "Primary Image", "print" => "Print Image", "planogram_front" => "Planogram Front",
+            "planogram_side" => "Planogram Side", "planogram_top" => "Planogram Top", "nutritional_label" => "Nutritional Label",
+            "additional" => "Additional"),
+        '#required' => TRUE,
+    );
+
+    $selectedstyles = array();
+
+    $styles = image_styles();
+
+    foreach(array_keys($styles) as $style) {
+        $styles[$style] = $style;
+    }
+
+    $styles['original'] = "original";
+    if($id) {
+        $selectedstyles = explode(",", $bundle['image_renditions']);
+    }
+
+    $form['renditions'] = array(
+        '#type' => 'select',
+        '#multiple' => true,
+        '#title' => t('Image Renditions'),
+        '#description' => t('Image Renditions to include in the bundle'),
+        '#default_value' => $selectedstyles,
+        '#options' => $styles,
+        '#required' => TRUE,
+    );
+
+    $form['save'] = array(
+        '#type' => 'submit',
+        '#value' => t('Save'),
+    );
+
+    return $form;
+}
+
+function image_bundler_admin_form() {
+    $form = array();
+
+    $form['add_bundler'] = array(
+        "#markup" => "<a href='/admin/image_bundler/add'>Add Bundler</a>"
+    );
+
+    $form['bundle_table'] = array (
+        '#type' => 'fieldset',
+        '#theme' => 'image_bundler_table',
+        '#tree' => TRUE,
+    );
+
+    $bundles = db_select("image_bundler")
+        ->fields("image_bundler", array())
+        ->execute()
+        ->fetchAll();
+
+    foreach($bundles as $bundle) {
+
+        $form['bundle_table']['bundle_id'][$bundle->bundle_id] = array(
+            '#markup' => $bundle->bundle_id
+        );
+
+        $form['bundle_table']['edit'][$bundle->bundle_id] = array(
+            '#markup' => "<a href='/admin/image_bundler/edit/{$bundle->bundle_id}'>Edit</a>"
+        );
+
+        $form['bundle_table']['delete'][$bundle->bundle_id] = array(
+            '#markup' => "<a href='/admin/image_bundler/delete/{$bundle->bundle_id}'>Delete</a>"
+        );
+
+        $form['bundle_table']['active'][$bundle->bundle_id] = array(
+            '#markup' => $bundle->active
+        );
+
+        $form['bundle_table']['zip_name'][$bundle->bundle_id] = array(
+            '#markup' => $bundle->zip_name
+        );
+
+        $form['bundle_table']['frequency'][$bundle->bundle_id] = array(
+            '#markup' => $bundle->frequency
+        );
+
+        $form['bundle_table']['filter_parameters'][$bundle->bundle_id] = array(
+            '#markup' => $bundle->filter_parameters
+        );
+
+        $form['bundle_table']['renditions'][$bundle->bundle_id] = array(
+            '#markup' => $bundle->image_renditions
+        );
+
+        $form['bundle_table']['image_types'][$bundle->bundle_id] = array(
+            '#markup' => $bundle->image_types
+        );
+    }
+
+    return $form;
+}
+
+function image_bundler_add_form_submit($form, &$form_state) {
+    $bundle = array("zip_name" => $form_state['values']['bundle_file'],
+                    "active"   => $form_state['values']['active'],
+                    "filter_parameters" => $form_state['values']['filter_parameters'],
+                    "frequency" => $form_state['values']['frequency'],
+                    "image_renditions" => implode(",", $form_state['values']['renditions']),
+                    "image_types" => implode(",", $form_state['values']['image_types']));
+
+    if(array_key_exists("bundle_id", $form_state['values'])) {
+        db_update("image_bundler")
+            ->fields($bundle)
+            ->condition("bundle_id", $form_state['values']['bundle_id'])
+            ->execute();
+
+        //update the rule
+        db_update("rules_config")
+            ->fields(array("active" => $form_state['values']['active']))
+            ->condition("name", 'rules_image_bundler_' . $form_state['values']['bundle_id'])
+            ->execute();
+    }
+    else {
+       $id = db_insert("image_bundler")
+                    ->fields($bundle)
+                    ->execute();
+    }
+
+    drupal_set_message("Bundler saved, Clear cache to take effect");
+}
+
+function image_bundler_theme($existing, $type, $theme, $path) {
+    $theme_hooks = array(
+        'image_bundler_table' => array(
+            'render element' => 'form',
+        )
+    );
+
+    return $theme_hooks;
+}
+
+function theme_image_bundler_table($variables) {
+
+    $form = $variables['form'];
+
+    $header = array('', '', t('Bundle ID'), t('Active'), t('Zip Name'), t('Frequency'), t('Filter Parameters'), t("Image Renditions"), t("Image Types"));
+
+    $rows = array();
+
+    foreach (element_children($form['bundle_id']) as $key) {
+
+        $record = array();
+        $record[] = drupal_render($form['edit'][$key]);
+        $record[] = drupal_render($form['delete'][$key]);
+        $record[] = drupal_render($form['bundle_id'][$key]);
+        $record[] = drupal_render($form['active'][$key]);
+        $record[] = drupal_render($form['zip_name'][$key]);
+        $record[] = drupal_render($form['frequency'][$key]);
+        $record[] = drupal_render($form['filter_parameters'][$key]);
+        $record[] = drupal_render($form['renditions'][$key]);
+        $record[] = drupal_render($form['image_types'][$key]);
+        $rows[] = $record;
+    }
+
+    $output = theme('table', array(
+        'header' => $header,
+        'rows' => $rows
+    ));
+
+    return $output;
+}
+
+//bundle the images
+function image_bundler_run($bundle_id, $manual = false) {
+
+    //this will take a while
+    set_time_limit(0);
+
+    module_load_include('inc', 'digital_core_data', 'digital_core_data_products');
+    module_load_include('inc', 'digital_core_data', 'digital_core_data_feeds');
+
+    //pull up this bundle information
+    $bundle = db_select("image_bundler")
+                ->fields("image_bundler", array())
+                ->condition("bundle_id", $bundle_id)
+                ->execute()
+                ->fetchObject();
+
+    //manual pull will ignore the time lock on the process
+    if(!$manual) {
+
+        //dont run more than once a day
+        $last_run = variable_get("image_bundler_{$bundle_id}_last_run", "1-1-1990");
+
+        //add 1 day to the last day we ran
+        $last_date = new DateTime($last_run);
+        $last_date->add(new DateInterval('P1D'));
+        $now = new DateTime();
+
+        $hour = $now->format("H");
+
+        //if this new date <= today then we can run again
+        if($last_date > $now) {
+            return;
+        }
+
+        switch($bundle->frequency) {
+            case "morning": {
+                if($hour < 4 || $hour > 12) {
+                    return;
+                }
+                break;
+            }
+            case "afternoon": {
+                if($hour < 12 || $hour > 6) {
+                    return;
+                }
+                break;
+            }
+            case "evening": {
+                if($hour < 6) {
+                    return;
+                }
+                break;
+            }
+            case "latenight": {
+                if($hour > 4) {
+                    return;
+                }
+                break;
+            }
+        }
+    }
+
+    //run the query filtering the product data down
+    $parameters = explode(",", $bundle->filter_parameters);
+
+    $filters = array();
+    foreach($parameters as $parameter) {
+        $param = explode("=", $parameter);
+        $filters[$param[0]] = $param[1];
+    }
+
+    //will need to iterate the results or it will crash/timeout solr
+    $p = array("perPage" => 100, "page" => 0);
+
+    $image_types = explode(",", $bundle->image_types);
+    $image_renditions = explode(",", $bundle->image_renditions);
+
+    $bundle_folder = "public://imagebundle" . $bundle->bundle_id;
+
+    //create a folder to hold this bundle
+    file_prepare_directory($bundle_folder, FILE_CREATE_DIRECTORY);
+
+    foreach($image_renditions as $image_rendition) {
+
+        $imgfolder = $bundle_folder . "/" . $image_rendition;
+
+        file_prepare_directory($imgfolder, FILE_CREATE_DIRECTORY);
+    }
+
+    //insert the last run timestamp
+    $lastrun = time();
+
+    db_update("image_bundler")
+        ->fields(array("last_run" =>  $lastrun))
+        ->condition("bundle_id", $bundle_id)
+        ->execute();
+
+    //determine if there are images to bundle for this run
+    if(array_key_exists("feed", $filters)) {
+        //only works with a feed for now, dont think they will even use the other options
+
+        //select count(*) from field_data_field_product_filter
+        //inner join field_data_field_primary_image on  field_data_field_primary_image.`entity_id` = field_data_field_product_filter.`field_product_filter_target_id`
+        //inner join file_managed on file_managed.`fid` = field_data_field_primary_image.`field_primary_image_target_id`
+        //where file_managed.`timestamp` > 1000
+
+        if(!$bundle->last_run || $bundle->last_run == "") {
+            $bundle->last_run = 0;
+        }
+
+        $count = 0;
+
+        //query the files and see if there are any files that have changed since the last run
+        //only need to rebuild the zip if there have been changes
+        foreach($image_types as $image_type) {
+            $query = db_select("field_data_field_product_filter");
+            $query->addJoin("inner", "field_data_field_{$image_type}_image", "field_data_field_{$image_type}_image", "field_data_field_{$image_type}_image.`entity_id` = field_data_field_product_filter.`field_product_filter_target_id`");
+            $query->addJoin("inner", "file_managed", "file_managed", "file_managed.`fid` = field_data_field_{$image_type}_image.`field_{$image_type}_image_target_id`");
+            $count += $query->condition(array("file_managed.timestamp", $bundle->last_run, ">"))
+              ->fields("field_data_field_product_filter", array("entity_id"))
+              ->execute()
+              ->rowCount();
+
+        }
+        if($count == 0) {
+            return;
+        }
+    }
+
+    do {
+        $products = array();
+        //if its a feed filter then the feed will be processed differently to get the product list as there are better methods for that type
+        if(array_key_exists("feed", $filters)) {
+            $products = digital_core_data_feeds_read($filters['feed'], $p);
+        }
+        else {
+            //get all the products but only bother with the nid field dont need other data
+            $products = digital_core_data_products_read($p, false, array('nid'), $image_types);
+        }
+
+        //loop the product data get the images
+        foreach($products['results'] as $product) {
+            //request all the images pull them to a local folder
+
+            //image types are broke out in the data retrieved, loop them and get the data
+            foreach($image_types as $image_type) {
+                if(array_key_exists("fid", $product['image_urls'][$image_type])) {
+                    //request the image file
+                    //$product['image_urls'][$image_type]
+                    foreach($image_renditions as $image_rendition) {
+                        $url = false;
+
+                        //download the rendition
+                        if($image_rendition == "original") {
+                            $url = $product['image_urls'][$image_type]['url'];
+                        }
+                        else {
+                            $url = $product['image_urls'][$image_type]['renditions'][$image_rendition];
+                        }
+
+                        //pull the file put it into the bundle folder
+                        //$bundle_folder
+
+                        system_retrieve_file($url, $bundle_folder . '/'. $image_rendition);
+                    }
+                }
+            }
+        }
+
+        $p['page'] = $p['page'] + 1;
+    }while($products && $products['count'] > 0);
+
+    //zip all files in that folder
+    $zip = new ZipArchive();
+
+    $archive_path = drupal_realpath("public://" . $bundle->zip_name . ".zip");
+
+    //create the zip
+    if ($zip->open($archive_path, ZipArchive::OVERWRITE) === TRUE) {
+
+        foreach($image_renditions as $image_rendition) {
+
+            $zip->addEmptyDir($image_rendition);
+
+            //get the files
+            $files = file_scan_directory($bundle_folder. '/'. $image_rendition, "/.*/");
+
+            //add all the files to the zip
+            foreach ($files as $file) {
+
+                //get the real path
+                $filepath = drupal_realpath($file->uri);
+
+                //check if the file is there and readable
+                $readable = is_readable($filepath);
+                $exists = file_exists($filepath);
+
+                if ($readable && $exists) {
+
+                    //add to the zip
+                    $zip->addFile($filepath, $image_rendition . "/" . $file->filename);
+                } else {
+                    drupal_set_message(t("Error adding image file to the archive, it does not exist. File: @file", array('@file' => $file['file_name'])));
+                }
+            }
+        }
+        //close the zip
+        $result = $zip->close();
+    }
+
+    //clean up after myself
+    //remove the bundle folder
+    file_unmanaged_delete_recursive($bundle_folder);
+
+    //call the completed event
+    rules_invoke_event('image_bundle_complete', $bundle->zip_name . ".zip");
+}

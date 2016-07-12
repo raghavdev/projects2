@@ -1,0 +1,33 @@
+<div>
+  <button ng-click="editCategoryNewCategory()">Add New Category</button>
+  <input id="newCategory" ng-model="newcategoryname" ng-show="newCategory" type="text" value="">
+  <button ng-show="newCategory" ng-click="editCategorySaveNewCategory(newcategoryname)">Apply</button>
+  <div class="modal-list category-manager-root" ng-mousemove="editCategoryMouseMove($event)">
+    <div ng-class="{'dragging': (dragging.tid === category.tid)}" ng-repeat="category in managedCategories | orderBy:'order'"
+         class="modal-list-item managed-category"
+         id="category-{{category.tid}}"
+         ng-mouseleave="editCategoryDeselect(category)"
+         ng-mouseenter="editCategorySelect(category)"
+         ng-mousedown="editCategoryMouseDown(category)"
+         ng-mouseup="editCategoryMouseUp(category)"
+         tid="{{category.tid}}"
+         cat-depth="{{category.depth}}"
+         cat-weight="{{category.weight}}">
+      <span>
+        <span class="indent">{{indentation(category)}}</span>
+        <span ng-hide="category.rename" ng-model="categoryname" class="draggable name">{{category.name}}</span>
+      </span>
+      <span class="name-form">
+        <input ng-model="categoryname" ng-show="category.rename" type="text" value="{{category.name}}">
+        <button ng-show="category.rename" ng-click="renameCategory(category, categoryname)">Apply</button>
+      </span>
+      <span ng-show='category.selected' class="selected-form">
+        <!---<button ng-click="moveCategory(categorymanagerchild)">MOVE</button>---->
+        <button ng-click="showRenameCategory(category)">Rename</button>
+        <button ng-click="removeCategory(category)">Remove</button>
+        <label for="internal_only">Internal Only</label>
+        <input ng-click="editCategoryDirty(category)" ng-checked="category.internal_only" id="internal_only" type="checkbox" ng-model="category.internal_only">
+      </span>
+    </div>
+  </div>
+</div>

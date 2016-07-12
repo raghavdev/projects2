@@ -1,0 +1,11 @@
+name = Blue Marble Services
+description = Blue Marble service resources.
+package = Blue Marble
+core = 7.x
+dependencies[] = bluemarble
+files[] = bluemarble_services_assets.inc
+files[] = bluemarble_services_brands.inc
+files[] = bluemarble_services_categories.inc
+files[] = bluemarble_services_products.inc
+files[] = bluemarble_services_user_prefs.inc
+files[] = bluemarble_services_image_styles.inc

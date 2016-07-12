@@ -1,0 +1,162 @@
+.modal {
+  position: absolute;
+  top: 0px;
+  left: 0px;
+  width:100%;
+  height:100%;
+  background-color: rgba(120, 120, 120, .6);
+  z-index: 1000;
+  cursor: pointer;
+  text-align: center;
+
+  .button-close {
+    -webkit-filter: invert(80%);
+    filter: invert(80%);
+    width: 24px;
+    height: 24px;
+    float: right;
+  }
+
+  .cancel {
+    color: $p300;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin: 0 1em;
+  }
+
+  .help-text {
+    font-size: 15px;
+    line-height: 18px;
+    margin-bottom: 40px;
+  }
+
+  &.new-product {
+    .modal-wrapper {
+      min-width: 750px;
+      height: 600px;
+      width: 55%;
+    }
+
+    #pane-detail {
+      border: none;
+    }
+
+    .pane-header {
+      font-size: 18px;
+      text-transform: uppercase;
+      font-weight: bold;
+      padding: 1em;
+    }
+    .pane-content {
+      margin: 18px 60px;
+      height: 424px;
+      overflow: scroll;
+    }
+    .pane-footer {
+      height: 80px;
+      text-align: center;
+    }
+ }
+
+  .modal-wrapper {
+    display: inline-block;
+    background-color: $white;
+    cursor: default;
+    position: relative;
+    overflow: auto;
+    max-height: 100%;
+    text-align: left;
+  }
+  p {
+    line-height: 1.5;
+    padding-bottom: 8px;
+  }
+  div p:nth-child(2){
+    padding-bottom: 10px;
+  }
+  h5 {
+    margin: 0 0 10px 0;
+  }
+  .pane-footer {
+    button {
+      text-shadow: none;
+      padding: 16px 60px;
+      font-weight: bold;
+      border-radius: 0px;
+      margin: 0 1em;
+      border: none;
+      background-color: $p300;
+      position: relative;
+
+      md-progress-circular {
+        display: inline-block;
+        position: absolute;
+        top: 3px;
+      }
+    }
+    button[disabled] {
+      opacity: 0.7;
+      -webkit-filter: grayscale(100%);
+      filter: grayscale(100%);
+      cursor: not-allowed;
+    }
+  }
+  .singleButton {
+    position: relative;
+    left: 66px;
+    margin-top: 10px;
+  }
+  .dialog-box {
+    width: 270px;
+    margin: auto;
+    input[type="text"] {
+      min-width: 269px;
+    }
+  }
+  .modal-list {
+    max-height: 400px;
+    overflow: auto;
+    margin: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    .dragging,
+    .dragging:hover {
+      background-color: #555;
+      color: #fff;
+    }
+  }
+  .modal-list-item {
+    position: relative;
+    height: 20px;
+    padding: 4px;
+    &:nth-child(odd) {
+      background-color: #e3e3e3;
+    }
+    &:hover {
+      background-color: #cde1e7;
+    }
+    span {
+      display: inline-block;
+    }
+    label {
+      margin: 0px;
+    }
+    .selected-form {
+      position: absolute;
+      right: 4px;
+    }
+    .draggable {
+      padding: 0 0 0 26px;
+      background-image: url('/sites/all/angularjs_apps/unfiDigitalCoreApp/images/drag-handle.png');
+      background-repeat: no-repeat;
+      background-position: 4px;
+    }
+    .indent {
+      color: #e7e7e7;
+    }
+  }
+}
+
+.edit-categories {
+  @include user-select(none);
+}

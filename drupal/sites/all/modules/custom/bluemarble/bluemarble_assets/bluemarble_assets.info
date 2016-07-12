@@ -1,0 +1,5 @@
+name = Blue Marble Assets
+description = Blue Marble asset handler.
+package = Blue Marble
+core = 7.x
+dependencies[] = bluemarble

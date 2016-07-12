@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the logintobaggin_settings feature.
+ */
+
+include_once 'unfi_logintobaggin_settings.features.inc';

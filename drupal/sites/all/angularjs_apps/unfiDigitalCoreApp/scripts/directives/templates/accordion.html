@@ -1,0 +1,10 @@
+<div class="acc-wrapper">
+  <div class="accordion {{state}} width-enhancer" ng-if="reversed == false">
+    <div class="width-enhancer" ng-include="getHeaderTemplate()"></div>
+    <div class="width-enhancer" ng-include="getContentTemplate()" onload="loadChildren()"></div>
+  </div>
+  <div class="accordion {{state}} reversed width-enhancer" ng-if="reversed">
+    <div class="width-enhancer" ng-include="getContentTemplate()" onload="loadChildren()"></div>
+    <div class="width-enhancer" ng-include="getHeaderTemplate()"></div>
+  </div>
+</div>

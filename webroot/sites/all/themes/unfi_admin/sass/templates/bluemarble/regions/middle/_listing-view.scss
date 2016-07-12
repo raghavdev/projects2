@@ -1,0 +1,30 @@
+.list-view__result {
+  color: $a600;
+  font-size: $font-size-xsmall;
+  padding: $spacing-small;
+  border-right: solid 1px transparent;
+  border-bottom: solid 1px $g300;
+  position: relative;
+  min-height: $activity-state-height + $spacing-small * 2;
+  cursor: pointer;
+  &.selected {
+    background-color: $p10;
+    border-right: solid 1px $g300;
+  }
+  ul {
+    @extend %ul-reset;
+  }
+  .list-view__result-fields li {
+    padding: 0 0 0 $spacing-medium;
+    line-height: $line-height-small;
+  }
+  li.list-view__result-title {
+    font-size: $font-size-small;
+    font-weight: bold;
+    padding: 0 $activity-state-width 0 0;
+  }
+  &-activity_state {
+    top: $spacing-small;
+    right: $spacing-small;
+  }
+}

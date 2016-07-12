@@ -1,0 +1,22 @@
+<?php
+
+/*
+ * HG Migrate
+ * 
+ * Function:
+ * Processes the excel spreadsheet provided that represents the honest green data.
+ * Pulls that data into the staging tables 
+ * And the processes the data into drupal
+ * 
+ * 
+ * Author:
+ * Peter Bliss
+ * Metal Toad Media
+ * pbliss@metaltoad.com 
+ * 
+ */
+
+//load the excel file into the staging table
+function hg_migrate_import() {
+  
+}

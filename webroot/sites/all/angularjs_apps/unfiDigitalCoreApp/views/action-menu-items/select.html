@@ -1,0 +1,4 @@
+<md-select class="action-menu {{actionMenuActionType}}" placeholder="{{actionMenuPlaceholder}}" ng-show="viewModeVisible()" ng-model="selectedItem" ng-click="actionMenuAction(selectedItem)">
+  <md-option ng-value="actionMenuItem.id" ng-repeat="actionMenuItem in actionMenuItems">{{ actionMenuItem.name }}</md-option>
+</md-select>
+<!-- <button ng-show="viewModeVisible()" class="action-menu-apply md-raised md-button md-default-theme" ng-click="actionMenuAction(selectedItem)">Apply</button> -->

@@ -1,0 +1,288 @@
+<?php
+
+function buw_product_information_bulk_upload_wizard_get_asset_info () {
+
+  global $base_url;
+
+  $path = $base_url . "/" . drupal_get_path("module", "buw_product_information") . '/BulkUploadTemplate.xls';
+
+  $options = array('excel_template' => array(
+      '#markup' => l("Click here to download the excel template", $path),
+    )
+  );
+
+  return array("product_information" => array(
+      "options" => $options,
+      "type" => "Product Information",
+      "uploader" => "file",
+      "analysis_table_theme_callback" => "buw_product_information_analysis_table",
+      "analysis_results_callback" => "buw_product_product_information_results_analysis",
+      "analysis_callback" => "buw_product_information_analysis",
+      "apply_callback" => "buw_product_information_apply",
+      "cleanup_callback" => "buw_product_information_cleanup",
+   ));
+}
+
+//determine if the products are new or updates
+function buw_product_information_analysis($row, $asset_info, $excel_file_id) {
+
+  $status = "new product";
+
+  //determine if this is a new record or update or just a bad record
+
+  //col 0 is always east id, and better be numeric
+  if(!is_numeric($row[0])) {
+    $status = "error";
+    $message = "Invalid East ID";
+  }
+  else {
+    $q = db_select("field_data_field_productsid")
+          ->fields("field_data_field_productsid", array("entity_id"));
+    $q->addJoin("inner", "digital_core_data_products", "dp", "dp.productsid = field_data_field_productsid.field_productsid_value");
+    $id = $q->condition("dp.east_product_id", $row[0])
+      ->execute()
+      ->fetchField();
+
+    if($id) {
+      $status = "update";
+      $message = "Product will be updated";
+    }
+  }
+
+  $record = buw_product_information_map_product($row);
+
+  return array(
+      "product_record" => $record,
+      "id" => $id,
+      "status" => $status,
+      "message" => $message
+  );
+}
+
+function buw_product_information_apply($product_data, $job_id, $asset_info, $options, $context) {
+  $record = array();
+
+  module_load_include('inc', 'digital_core_data', 'digital_core_data_products');
+
+  if($product_data['status'] == "update") {
+
+    //we will not allow blanking out any fields on update, so kill those
+    foreach($product_data['product_record'] as $field => $value) {
+      if($value == "") {
+        unset($product_data['product_record'][$field]);
+      }
+    }
+
+    digital_core_data_products_update($product_data['product_record']['east_product_id'], $product_data['product_record']);
+  }
+  else {
+    digital_core_data_products_create($product_data['product_record']);
+  }
+
+  $context['results']['job_id'] = $job_id;
+}
+
+function buw_product_product_information_results_analysis($analysis_results) {
+
+  $structure = array();
+
+  $error_count = 0;
+  $warning_count = 0;
+  $ok_count = 0;
+  $new = 0;
+  $update = 0;
+
+  foreach($analysis_results as $idx => $result) {
+    if(is_numeric($idx)) {
+
+      $result = unserialize($result);
+
+      $structure['table']['upload_table']['east_product_id'][$result["product_record"]['east_product_id']] = array(
+        "#markup" => $result["product_record"]['east_product_id']
+      );
+
+       $structure['table']['upload_table']['name'][$result["product_record"]["east_product_id"]] = array(
+        "#markup" => $result["product_record"]['consumer_product_name']
+      );
+
+      $structure['table']['upload_table']['status'][$result["product_record"]["east_product_id"]] = array(
+        "#markup" => $result['status']
+      );
+
+      $structure['table']['upload_table']['message'][$result["product_record"]["east_product_id"]] = array(
+        "#markup" => $result['message']
+      );
+
+      if(strtolower($result['status']) == "error") {
+        $error_count++;
+      }
+      else if(strtolower($result['status']) == "warning") {
+        $warning_count++;
+      }
+      else if(strtolower($result['status']) == 'update') {
+        $ok_count++;
+        $update++;
+      }
+      else if(strtolower($result['status']) == 'new product') {
+        $ok_count++;
+        $new++;
+      }
+    }
+  }
+
+  $structure['summary']['analysis_result_block'] = array (
+    '#type' => 'fieldset',
+  );
+
+  $structure['summary']['analysis_result_block']['number_uploads'] = array(
+    "#markup" => "<div><b>Number of Uploads:</b> " . count($analysis_results) . "</div>",
+  );
+
+  $structure['summary']['analysis_result_block']['validated_uploads'] = array(
+    "#markup" => "<div><b>Validated Uploads:</b> {$ok_count} </div>",
+  );
+
+  $structure['summary']['analysis_result_block']['new_uploads'] = array(
+    "#markup" => "<div><b>Number of New Product Uploads:</b> {$new} </div>",
+  );
+
+  $structure['summary']['analysis_result_block']['update_uploads'] = array(
+    "#markup" => "<div><b>Number of Updates:</b> {$update} </div>",
+  );
+
+  $structure['summary']['analysis_result_block']['errors'] = array(
+    "#markup" => "<div><b>Errors:</b> {$error_count} </div>",
+  );
+
+  $structure['summary']['analysis_result_block']['warnings'] = array(
+    "#markup" => "<div><b>Warnings:</b> {$warning_count} </div>",
+  );
+
+  return $structure;
+}
+
+function theme_buw_product_information_analysis_table($variables) {
+
+  $form = $variables['form'];
+
+  $header = array(t('East Product ID'), t('Name'), t('Status'), t('Message'));
+
+  $rows = array();
+
+  foreach (element_children($form['upload_table']['east_product_id']) as $key) {
+
+    $record = array();
+    $record[] = drupal_render($form['upload_table']['east_product_id'][$key]);
+    $record[] = drupal_render($form['upload_table']['name'][$key]);
+    $record[] = drupal_render($form['upload_table']['status'][$key]);
+    $record[] = drupal_render($form['upload_table']['message'][$key]);
+
+    $rows[] = $record;
+  }
+
+  $output = theme('table', array(
+      'header' => $header,
+      'rows' => $rows
+  ));
+
+  return $output;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function buw_product_information_theme($existing, $type, $theme, $path) {
+
+  $theme_hooks = array(
+    'buw_product_information_analysis_table' => array(
+      'render element' => 'form',
+      'file' => 'buw_product_information.module'
+     )
+  );
+
+  return $theme_hooks;
+}
+
+//Clean up any temp files
+function buw_product_information_cleanup($job_id) {
+  //need to remove the excel file from the system
+  $options = db_select("bulk_upload_wizard_jobs")
+                ->condition("job_id", $job_id)
+                ->fields("bulk_upload_wizard_jobs", array("job_record"))
+                ->condition("record_type", "options")
+                ->execute()
+                ->fetchField();
+
+  $fid = unserialize($options);
+
+  $file = file_load($fid);
+
+  file_delete($file);
+}
+
+function buw_product_information_map_product($data) {
+
+  $record = array();
+
+  $record['east_product_id'] = $data[0];
+  $record['upc'] = $data[2];
+  $record['master_case_upc'] = $data[3];
+  $record['title'] = $data[1];
+  $record['consumer_product_name'] = $data[1];
+  $record['feature_1'] = $data[10];
+  $record['feature_2'] = $data[11];
+  $record['feature_3'] = $data[12];
+  $record['feature_4'] = $data[13];
+  $record['feature_5'] = $data[14];
+  $record['manufacturer_info'] = $data[6];
+  $record['description1'] = $data[4];
+  $record['description2'] = $data[5];
+//  $record['description3'] = "";
+//  $record['description4'] = "";
+//  $record['description5'] = "";
+  $record['ingredients'] = $data[7];
+  $record['allergens'] = $data[8];
+  $record['unit_length'] = $data[39];
+  $record['unit_width'] = $data[40];
+  $record['unit_height'] = $data[41];
+  //$record['scent'] = $data[];
+  //$record['color'] = $data[];
+  //$record['status'] = ""
+  //$record['brand'] = $data[];
+  $record['serving_size'] = $data[15];
+  $record['servings_per_container'] = $data[16];
+  $record['calories'] = $data[17];
+  $record['calories_from_fat'] = $data[18];
+  $record['total_fat_pdv'] = $data[20];
+  $record['total_fat'] = $data[19];
+  $record['saturated_fat'] = $data[21];
+  $record['saturated_fat_pdv'] = $data[22];
+  $record['trans_fat'] = $data[23];
+  $record['cholesterol'] = $data[24];
+  $record['cholesterol_pdv'] = $data[25];
+  $record['sodium'] = $data[26];
+  $record['sodium_pdv'] = $data[27];
+  $record['total_carbs'] = $data[28];
+  $record['total_carbs_pdv'] = $data[29];
+  $record['dietary_fiber'] = $data[30];
+  $record['dietary_fiber_pdv'] = $data[31];
+  $record['sugars'] = $data[32];
+  $record['sugars_pdv'] = $data[33];
+  $record['protein'] = $data[34];
+  $record['protein_pdv'] = $data[35];
+  $record['vitamin_a'] = $data[36];
+  $record['vitamin_c'] = $data[37];
+  $record['iron'] = $data[38];
+//  $record['video_link'] = $data[];
+//  $record['hg_length'] = $data[];
+//  $record['hg_height'] = $data[];
+//  $record['hg_description'] = $data[];
+//  $record['hg_product_features'] = $data[];
+//  $record['hg_promo_features'] = $data[];
+//  $record['hg_promo_dicount'] = $data[];
+//  $record['map_policy_price'] = $data[];
+  $record['keywords'] = $data[9];
+  //$record['category'] = $data[];
+
+  return $record;
+}

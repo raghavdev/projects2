@@ -1,0 +1,112 @@
+<?php
+
+/*
+ * Digital Core Staging
+ *
+ * Function:
+ * Facilitates all communication to and from the staging tables
+ *
+ * As well as all mapping of the data to and from the staging tables
+ *
+ * Meant to be a flexible layer, not the end point. So no actual structures are defined here
+ * Another library will provide the more definitive data that this talks and responds to
+ *
+ * Author:
+ * Peter Bliss
+ * Metal Toad Media
+ * pbliss@metaltoad.com
+ *
+ */
+
+function digital_core_staging_prep_table($dataType) {
+  //wipe out the current data in the table
+  db_truncate($dataType)->execute();
+}
+
+//Write multiple records to the staging database
+function digital_core_staging_write($dataType, $records) {
+  digital_core_staging_prep_table($dataType);
+
+  //data will come in ready to go into the staging table
+
+  //loop the records provided and write them to the database
+  foreach($records as $record) {
+    digital_core_staging_write_record($dataType, $record);
+  }
+}
+
+function digital_core_staging_write_record($dataType, $record) {
+
+  try {
+    $fields = array();
+
+    //build out the field list
+    foreach($record as $field => $value) {
+      $fields[$field] = $value;
+    }
+
+      //insert the record
+    $query = db_insert($dataType)
+      ->fields($fields);
+
+    $q = (string)$query;
+
+    $query->execute();
+  }
+  catch(Exception $ex) {
+    watchdog("Issue with import", $ex->getMessage());
+  }
+}
+
+function digital_core_staging_theme($existing, $type, $theme, $path) {
+
+  $theme_hooks = array(
+    'digital_core_staging_field_mapping_table' => array(
+      'render element' => 'form',
+      'file' => 'digital_core_staging_field_mapping.inc',
+     ),
+    'digital_core_staging_field_group_mapping_table' => array(
+      'render element' => 'form',
+      'file' => 'digital_core_staging_field_group_mapping.inc',
+     )
+  );
+
+  return $theme_hooks;
+}
+
+/**
+ * Implements hook_menu().
+ *
+ */
+function digital_core_staging_menu() {
+
+  $items = array();
+
+  //Administration of the eiw settings
+  $items['admin/config/digitalcore/staging'] = array(
+    'page callback' => 'digital_core_staging_admin',
+    'access arguments' => array('administer digitalcore staging'),
+    'access callback' => 'user_access',
+    'file' => 'digital_core_staging_admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function digital_core_staging_permission() {
+  return array(
+    'administer digitalcore staging' =>  array(
+      'title' => t('Administer Digitalcore Staging'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+function digital_core_staging_process_data_records($data_type) {
+  module_load_include('inc', 'digital_core_staging', 'digital_core_staging_process');
+  digital_core_staging_process_data_records_callback($data_type);
+}

@@ -1,0 +1,112 @@
+<?php
+
+/*
+ * Blue Marble Staging
+ *
+ * Function:
+ * Facilitates all communication to and from the staging tables
+ *
+ * As well as all mapping of the data to and from the staging tables
+ *
+ * Meant to be a flexible layer, not the end point. So no actual structures are defined here
+ * Another library will provide the more definitive data that this talks and responds to
+ *
+ * Author:
+ * Peter Bliss
+ * Metal Toad Media
+ * pbliss@metaltoad.com
+ *
+ */
+
+function bluemarble_staging_prep_table($dataType) {
+  //wipe out the current data in the table
+  db_truncate($dataType)->execute();
+}
+
+//Write multiple records to the staging database
+function bluemarble_staging_write($dataType, $records) {
+  bluemarble_staging_prep_table($dataType);
+
+  //data will come in ready to go into the staging table
+
+  //loop the records provided and write them to the database
+  foreach($records as $record) {
+    bluemarble_staging_write_record($dataType, $record);
+  }
+}
+
+function bluemarble_staging_write_record($dataType, $record) {
+
+  try {
+    //insert the record
+    db_insert($dataType)
+      ->fields($record)
+      ->execute();
+  }
+  catch(Exception $ex) {
+    watchdog("Issue with import", $ex->getMessage());
+  }
+}
+
+function bluemarble_staging_theme($existing, $type, $theme, $path) {
+
+  $theme_hooks = array(
+    'bluemarble_staging_field_mapping_table' => array(
+      'render element' => 'form',
+      'file' => 'bluemarble_staging_field_mapping.inc',
+     ),
+    'bluemarble_staging_field_group_mapping_table' => array(
+      'render element' => 'form',
+      'file' => 'bluemarble_staging_field_group_mapping.inc',
+     )
+  );
+
+  return $theme_hooks;
+}
+
+/**
+ * Implements hook_menu().
+ *
+ */
+function bluemarble_staging_menu() {
+
+  $items = array();
+
+  //Administration of the eiw settings
+  $items['admin/config/digitalcore/staging'] = array(
+    'page callback' => 'bluemarble_staging_admin',
+    'access arguments' => array('administer digitalcore staging'),
+    'access callback' => 'user_access',
+    'file' => 'bluemarble_staging_admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function bluemarble_staging_permission() {
+  return array(
+    'administer digitalcore staging' =>  array(
+      'title' => t('Administer Digitalcore Staging'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Loads field mappings for a given source and destination.
+ */
+function bluemarble_staging_field_mappings_load($source = NULL, $destination = NULL) {
+  $query = db_select('bluemarble_mapping', 'bm')
+    ->fields('bm', array('fromField', 'toField', 'fromAlt', 'customProcessing', 'customProcessingArgs'));
+  if ($source != NULL) {
+    $query->condition('bm.source', $source);
+  }
+  if ($destination != NULL) {
+    $query->condition('bm.destination', $destination);
+  }
+  return $query->execute()->fetchAll();
+}

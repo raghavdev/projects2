@@ -1,0 +1,11 @@
+name = Blue Marble Data
+description = Blue Marble data access.
+package = Blue Marble
+core = 7.x
+dependencies[] = bluemarble
+dependencies[] = simple_solr
+dependencies[] = tom
+files[] = bluemarble_data_products.inc
+files[] = bluemarble_data_brands.inc
+files[] = bluemarble_data_assets.inc
+files[] = bluemarble_data_categories.inc

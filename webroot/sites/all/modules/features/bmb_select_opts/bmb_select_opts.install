@@ -1,0 +1,450 @@
+<?php
+
+/**
+ * Implements hook_install().
+ */
+function bmb_select_opts_install() {
+
+  db_update('taxonomy_vocabulary')
+    ->fields(array(
+      'name'         => 'Dietary Preference',
+      'machine_name' => 'dietary_preference',
+    ))
+    ->condition('machine_name', 'dietary_preference_attributes')
+    ->execute();
+
+  db_update('taxonomy_vocabulary')
+    ->fields(array(
+      'name'         => 'Free Of',
+      'machine_name' => 'free_of',
+    ))
+    ->condition('machine_name', 'free_of_attributes')
+    ->execute();
+
+  db_update('taxonomy_vocabulary')
+    ->fields(array(
+      'name'         => 'Major Allergen',
+      'machine_name' => 'major_allergen',
+    ))
+    ->condition('machine_name', 'major_allergen_attributes')
+    ->execute();
+
+  db_update('taxonomy_vocabulary')
+    ->fields(array(
+      'name'         => 'Processing Allergen',
+      'machine_name' => 'processing_allergen',
+    ))
+    ->condition('machine_name', 'processing_attributes')
+    ->execute();
+
+  db_update('taxonomy_vocabulary')
+    ->fields(array(
+      'name'         => 'Salt Content',
+      'machine_name' => 'salt_content',
+    ))
+    ->condition('machine_name', 'salt_content_attributes')
+    ->execute();
+
+  db_update('taxonomy_vocabulary')
+    ->fields(array(
+      'name'         => 'Sweetener',
+      'machine_name' => 'sweetener',
+    ))
+    ->condition('machine_name', 'sweetener_attributes')
+    ->execute();
+}
+
+/**
+ * Adds default Organic and Veg. Type terms.
+ */
+function bmb_select_opts_update_7000() {
+  _bmb_select_opts_create_terms('organic_content', array('>70%', '>95%', '100%'));
+  _bmb_select_opts_create_terms('veg_type', array('Vegan', 'Vegetarian'));
+}
+
+/**
+ * Adds default Certification Agency terms.
+ */
+function bmb_select_opts_update_7001() {
+  features_revert_module('bmb_select_opts');
+
+  $vocabularies = taxonomy_vocabulary_get_names();
+
+  if (!isset($vocabularies['agency_organic']->vid) || !isset($vocabularies['kosher_certifying_agency']->vid)) {
+    throw new DrupalUpdateException('Organic Certifying Agency or Kosher Certifying Agency vocabulary is missing.');
+  }
+
+  // Add Gluten Free Certification Agency terms
+  _bmb_select_opts_create_terms('agency_gluten_free', array(
+    'NSF Certified Gluten Free',
+    'Gluten Intolerance Group GiG',
+    'Gluten-Free Certification Program GFCP',
+  ));
+
+  // Remove existing Organic Certification Agency terms
+  // Not worrying about migrating associations since none of that data has been
+  // input yet.
+  $tids = db_select('taxonomy_term_data', 'td')
+    ->fields('td', array('tid'))
+    ->condition('td.vid', $vocabularies['agency_organic']->vid)
+    ->execute()
+    ->fetchCol();
+  foreach ($tids as $tid) {
+    taxonomy_term_delete($tid);
+  }
+
+  // Add Organic Certification Agency terms
+  _bmb_select_opts_create_terms('agency_organic', array(
+    'QAI',
+    'ProCert',
+    'EcoCert',
+    'CCOF',
+    'OTCO',
+    'Eccysa Organic',
+    'YOLO Organic',
+    'AOC',
+    'Vermont Organic Farmers',
+    'TX Dept of Ag',
+    'Danish Veterinary & Food Administration',
+    'OCIA',
+    'ICEA',
+    'BCS OKO-Garantie GMBH',
+    'Baystate Organic Certifiers',
+    'MO',
+    'DIO',
+    'AbCert',
+    'Global Culture',
+    'CAAE',
+    'PA Certified Organic',
+    'Global Alliance',
+    'GOA',
+    'PCO',
+    'BCS',
+    'Control Union Certifications',
+    'Eco-Logica',
+    'PrimusGFS',
+    'WSDA',
+    'MOSA',
+    'Skal',
+  ));
+
+  // Add Kosher Certifying Agency terms
+  _bmb_select_opts_create_terms('kosher_certifying_agency', array(
+    'Kehillah Kosher',
+    'Chicago Rabbinical Council (cRc)',
+    'Star-K',
+    'The Organized Kashrus Laboratories (OK)',
+    'Orthodox Jewish Congregations (OU)',
+    'Vaad HaKashrus of Buffalo',
+    'Kashrus Council of Canada (COR)',
+    'Montreal Vaad Hair (MK)',
+    'KSA',
+  ));
+
+  // Delete the old text field for Kosher Agency
+  field_delete_field('field_kosher_agency');
+
+  // Add Kosher Certification Agency vocabulary to Content URI config
+  $uri = db_select('content_uri', 'c')
+    ->fields('c', array('id', 'contentData'))
+    ->condition('url', 'service/digitalcore/product_details')
+    ->execute()
+    ->fetchAssoc();
+  $config = unserialize($uri['contentData']);
+
+  $config['taxonomy'][$vocabularies['kosher_certifying_agency']->vid] = 1;
+
+  db_update('content_uri')
+    ->fields(array(
+      'contentData' => serialize($config),
+    ))
+    ->condition('id', $uri['id'])
+    ->execute();
+}
+
+/**
+ * Helper function: Create terms in a vocabulary.
+ *
+ * @param string
+ *   The vocabulary machine name.
+ * @param array
+ *   An array of term names to be created.
+ *
+ * @throws DrupalUpdateException
+ */
+function _bmb_select_opts_create_terms($vocabulary, $names) {
+  $vocab = taxonomy_vocabulary_machine_name_load($vocabulary);
+
+  if (!$vocab) {
+    throw new DrupalUpdateException('Missing vocabulary: ' . check_plain($vocabulary));
+  }
+
+  foreach ($names as $name) {
+    $term = entity_create('taxonomy_term', array(
+      'vid' => $vocab->vid,
+      'name' => $name,
+    ));
+    entity_save('taxonomy_term', $term);
+  }
+}
+
+// Populate OE & PP values for the enum_id field for manufacturing_method
+function bmb_select_opts_update_7002() {
+  // This update can only run if the field instace has been created, which will
+  // not happen until the feature-revert occurs.
+  if (field_info_instance('taxonomy_term', 'field_enum_id', 'manufacturing_method') == FALSE) {
+    throw new DrupalUpdateException('Revert features before running this update. (' . __FUNCTION__ . ')');
+  }
+
+  // To determine which term gets which enum_id value
+  // array( macola_name => enum_id )
+  $map = array(
+    'M' => 'PP',
+    'P' => 'OE',
+  );
+
+  // Query for existing terms to add the enum_id, there _should only be 2_,
+  // so I did not batch this.
+  $query = db_select('field_data_field_macola_name', 'mn');
+  $query->fields('mn', array('entity_id'));
+  $query->condition('mn.entity_type', 'taxonomy_term');
+  $query->condition('mn.bundle', 'manufacturing_method');
+  $query->condition('mn.field_macola_name_value', array_keys($map));
+
+  $result = $query->execute();
+
+  while (($entity_id = $result->fetchField())) {
+    $term = entity_load_single('taxonomy_term', $entity_id);
+
+    // Grab the macola_name for the term
+    if (
+      isset($term->field_macola_name)
+      && isset($term->field_macola_name[LANGUAGE_NONE][0]['value'])
+    ) {
+      $macola_name = $term->field_macola_name[LANGUAGE_NONE][0]['value'];
+    }
+
+    // Set the enum_id based on the macola_name
+    if (isset($macola_name) && isset($map[$macola_name])) {
+      $term->field_enum_id[LANGUAGE_NONE][0]['value'] = $map[$macola_name];
+      entity_save('taxonomy_term', $term);
+    }
+  }
+}
+
+/**
+ * Adds Payment Terms terms.
+ */
+function bmb_select_opts_update_7003() {
+  features_revert_module('bmb_select_opts');
+
+  $vocab = taxonomy_vocabulary_machine_name_load('payment_terms');
+  if (!$vocab) {
+    throw new DrupalUpdateException('Missing vocabulary: payment_terms');
+  }
+
+  $payment_terms = array(
+    array(
+      'id' => 125,
+      'value' => '1',
+      'label' => 'net 10 days',
+    ),
+    array(
+      'id' => 126,
+      'value' => '10',
+      'label' => 'net 70 days',
+    ),
+    array(
+      'id' => 127,
+      'value' => '11',
+      'label' => 'net 25 days',
+    ),
+    array(
+      'id' => 128,
+      'value' => '12',
+      'label' => 'net 30 days',
+    ),
+    array(
+      'id' => 129,
+      'value' => '13',
+      'label' => '.75%10 net 30 d',
+    ),
+    array(
+      'id' => 130,
+      'value' => '14',
+      'label' => '1%10 net 30 day',
+    ),
+    array(
+      'id' => 131,
+      'value' => '15',
+      'label' => '1%10 net 11 day',
+    ),
+    array(
+      'id' => 132,
+      'value' => '16',
+      'label' => '2%10 net 30 day',
+    ),
+    array(
+      'id' => 133,
+      'value' => '17',
+      'label' => '2%10 net 11 day',
+    ),
+    array(
+      'id' => 134,
+      'value' => '18',
+      'label' => '10%12 net 30 da',
+    ),
+    array(
+      'id' => 135,
+      'value' => '19',
+      'label' => '.05%10 net 30 d',
+    ),
+    array(
+      'id' => 136,
+      'value' => '2',
+      'label' => 'net 15 days',
+    ),
+    array(
+      'id' => 153,
+      'value' => '20',
+      'label' => '1%10 net 45 day',
+    ),
+    array(
+      'id' => 137,
+      'value' => '21',
+      'label' => '1%10 net 20 day',
+    ),
+    array(
+      'id' => 138,
+      'value' => '22',
+      'label' => '1%15 net 30',
+    ),
+    array(
+      'id' => 160,
+      'value' => '23',
+      'label' => '1%17 net 30 day',
+    ),
+    array(
+      'id' => 139,
+      'value' => '24',
+      'label' => '1%30 net 31 day',
+    ),
+    array(
+      'id' => 140,
+      'value' => '29',
+      'label' => '2%10 net 60 day',
+    ),
+    array(
+      'id' => 141,
+      'value' => '3',
+      'label' => 'net 14 days',
+    ),
+    array(
+      'id' => 156,
+      'value' => '30',
+      'label' => '2%5 Net 45 Days',
+    ),
+    array(
+      'id' => 142,
+      'value' => '4',
+      'label' => 'net 7 days',
+    ),
+    array(
+      'id' => 143,
+      'value' => '5',
+      'label' => 'net 45 days',
+    ),
+    array(
+      'id' => 144,
+      'value' => '50',
+      'label' => '5%10 net 30 day',
+    ),
+    array(
+      'id' => 145,
+      'value' => '52',
+      'label' => '1.5%15 net 30 d',
+    ),
+    array(
+      'id' => 146,
+      'value' => '53',
+      'label' => '2%10 net 45 day',
+    ),
+    array(
+      'id' => 155,
+      'value' => '54',
+      'label' => '2%45 Net 60 Day',
+    ),
+    array(
+      'id' => 147,
+      'value' => '6',
+      'label' => 'net 20 days',
+    ),
+    array(
+      'id' => 148,
+      'value' => '7',
+      'label' => 'net on receipt',
+    ),
+    array(
+      'id' => 149,
+      'value' => '8',
+      'label' => 'net 60 days',
+    ),
+    array(
+      'id' => 150,
+      'value' => '9',
+      'label' => 'net 21 days',
+    ),
+    array(
+      'id' => 164,
+      'value' => 'W1',
+      'label' => 'wire 1% 10',
+    ),
+    array(
+      'id' => 166,
+      'value' => 'W15',
+      'label' => 'wire- 1% 15',
+    ),
+    array(
+      'id' => 165,
+      'value' => 'W2',
+      'label' => 'wire 2% 10',
+    ),
+    array(
+      'id' => 167,
+      'value' => 'W30',
+      'label' => 'wire- net 30',
+    ),
+    array(
+      'id' => 168,
+      'value' => 'W45',
+      'label' => 'wire- net 45',
+    ),
+    array(
+      'id' => 151,
+      'value' => 'WT',
+      'label' => 'wire transfer',
+    ),
+  );
+
+  foreach ($payment_terms as $payment_term) {
+    $term = entity_create('taxonomy_term', array(
+      'vid' => $vocab->vid,
+      'name' => $payment_term['label'],
+      'field_macola_id' => array(
+        'und' => array(
+          0 => array(
+            'value' => $payment_term['id'],
+          ),
+        )
+      ),
+      'field_macola_name' => array(
+        'und' => array(
+          0 => array(
+            'value' => $payment_term['value'],
+          ),
+        ),
+      ),
+    ));
+    entity_save('taxonomy_term', $term);
+  }
+}

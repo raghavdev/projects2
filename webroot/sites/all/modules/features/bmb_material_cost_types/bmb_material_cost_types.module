@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Blue Marble - Material Cost Types feature.
+ */
+
+include_once 'bmb_material_cost_types.features.inc';

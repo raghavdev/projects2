@@ -1,0 +1,471 @@
+<?php
+
+/**
+ * Implements hook_simple_solr_search_query_build_alter().
+ *
+ * Blue Marble specific filtering to read entity data from SOLR.
+ */
+function bluemarble_data_simple_solr_search_query_build_alter($query, &$variables, &$objects) {
+
+  $query = $objects['query'];
+  $query_parameters = &$variables['query_parameters'];
+
+  // For multi-value filters we need to do something special
+  foreach ($query_parameters as $name => $value) {
+    if (bluemarble_data_is_multivalue_filter($name)) {
+      // Must/must not have option is present
+      if (strpos($value, '+') !== FALSE) {
+        tom_apply_many_multi_filter($query, $query_parameters, $name, $name);
+      }
+      else {
+        tom_apply_multi_filter($query, $query_parameters, $name);
+      }
+    }
+  }
+
+  //product dates
+  if(array_key_exists("product_dates", $query_parameters)) {
+
+    //due to the lack of support for this in the module, moved it to the alter below
+    unset($query_parameters['product_dates']);
+  }
+
+   //product dates
+  if(array_key_exists("asset_dates", $query_parameters)) {
+
+    //due to the lack of support for this in the module, moved it to the alter below
+    unset($query_parameters['asset_dates']);
+  }
+
+  //product name parameters
+  if(array_key_exists("product_name", $query_parameters)) {
+
+    $parameters = explode("|", $query_parameters['product_name']);
+
+    //0 = boolean (must not / must)
+    //1 = qualifier
+    //  -Starts With = 0
+    //  -Ends With = 1
+    //  -Contains = 2
+    //2 = value
+
+    $c = "=";
+    if($parameters[0] == 0) {
+      $c = "<>";
+    }
+
+    switch($parameters[1]) {
+      case 0: {
+        //starts with
+        $query->condition("title", '/^' . $parameters[2] . '/', $c);
+        break;
+      }
+      case 1: {
+        //ends with
+        $query->condition("title", '/' . $parameters[2] . '$/', $c);
+        break;
+      }
+      case 2: {
+        //contains
+        $query->condition("title", '*' . $parameters[2] . '*', $c);
+        break;
+      }
+    }
+
+    unset($query_parameters['product_name']);
+  }
+
+  if(array_key_exists("modified", $query_parameters)) {
+
+    if($idx == "default_node_index") {
+      $query->condition("changed", $query_parameters['modified'], ">");
+    }
+    else if($idx == "asset_index") {
+      $query->condition("timestamp", $query_parameters['modified'], ">");
+    }
+
+    unset($query_parameters['modified']);
+  }
+
+  if(array_key_exists("older", $query_parameters)) {
+
+    if($idx == "default_node_index") {
+      $query->condition("changed", $query_parameters['older'], "<");
+    }
+    else if($idx == "asset_index") {
+      $query->condition("timestamp", $query_parameters['older'], "<");
+    }
+
+    unset($query_parameters['older']);
+  }
+
+  //created must be a range to include a date range, even if its one day
+  if(array_key_exists("created-start", $query_parameters)) {
+
+    if($idx == "index") {
+      $query->condition("created", $query_parameters['created-start'], ">=");
+      $query->condition("created", $query_parameters['created-end'], "<=");
+    }
+    else if($idx == "asset_index") {
+      $query->condition("timestamp", $query_parameters['created-start'], ">=");
+      $query->condition("timestamp", $query_parameters['created-end'], "<=");
+    }
+
+    unset($query_parameters['created-start']);
+    unset($query_parameters['created-end']);
+  }
+
+  //primary image
+  tom_apply_empty_boolean_filter($query, $query_parameters, "primary_image");
+}
+
+
+/**
+ * Implements hook_search_api_solr_query_alter
+ */
+function bluemarble_data_search_api_solr_query_alter(&$call_args, $query) {
+  $date_parameters = false;
+
+  if(array_key_exists("product_dates", $_GET)) {
+    $date_parameters = explode("|", $_GET['product_dates']);
+  }
+
+  if(array_key_exists("asset_dates", $_GET)) {
+    $date_parameters = explode("|", $_GET['asset_dates']);
+  }
+
+   //product dates
+  if($date_parameters) {
+
+    //0 = boolean
+    //1 = qualifier
+    //  0 - Have been added between
+    //  1 - Added Since
+    //  2 - Added Before
+    //  3 - Have been updated between
+    //  4 - Modified since
+    //  5 - Modified before
+    //
+    //2 = start month0
+    //3 = start day
+    //4 = start year
+    //5 = end month
+    //6 = end day
+    //7 = end year
+
+    $field = "ds_created";
+
+    if($date_parameters[1] > 2) {
+      //shift it down a set so that can compare the same
+      $date_parameters[1] = $date_parameters[1] - 3;
+      $field = "ds_changed";
+    }
+
+    switch($date_parameters[1]) {
+      case 0: {
+        $call_args['params']['fq'][] = "{$field}:[{$date_parameters[4]}-{$date_parameters[2]}-{$date_parameters[3]}T12:00:00Z TO {$date_parameters[7]}-{$date_parameters[5]}-{$date_parameters[6]}T12:00:00Z]";
+        break;
+      }
+      case 1: {
+        $currentDate = getdate();
+
+        $call_args['params']['fq'][] = "{$field}:[{$date_parameters[4]}-{$date_parameters[2]}-{$date_parameters[3]}T12:00:00Z TO {$currentDate['year']}-{$currentDate['mon']}-{$currentDate['mday']}T12:00:00Z]";
+        break;
+      }
+      case 2: {
+        $call_args['params']['fq'][] = "{$field}:[1970-01-01T12:00:00Z TO {$date_parameters[4]}-{$date_parameters[2]}-{$date_parameters[3]}T12:00:00Z]";
+        break;
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_entity_property_info_alter().
+ */
+function bluemarble_data_entity_property_info_alter(&$info) {
+  $info['node']['bundles']['product_details']['properties']['ecom_include'] = array(
+    'type' => 'boolean',
+    'label' => t('Ecom Include'),
+    'sanitized' => FALSE,
+    'getter callback' => 'bluemarble_data_ecom_include',
+  );
+  $info['node']['bundles']['product_details']['properties']['product_name'] = array(
+    'type' => 'text',
+    'label' => t('Product Name'),
+    'sanitized' => FALSE,
+    'getter callback' => 'bluemarble_data_get_product_name_getter',
+  );
+}
+
+function bluemarble_data_get_product_name_getter($item) {
+  return $item->title;
+}
+
+function bluemarble_data_ecom_include($item) {
+
+  $q = db_select("users");
+  $q->addJoin("inner", "field_data_field_feed_owner", "o", "o.field_feed_owner_uid = users.uid");
+  $q->addJoin("inner", "field_data_field_product_filter", "f", "f.entity_id = o.entity_id");
+  $q->fields("f", array("field_product_filter_target_id"));
+  $feedids = $q->execute()->fetchCol();
+
+  if(in_array($item->nid, $feedids)) {
+    return true;
+  }
+
+  return false;
+}
+
+//look up a product in the database based on a key field -> value supplied
+//returns the nid of that product
+function bluemarble_data_get_nid($key_field, $key_value) {
+
+  //they key value may need to be converted to something stored in drupal first
+  //east and west product id values are not field entries, so not imediately searchable
+  //if the key field is in the field_config table then its a drupal field, otherwise
+  //get the value from the bluemarble_data_products table and then match over to
+  //the nid on the node then
+
+  $field_exists = db_select("field_config")
+                    ->condition("field_name", $key_field)
+                    ->fields("field_config")
+                    ->execute()
+                    ->fetchAll();
+
+  if(!$field_exists) {
+    throw new Exception(t('Unknown field @field', array('@field' => $key_field)));
+  }
+
+  return db_select("field_data_{$key_field}")
+            ->fields("field_data_{$key_field}", array("entity_id"))
+            ->condition("{$key_field}_value", $key_value)
+            ->execute()
+            ->fetchField();
+}
+
+function bluemarble_data_update_solr_direct($entity_type, $field, $id, $value) {
+  //get some info about the index
+  $indexid = db_select("search_api_index")
+    ->fields("search_api_index", array("id"))
+    ->condition("machine_name", "default_node_index")
+    ->condition("item_type", $entity_type)
+    ->execute()
+    ->fetchField();
+
+  //get the solr index object
+  $index = search_api_index_load($indexid);
+
+  //get the server
+  $server = search_api_index_get_server($index);
+
+  //get the connection
+  $conn = $server->getSolrConnection();
+
+  //get the solr field name
+  $field_type = $index->options['fields'][$field]['type'];
+
+  $prefix = "ss_";
+
+  if($field_type == "integer") {
+    $prefix = "is_";
+  }
+  else if($field_type == "taxonomy_term") {
+    $prefix = "is_";
+  }
+  else if($field_type == "boolean") {
+    $prefix = "bs_";
+  }
+  else if($field_type == "date") {
+    $prefix = "ds_";
+  }
+
+  $req = '<add><doc><field name="id">'.$index->machine_name.'-'.$id.'</field><field name="'.$prefix.$field.'" update="set">'.$value.'</field></doc></add>';
+
+  //use the connection to run a query
+  $r = $conn->update($req);
+}
+
+//update the record directly, inserting the updated fields into the database bypassing drupal
+//performance reasons
+function bluemarble_data_update_direct($entity_type, $bundle, $id, $fields, $index = true) {
+
+
+  //get the field info needed for knowing how to update a field
+  $field_info = db_select("field_config")
+    ->fields("field_config", array("field_name", "type"))
+    ->execute()
+    ->fetchAllAssoc("field_name");
+
+  foreach($fields as $field => $value) {
+
+    $value_field = "value";
+
+    $x = "";
+
+    if($field_info[$field]->type == "taxonomy_term_reference") {
+      $value_field = "target_id";
+    }
+    else if($field_info[$field]->type == "entityreference") {
+      $value_field = "target_id";
+    }
+
+    db_merge("field_data_{$field}")
+      ->key(array("entity_id" => $id))
+      ->fields(array($field."_".$value_field => $value,
+        "delta" => 0,
+        "entity_type" => $entity_type,
+        "bundle" => $bundle,
+        "language" => "und",
+        "revision_id" => $id))
+      ->execute();
+
+    db_merge("field_revision_{$field}")
+      ->key(array("entity_id" => $id))
+      ->fields(array($field."_".$value_field => $value,
+        "delta" => 0,
+        "entity_type" => $entity_type,
+        "bundle" => $bundle,
+        "language" => "und",
+        "revision_id" => $id))
+      ->execute();
+
+    //update solr
+
+    if($index) {
+      bluemarble_data_update_solr_direct($entity_type, $field, $id, $value);
+    }
+  }
+}
+
+function bluemarble_data_calulate_check_digit($id) {
+  /*
+   * Take the 6 digit product number:    UVWXYZ
+
+      Fill in the following number like so   ABCDEF =
+
+      AB=V*2   cd=x*2     ef=Z*2
+
+      Sum = a+b+c+d+e+f+U+W+Y
+
+      Which=second digit of sum
+
+      List = 0,9,8,7,6,5,4,3,2,1
+
+      Check digit is  list(which  +1)
+   */
+
+  $data = str_split((string)$id);
+
+  $ab = ($data[1] * 2);
+  $cd = ($data[3] * 2);
+  $ef = ($data[5] * 2);
+
+  $abS = str_split((string)$ab);
+  $cdS = str_split((string)$cd);
+  $efS = str_split((string)$ef);
+
+  $sum += $abS[0];
+  if(count($abS) > 1) {
+    $sum += $abS[1];
+  }
+
+  $sum += $cdS[0];
+  if(count($cdS) > 1) {
+    $sum += $cdS[1];
+  }
+
+  $sum += $efS[0];
+  if(count($efS) > 1) {
+    $sum += $efS[1];
+  }
+
+  $sum += $data[0];
+  $sum += $data[2];
+  $sum += $data[4];
+
+  $list = array(0, 9, 8, 7, 6, 5, 4, 3, 2, 1);
+
+  $which = str_split($sum);
+
+  if(count($which) > 1) {
+    $d = $which[1];
+  }
+  else {
+    $d = $which[0];
+  }
+
+  $check = $list[$d];
+
+  return $check;
+}
+
+/**
+ * Helper function: detect if a filter is a multi select filter.
+ *
+ * @return boolean
+ */
+function bluemarble_data_is_multivalue_filter($name) {
+  // @todo determine if this is worth caching instead
+  $is_multivalue = drupal_static(__FUNCTION__);
+  if (!isset($is_multivalue[$name])) {
+    $is_multivalue[$name] = FALSE;
+    $multivalue_types = array(
+      'entityreference',
+      'node_reference',
+      'taxonomy_term_reference',
+      'list_text',
+      'workflow',
+    );
+
+    // @todo this is a hack to simplify determining the real field name.
+    $field_name = $name;
+    if (strpos($name, 'field_') !== 0) {
+      $field_name = 'field_' . $name;
+    }
+
+    $info = field_info_field($field_name);
+    if ($info) {
+      // Only these field types are considered multivalue
+      if (in_array($info['type'], $multivalue_types)) {
+        $is_multivalue[$name] = TRUE;
+      }
+    }
+  }
+
+  return $is_multivalue[$name];
+}
+
+/**
+ * Helper function: detect if a field is a taxonomy reference field.
+ *
+ * @return boolean
+ */
+function bluemarble_data_is_taxonomy_field($name) {
+  // @todo determine if this is worth caching instead
+  $is_taxonomy = drupal_static(__FUNCTION__);
+  if (!isset($is_taxonomy[$name])) {
+    $is_taxonomy[$name] = FALSE;
+  }
+  else {
+    // @todo this is a hack to simplify determining the real field name.
+    $field_name = $name;
+    if (strpos($name, 'field_') !== 0) {
+      $field_name = 'field_' . $name;
+    }
+    $info = field_info_field($field_name);
+    if ($info) {
+      if ($info['type'] == 'entityreference') {
+        if (isset($info['settings']['handler_settings']['target_type'])) {
+          $target_type = $info['settings']['handler_settings']['target_type'];
+          if ($target_type == 'taxonomy_term') {
+            $is_taxonomy[$name] = TRUE;
+          }
+        }
+      }
+      else if ($info['type'] == 'taxonomy_term_reference') {
+        $is_taxonomy[$name] = TRUE;
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+// Detail list
+ul.detail-list {
+  margin: 0;
+  & > li {
+    padding: $spacing-medium 0;
+    border-bottom: 1px solid $g300;
+    &:first-child {
+      padding-top: 0;
+    }
+  }
+  .detail-list-inner {
+    & > li {
+      position: relative;
+    }
+    md-input-container {
+      padding-left: 25px;
+    }
+  }
+  ul {
+    margin: 0;
+  }
+  button {
+    margin-top: $spacing-large;
+  }
+  .list-icon {
+    float: left;
+    position: absolute;
+    top: 40%;
+    top: calc(55% - 16px);
+    height: 16px;
+    margin-right: $spacing-medium;
+  }
+}

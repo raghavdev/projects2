@@ -1,0 +1,6 @@
+name = UNFI Reports : CMP Images Report
+description = Report to view the current CMP images.
+package = UNFI
+core = 7.x
+
+dependencies[] = unfi_reports

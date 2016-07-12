@@ -1,0 +1,12 @@
+name = TOM: The Object Manager
+description = Provides generic object manager API functions.
+package = TOM
+core = 7.x
+dependencies[] = simple_solr
+
+; Manually modified, 7.x-1.9 version with local changes for testing
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "tom"
+project status url = "http://toadhub.metaltoad.com/project-updates"
+

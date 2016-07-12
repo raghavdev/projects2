@@ -1,0 +1,3 @@
+name = Admin Menu - Auto Hide
+description = Automatically hide the admin menu, and show when the cursor reaches the top of the screen.
+core = 7.x

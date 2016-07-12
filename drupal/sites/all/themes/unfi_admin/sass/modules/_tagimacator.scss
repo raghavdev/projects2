@@ -1,0 +1,45 @@
+.tagimacator {
+  overflow-x: hidden;
+  .tagimacator-search-list {
+    width:100%;
+    margin:0;
+    padding:0;
+    overflow-y: auto;
+    max-height: 115px;
+    li {
+      padding-left: 4px;
+      cursor: pointer;
+      &.selected {
+        color: $color-action-primary;
+      }
+    }
+  }
+  .tagimacator-selected-list {
+    display: inline-block;
+    width:auto;
+    margin:0;
+    padding:0;
+    text-align: left;
+    li {
+      display: inline-block;
+      width: auto;
+      margin-right: 5px;
+      margin-bottom: 5px;
+      padding: 3px;
+      line-height: 12px;
+      text-align: left;
+      color: $color-action-primary;
+      background: $g400;
+    }
+  }
+  .tagimacant {
+    color: $white;
+    cursor: pointer;
+  }
+}
+// Dark theme
+.dark-theme .tagimacator{
+  .tagimacator-selected-list li {
+    background: lighten($p700,5%);
+  }
+}

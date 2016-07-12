@@ -1,0 +1,315 @@
+<?php
+/**
+ * @file
+ * Blue Marble Access Import module code.
+ */
+
+include_once 'bluemarble_access_import.value_parsing.inc';
+
+/**
+ * Implements hook_menu().
+ */
+function bluemarble_access_import_menu() {
+  $items['admin/config/bluemarble/access_import'] = array(
+    'title' => 'Access Import',
+    'description' => 'Run import of Access data from CSV.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('bluemarble_access_import_admin_form'),
+    'access arguments' => array('run bluemarble access import'),
+    'file' => 'bluemarble_access_import.admin.inc',
+  );
+
+  $items['admin/config/bluemarble/access_import/mapping'] = array(
+    'title' => 'Access Import Field Mapping',
+    'description' => 'Configure the Access Import field mappings.',
+    'page callback' => 'bluemarble_access_import_admin_field_mappings',
+    'access arguments' => array('administer bluemarble access import'),
+    'file' => 'bluemarble_access_import.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function bluemarble_access_import_permission() {
+  $perms = array();
+
+  $perms['administer bluemarble access import'] = array(
+    'title' => t('Administer Blue Marble Access Import'),
+    'description' => t('Configure the Blue Marble Access Import settings.'),
+    'restrict access' => TRUE,
+  );
+
+  $perms['run bluemarble access import'] = array(
+    'title' => t('Administer Blue Marble Access Import'),
+    'description' => t('Import a CSV of Access data.'),
+    'restrict access' => TRUE,
+  );
+
+  return $perms;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function bluemarble_access_import_form_bluemarble_staging_csv_upload_form_alter(&$form, &$form_state) {
+  if ($form_state['build_info']['args'][0] == 'bluemarble_access_products') {
+    $form['#submit'][] = 'bluemarble_access_import_admin_form_submit';
+  }
+}
+
+/**
+ * Form #submit callback: Blue Marble Access Import CSV form.
+ */
+function bluemarble_access_import_admin_form_submit($form, &$form_state) {
+  $batch = array(
+    'operations'       => array(
+      array('bluemarble_access_import_batch_process_support_entities', array()),
+      array('bluemarble_access_import_batch_process_products', array()),
+    ),
+    'finished'         => 'bluemarble_access_import_batch_finished',
+    'title'            => t('Access Data Import'),
+    'init_message'     => t('Access Data Import is starting.'),
+    'progress_message' => '',
+    'error_message'    => t('Access Data Import has encountered an error.'),
+    'file'             => drupal_get_path('module', 'bluemarble_access_import') . '/bluemarble_access_import.batch.inc',
+  );
+  batch_set($batch);
+}
+
+/**
+ * Get existing product nodes or create stub nodes by UPC.
+ *
+ * @param array
+ *   List of UPCs
+ *
+ * @return array
+ *   MUST return an array of the same length and in the same order.
+ */
+function bluemarble_access_import_get_or_create_products($upcs) {
+  $ret = array();
+  $create = variable_get('bluemarble_access_import_create_nodes_product_details', FALSE);
+
+  if (empty($upcs)) {
+    return $ret;
+  }
+
+  // Pad all UPCs to 11 digits
+  foreach ($upcs as &$upc) {
+    $upc = str_pad($upc, 11, '0', STR_PAD_LEFT);
+  }
+
+  // Find existing products by the UPC.
+  $query = db_select('field_data_field_item_num', 'fin')
+    ->fields('fin', array('field_item_num_value', 'entity_id'))
+    ->condition('fin.entity_type', 'node')
+    ->condition('fin.bundle', 'product_details')
+    ->condition('fin.deleted', 0)
+    ->condition('fin.field_item_num_value', $upcs);
+  $nids_by_upc =  $query->execute()->fetchAllKeyed();
+
+  $nodes = node_load_multiple($nids_by_upc);
+
+  // Loop through the original UPCs, so our resulting array is in the
+  // same order.
+  foreach ($upcs as $upc) {
+    if (isset($nids_by_upc[$upc])) {
+      $nid   = $nids_by_upc[$upc];
+      $ret[] = $nodes[$nid];
+    }
+    elseif ($create) {
+      $ret[] = entity_create('node', array(
+        'is_new'   => TRUE,
+        'title'    => '',
+        'type'     => 'product_details',
+        'language' => LANGUAGE_NONE,
+        'uid'      => 0,
+      ));
+    }
+    else {
+      $ret[] = FALSE;
+    }
+  }
+
+  return $ret;
+}
+
+/**
+ * Updates a single node from access data, using mappings.
+ *
+ * @param $node
+ * @param $apiEntity
+ *
+ * @throws \Exception
+ */
+function bluemarble_access_import_update_product($node, $apiEntity) {
+  $mappings = bluemarble_staging_field_mappings_load('csv', $node->type);
+  $is_new   = !empty($node->is_new);
+
+  $node->bluemarble_access_import = TRUE;
+
+  $wrapper = entity_metadata_wrapper('node', $node);
+
+  $workflow_mappings = array();
+  $workflow_fields   = array();
+
+  if (module_exists('workflow')) {
+    $workflow_fields = array_keys(_workflow_info_fields($node, 'node', 'product_details'));
+  }
+
+  foreach ($mappings as &$mapping) {
+    if (!empty($mapping->customProcessingArgs)) {
+      $mapping->customProcessingArgs = unserialize($mapping->customProcessingArgs);
+    }
+    if (empty($mapping->customProcessingArgs)) {
+      $mapping->customProcessingArgs = array();
+    }
+
+    $fromField = $mapping->fromField;
+    $toField   = $mapping->toField;
+    if ($fromField && $toField) {
+      if (in_array($toField, $workflow_fields)) {
+        $workflow_mappings[$toField] = $mapping;
+        continue;
+      }
+      $fromAlt = $mapping->fromAlt;
+
+      $value = NULL;
+      if (isset($apiEntity->{$fromField})) {
+        $value = $apiEntity->{$fromField};
+      }
+      else {
+        if (isset($apiEntity->{$fromAlt})) {
+          $value = $apiEntity->{$fromAlt};
+        }
+      }
+
+      // Convert string values for constants to their constant value/
+      switch (strtolower($value)) {
+        case 'null':
+          $value = NULL;
+          break;
+
+        case 'false':
+          $value = FALSE;
+          break;
+
+        case 'true':
+          $value = TRUE;
+          break;
+
+        default:
+          // Handle with custom processing.
+      }
+
+      $function = $mapping->customProcessing;
+      if ($function && function_exists($function)) {
+        $context = array(
+          'mapping'   => $mapping,
+          'apiEntity' => $apiEntity,
+        );
+        $value = $function($value, 'import', $wrapper, $context);
+      }
+
+      if ($value !== NULL) {
+        try {
+          tom_entity_field_set($wrapper, $toField, $value);
+        } catch (Exception $e) {
+          $message  = 'Failed to set value for @f (Node ID: @n, Item No.: @i). <br /> Value = <pre>@v</pre>';
+          $msg_vars = array(
+            '@f' => $toField,
+            '@n' => $node->nid,
+            '@i' => $apiEntity->UPC,
+            '@v' => print_r($value, TRUE),
+          );
+          watchdog('bluemarble_access_import', $message, $msg_vars, WATCHDOG_ERROR);
+          watchdog_exception('bluemarble_access_import', $e);
+        }
+      }
+    }
+  }
+
+  // Nodes should have a title, but we aren't mapping anything from the CSV to
+  // the title. We also don't want to overwrite an existing title.
+  $title = $wrapper->title->value();
+  if (empty($title)) {
+    $title = 'Temporary desc ';
+    if (!empty($apiEntity->Casepack)) {
+      $title .= $apiEntity->Casepack . ' ';
+    }
+    if (!empty($apiEntity->Size)) {
+      $title .= $apiEntity->Size;
+    }
+    if (!empty($apiEntity->UOM)) {
+      $title .= $apiEntity->UOM;
+    }
+    $wrapper->title->set($title);
+  }
+
+  $wrapper->save();
+
+  // Workflow transitions should be done after the entity has been created.
+  if ($is_new) {
+    foreach ($workflow_fields as $toField) {
+      $mapping   = $workflow_mappings[$toField];
+      $fromField = $mapping->fromField;
+      $fromAlt   = $mapping->fromAlt;
+
+      $value = NULL;
+      if (isset($apiEntity->{$fromField})) {
+        $value = $apiEntity->{$fromField};
+      }
+      else {
+        if (isset($apiEntity->{$fromAlt})) {
+          $value = $apiEntity->{$fromAlt};
+        }
+      }
+
+      $function = $mapping->customProcessing;
+      if ($function && function_exists($function)) {
+        $context = array(
+          'mapping'   => $mapping,
+          'apiEntity' => $apiEntity,
+        );
+        $value = $function($value, 'import', $wrapper, $context);
+      }
+
+      if ($value) {
+        sudo_workflow_transition_to_state('node', $node, $toField, $value, 'Update from Blue Marble Access Import');
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_bmb_csv_import_support_entity_search_query_alter().
+ */
+function bluemarble_access_import_bmb_csv_import_support_entity_search_query_alter($query, $value, $map, $context) {
+  if (strpos($map['field_table'], 'field_data_') === 0) {
+    $query->condition('tbl.entity_type', $map['entity_type']);
+    $query->condition('tbl.bundle', $map['bundle']);
+  }
+  elseif ($map['entity_type'] == 'node') {
+    $query->condition('tbl.type', $map['bundle']);
+  }
+  elseif ($map['entity_type'] == 'taxonomy_term') {
+    $query->join('taxonomy_vocabulary', 'tv', 'tbl.vid=tv.vid');
+    $query->condition('tv.machine_name', $map['bundle']);
+  }
+  // @todo: more entity types?
+  else {
+    // Error
+  }
+}
+
+/**
+ * Implements hook_bmb_csv_import_support_entity_create_init_values_alter().
+ */
+function bluemarble_access_import_bmb_csv_import_support_entity_create_init_values_alter(&$init_values, $value, $map, $context) {
+  if ($map['entity_type'] == 'taxonomy_term') {
+    $vocab = taxonomy_vocabulary_machine_name_load($map['bundle']);
+    $init_values['vid'] = $vocab->vid;
+  }
+}

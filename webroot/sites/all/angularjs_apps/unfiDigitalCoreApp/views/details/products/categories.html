@@ -1,0 +1,17 @@
+<div class="detail-main marketing-detail columns twelve">
+    <h2>Categories</h2>
+    <div class="detail-data">
+        <div section="categories" formfield="web_category"></div>
+        <div section="categories" formfield="bmb_category"></div>
+        <div section="categories" formfield="bmb_product_type"></div>
+        <div section="categories" formfield="spins_category"></div>
+        <div section="categories" formfield="spins_product_type"></div>
+    </div>
+    <div class="download-export" ng-if="record.item_num">Download / Export:
+        <ul>
+            <li><a href="/bmbpim/product/{{record.item_num}}/details.csv">CSV</a></li>
+            <li><a href="/bmbpim/product/{{record.item_num}}/details.json" target="_blank">JSON</a></li>
+            <li><a href="/bmbpim/product/{{record.item_num}}/details.xml" target="_blank">XML</a></li>
+        </ul>
+    </div>
+</div>

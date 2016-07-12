@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the CRM API View feature.
+ */
+
+include_once 'crm_api_view.features.inc';

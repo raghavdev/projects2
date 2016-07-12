@@ -1,0 +1,28 @@
+.md-chips {
+  position: relative;
+}
+
+.md-chip {
+  background: rgb(224,224,224);
+  color: rgb(66,66,66);
+  cursor: default;
+  border-radius: 16px;
+  display: inline-block;
+  height: 32px;
+  line-height: 32px;
+  margin: 8px 8px 0 0;
+  padding: 0 8px 0 12px;
+
+  .md-chip-remove {
+    text-align: center;
+    width: 32px;
+    height: 32px;
+    min-width: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    margin: 0;
+    position: relative;
+  }
+}

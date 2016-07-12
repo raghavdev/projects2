@@ -1,0 +1,850 @@
+<?php
+
+/**
+ * @file
+ * Blue Marble Services
+ *
+ * Provides the resources for the Blue Marble webservices endpoints.
+ * The service resources will be used by the angular app to communicate back to drupal.
+ *
+ * Author:
+ * Peter Bliss
+ * Metal Toad Media
+ * pbliss@metaltoad.com
+ *
+ */
+
+/**
+ * Implements hook_services_resources().
+ */
+function bluemarble_services_services_resources() {
+  return array(
+    'image_styles' => array(
+      'index' => array(
+        'help' => 'Get a list of defined image styles globaly',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_image_styles'),
+        'callback' => 'bluemarble_services_image_styles_index',
+        'access callback' => 'user_access',
+        'access arguments' => array('read blue marble image styles'),
+        'access arguments append' => FALSE,
+      ),
+      'retrieve' => array(
+        'help' => 'Retrieves a list of image styles defined for the specified image file',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_image_styles'),
+        'callback' => 'bluemarble_services_image_styles_retrieve',
+        'access callback' => 'user_access',
+        'access arguments' => array('read blue marble image styles'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'file_name',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'Image file Name',
+          ),
+        ),
+      ),
+    ),
+    'user_prefs' => array(
+      'retrieve' => array(
+        'help' => 'Current user UI Preferences',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_user_prefs'),
+        'callback' => 'bluemarble_services_user_prefs_retrieve',
+        'access callback' => 'user_access',
+        'access arguments' => array('read blue marble user prefs'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'uid',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'User Id',
+          ),
+        ),
+      ),
+      'update' => array(
+        'help' => 'Updates an array of user prefs',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_user_prefs'),
+        'callback' => 'bluemarble_services_user_prefs_update',
+        'access callback' => 'user_access',
+        'access arguments' => array('update blue marble user prefs'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'id',
+            'type' => 'int',
+            'description' => 'The id of the user to update',
+            'source' => array('path' => '0'),
+            'optional' => TRUE,
+          ),
+          array(
+            'name' => 'data',
+            'type' => 'array',
+            'description' => 'The user prefs object',
+            'source' => 'data',
+            'optional' => TRUE,
+          ),
+        ),
+      ),
+    ),
+    'assets' => array(
+      'index' => array(
+        'help' => 'Retrieves a listing of assets',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_assets'),
+        'callback' => 'bluemarble_services_assets_index',
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core assets'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'perPage',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'perPage',
+            ),
+            'optional' => TRUE,
+            'default value' => 100,
+          ),
+          array(
+            'name' => 'page',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'page',
+            ),
+            'optional' => TRUE,
+            'default value' => 0,
+          ),
+          array(
+            'name' => 'parameters',
+            'type' => 'array',
+            'description' => '',
+            'source' => 'param',
+            'optional' => TRUE,
+            'default value' => array(),
+          ),
+          array(
+            'name' => 'sort',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'sort',
+            ),
+            'optional' => TRUE,
+            'default value' => 'fid',
+          ),
+        ),
+      ),
+      'retrieve' => array(
+        'help' => 'Retrieves an asset',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_assets'),
+        'callback' => 'bluemarble_services_assets_retrieve',
+        'access callback' => 'user_access',
+        'access arguments' => array('read digital core assets'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'fid_id',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'FID',
+          ),
+          array(
+            'name' => 'option',
+            'optional' => TRUE,
+            'source' => array('path' => 1),
+            'type' => 'string',
+            'description' => 'Rendition or option',
+          ),
+        ),
+      ),
+      'create' => array(
+        'help' => 'Creates an asset',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_assets'),
+        'callback' => 'bluemarble_services_assets_create',
+        'access callback' => 'user_access',
+        'access arguments' => array('create digital core assets'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'data',
+            'type' => 'struct',
+            'description' => 'The asset object',
+            'source' => 'data',
+            'optional' => FALSE,
+          ),
+        ),
+      ),
+      'update' => array(
+        'help' => 'Updates an asset',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_assets'),
+        'callback' => 'bluemarble_services_assets_update',
+        'access callback' => 'user_access',
+        'access arguments' => array('update digital core assets'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'id',
+            'type' => 'int',
+            'description' => 'The id of the asset to update',
+            'source' => array('path' => '0'),
+            'optional' => TRUE,
+          ),
+          array(
+            'name' => 'data',
+            'type' => 'struct',
+            'description' => 'The asset data object',
+            'source' => 'data',
+            'optional' => TRUE,
+          ),
+         ),
+      ),
+      'delete' => array(
+        'help' => 'Deletes an asset',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_assets'),
+        'callback' => 'bluemarble_services_assets_delete',
+        'access callback' => 'user_access',
+        'access arguments' => array('delete digital core assets'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'nid',
+            'type' => 'int',
+            'description' => 'The id of the asset to delete',
+            'source' => array('path' => '0'),
+            'optional' => FALSE,
+          ),
+        ),
+      ),
+    ),
+    'products' => array(
+      'index' => array(
+        'help' => 'Retrieves a listing of products',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_products'),
+        'callback' => 'bluemarble_services_products_index',
+        'access callback' => 'user_access',
+        'access arguments' => array('read blue marble products'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'perPage',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'perPage',
+            ),
+            'optional' => TRUE,
+            'default value' => 100,
+          ),
+          array(
+            'name' => 'page',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'page',
+            ),
+            'optional' => TRUE,
+            'default value' => 0,
+          ),
+          array(
+            'name' => 'parameters',
+            'type' => 'array',
+            'description' => '',
+            'source' => 'param',
+            'optional' => TRUE,
+            'default value' => array(),
+          ),
+          array(
+            'name' => 'sort',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'sort',
+            ),
+            'optional' => TRUE,
+            'default value' => 'nid',
+          ),
+        ),
+      ),
+      'retrieve' => array(
+        'help' => 'Retrieves a product',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_products'),
+        'callback' => 'bluemarble_services_products_retrieve',
+        'access callback' => 'user_access',
+        'access arguments' => array('read blue marble products'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'products_id',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'Product ID',
+          ),
+        ),
+      ),
+      'update' => array(
+        'help' => 'Updates a product',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_products'),
+        'callback' => 'bluemarble_services_products_update',
+        'access callback' => 'user_access',
+        'access arguments' => array('update blue marble products'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'id',
+            'type' => 'int',
+            'description' => 'The id of the product to update',
+            'source' => array('path' => '0'),
+            'optional' => TRUE,
+          ),
+          array(
+            'name' => 'data',
+            'type' => 'array',
+            'description' => 'The product data object',
+            'source' => 'data',
+            'optional' => TRUE,
+          ),
+        ),
+      ),
+      'create' => array(
+        'help' => 'Creates a product',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_products'),
+        'callback' => 'bluemarble_services_products_create',
+        'access arguments' => array('create blue marble products'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'data',
+            'type' => 'array',
+            'description' => 'The product object',
+            'source' => 'data',
+            'optional' => FALSE,
+          ),
+        ),
+      ),
+    ),
+    'categories' => array(
+      'retrieve' => array(
+        'help' => 'Retrieve a category',
+        'callback' => 'bluemarble_services_categories_retrieve',
+        'args' => array(
+          array(
+            'name' => 'tid',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'The tid of the category to get',
+          ),
+        ),
+        'access arguments' => array('read blue marble categories'),
+        'access callback' => 'user_access',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_categories'),
+      ),
+      'create' => array(
+        'help' => 'Create a category',
+        'callback' => 'bluemarble_services_categories_create',
+        'args' => array(
+          array(
+            'name' => 'term',
+            'optional' => FALSE,
+            'source' => 'data',
+            'description' => 'The category object to create',
+            'type' => 'array',
+          ),
+        ),
+        'access callback' => 'user_access',
+        'access arguments' => array('create blue marble categories'),
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_categories'),
+      ),
+      'update' => array(
+        'help' => 'Update a category',
+        'callback' => 'bluemarble_services_categories_update',
+        'args' => array(
+          array(
+            'name' => 'tid',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'description' => 'The unique identifier for this category.',
+            'type' => 'int',
+          ),
+          array(
+            'name' => 'term',
+            'optional' => FALSE,
+            'source' => 'data',
+            'description' => 'The category data to update',
+            'type' => 'array',
+          ),
+        ),
+        'access callback' => 'user_access',
+        'access arguments' => array('update blue marble categories'),
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_categories'),
+      ),
+      'delete' => array(
+        'help' => 'Delete a category',
+        'callback' => 'bluemarble_services_categories_delete',
+        'args' => array(
+          array(
+            'name' => 'tid',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+          ),
+        ),
+        'access callback' => 'user_access',
+        'access arguments' => array('delete blue marble categories'),
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_categories'),
+      ),
+      'index' => array(
+        'help' => 'List all categories',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_categories'),
+        'callback' => 'bluemarble_services_categories_index',
+        'access callback' => 'user_access',
+        'access arguments' => array('read blue marble categories'),
+        'args' => array(
+        ),
+      ),
+    ),
+    'brands' => array(
+      'retrieve' => array(
+        'help' => 'Retrieve a brand',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_brands'),
+        'callback' => 'bluemarble_services_brands_retrieve',
+        'args' => array(
+          array(
+            'name' => 'nid',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'The nid of the brand to retrieve',
+          ),
+        ),
+        'access callback' => 'user_access',
+        'access arguments' => array('read blue marble brands'),
+        'access arguments append' => FALSE,
+      ),
+      'update' => array(
+        'help' => 'Update a brand',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_brands'),
+        'callback' => 'bluemarble_services_brands_update',
+        'args' => array(
+          array(
+            'name' => 'nid',
+            'optional' => FALSE,
+            'source' => array('path' => 0),
+            'type' => 'int',
+            'description' => 'The nid of the brand to update',
+          ),
+          array(
+            'name' => 'node',
+            'optional' => FALSE,
+            'source' => 'data',
+            'description' => 'The brand data to update',
+            'type' => 'array',
+          ),
+        ),
+        'access callback' => 'user_access',
+        'access arguments' => array('update blue marble brands'),
+        'access arguments append' => FALSE,
+      ),
+      'index' => array(
+        'help' => 'List all brands',
+        'file' => array('type' => 'inc', 'module' => 'bluemarble_services', 'name' => 'bluemarble_services_brands'),
+        'callback' => 'bluemarble_services_brands_index',
+        'args' => array(
+           array(
+            'name' => 'perPage',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'perPage',
+            ),
+            'optional' => TRUE,
+            'default value' => 100,
+          ),
+          array(
+            'name' => 'page',
+            'optional' => TRUE,
+            'type' => 'int',
+            'description' => 'The zero-based index of the page to get, defaults to 0.',
+            'default value' => 0,
+            'source' => array('param' => 'page'),
+          ),
+          array(
+            'name' => 'parameters',
+            'optional' => TRUE,
+            'type' => 'array',
+            'description' => 'Parameters array',
+            'default value' => array(),
+            'source' => array('param' => 'parameters'),
+          ),
+          array(
+            'name' => 'sort',
+            'type' => 'int',
+            'description' => '',
+            'source' => array(
+              'param' => 'sort',
+            ),
+            'optional' => TRUE,
+            'default value' => 'nid',
+          ),
+        ),
+        'access callback' => 'user_access',
+        'access arguments' => array('read blue marble brands'),
+       ),
+    ),
+    'validate' => array(
+      'create' => array(
+        'help' => 'Validates a field',
+        'callback' => 'bluemarble_services_validate_field',
+        'access arguments' => array('update blue marble products'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'data',
+            'type' => 'array',
+            'description' => 'The record to validate',
+            'source' => 'data',
+            'optional' => FALSE,
+          ),
+        ),
+      ),
+    ),
+    'compute' => array(
+      'create' => array(
+        'help' => 'Computes / calculates a field',
+        'callback' => 'bluemarble_services_compute_field',
+        'access arguments' => array('update blue marble products'),
+        'access arguments append' => FALSE,
+        'args' => array(
+          array(
+            'name' => 'data',
+            'type' => 'array',
+            'description' => 'The record to compute',
+            'source' => 'data',
+            'optional' => FALSE,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_permission().
+ */
+function bluemarble_services_permission() {
+  return array(
+    'read blue marble assets' =>  array(
+      'title' => t('read blue marble assets'),
+      'restrict access' => TRUE,
+    ),
+    'create blue marble assets' =>  array(
+      'title' => t('create blue marble assets'),
+      'restrict access' => TRUE,
+    ),
+    'update blue marble assets' =>  array(
+      'title' => t('update blue marble assets'),
+      'restrict access' => TRUE,
+    ),
+    'delete blue marble assets' =>  array(
+      'title' => t('delete blue marble assets'),
+      'restrict access' => TRUE,
+    ),
+    'read blue marble brands' =>  array(
+      'title' => t('read blue marble brands'),
+      'restrict access' => TRUE,
+    ),
+    'update blue marble brands' =>  array(
+      'title' => t('update blue marble brands'),
+      'restrict access' => TRUE,
+    ),
+    'read blue marble categories' =>  array(
+      'title' => t('read blue marble categories'),
+      'restrict access' => TRUE,
+    ),
+    'create blue marble categories' =>  array(
+      'title' => t('create blue marble categories'),
+      'restrict access' => TRUE,
+    ),
+    'delete blue marble categories' =>  array(
+      'title' => t('delete blue marble categories'),
+      'restrict access' => TRUE,
+    ),
+    'update blue marble categories' => array(
+      'title' => t('update blue marble categories'),
+      'restrict access' => TRUE,
+    ),
+    'read blue marble image styles' =>  array(
+      'title' => t('read blue marble image styles'),
+      'restrict access' => TRUE,
+    ),
+    'create blue marble products' =>  array(
+      'title' => t('create blue marble products'),
+      'restrict access' => TRUE,
+    ),
+    'read blue marble products' =>  array(
+      'title' => t('read blue marble products'),
+      'restrict access' => TRUE,
+    ),
+    'update blue marble products' =>  array(
+      'title' => t('update blue marble products'),
+      'restrict access' => TRUE,
+    ),
+    'read blue marble user prefs' =>  array(
+      'title' => t('read blue marble user prefs'),
+      'restrict access' => TRUE,
+    ),
+    'update blue marble user prefs' =>  array(
+      'title' => t('update blue marble user prefs'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+
+/**
+ * Service endpoint to validate an individual field.
+ */
+function bluemarble_services_validate_field($data) {
+  try {
+    $entity_type = $data['entity_type'];
+    $bundle = $data['bundle'];
+
+    $field_map = field_info_field_map();
+
+    $entityData = tom_drupalize_fields($entity_type, $bundle, $data['record']);
+
+    $info = entity_get_info($entity_type);
+    if (!$info) {
+      throw new Exception('Unknown entity type ' . $entity_type);
+    }
+
+    $id_property = $info['entity keys']['id'];
+
+    if (array_key_exists($id_property, $entityData)) {
+      $entityInfo[$id_property] = $entityData[$id_property];
+      unset($entityData[$id_property]);
+    }
+
+    if (isset($info['entity keys']['bundle'])) {
+      $bundle_property = $info['entity keys']['bundle'];
+      $entityInfo[$bundle_property] = $bundle;
+      unset($entityData[$bundle_property]);
+    }
+
+    if (isset($entityInfo[$id_property])) {
+      $entity = entity_load_single($entity_type, $entityInfo[$id_property]);
+    }
+    else {
+      $entity = entity_create($entity_type, $entityInfo);
+    }
+
+    $wrapper = entity_metadata_wrapper($entity_type, $entity);
+
+    $field_name = $data['field'];
+    if (!isset($entityData[$field_name])) {
+      if (isset($entityData['field_' . $field_name])) {
+        $field_name = 'field_' . $field_name;
+      }
+    }
+
+    if (isset($entityData[$field_name])) {
+      $value = $entityData[$field_name];
+      tom_entity_field_set($wrapper, $field_name, $value);
+    }
+  }
+  catch (EntityMetadataWrapperException $e) {
+    $errors[] = t('Invalid value.');
+    return array('valid' => FALSE, 'errors' => $errors);
+  }
+  catch (Exception $e) {
+    watchdog_exception('bluemarble_services', $e);
+    $errors[] = t('An unknown error occurred.');
+    return array('valid' => FALSE, 'errors' => $errors);
+  }
+
+  $errors = array();
+  try {
+    field_attach_validate($entity_type, $entity, array('field_name' => $field_name));
+  }
+  catch (FieldValidationException $e) {
+    if (isset($e->errors)) {
+      if (!empty($e->errors[$field_name])) {
+        foreach ($e->errors[$field_name] as $lang => $lang_errors) {
+          foreach ($lang_errors as $delta => $delta_errors) {
+            foreach ($delta_errors as $error) {
+              $errors[] = $error['message'];
+            }
+          }
+        }
+      }
+    }
+    else {
+      $errors[] = t('An unknown error occurred.');
+    }
+  }
+  if (!empty($errors)) {
+    return array('valid' => FALSE, 'errors' => $errors);
+  }
+  return array('valid' => TRUE);
+}
+
+/**
+ * Service endpoint to compute an individual field.
+ */
+function bluemarble_services_compute_field($data) {
+  try {
+    $entity_type = $data['entity_type'];
+    $bundle = $data['bundle'];
+
+    $field_name = $data['field'];
+    unset($data['record'][$field_name]);
+    $field_name = 'field_' . $field_name;
+
+    $entityData = tom_drupalize_fields($entity_type, $bundle, $data['record']);
+    $entityInfo = array('type' => $bundle);
+
+    if (array_key_exists('uid', $entityData)) {
+      $entityInfo['uid'] = $entityData['uid'];
+      unset($entityData['uid']);
+    }
+
+    if (array_key_exists('nid', $entityData)) {
+      $entityInfo['nid'] = $entityData['nid'];
+      unset($entityData['nid']);
+    }
+
+    $entity = entity_create($entity_type, $entityInfo);
+
+    $wrapper = entity_metadata_wrapper($entity_type, $entity);
+
+    foreach ($entityData as $other_field => $value) {
+      try {
+        $value = $entityData[$other_field];
+        tom_entity_field_set($wrapper, $other_field, $value);
+      } catch (Exception $e) {
+        watchdog_exception('bluemarble_services', $e);
+      }
+    }
+  }
+  catch (EntityMetadataWrapperException $e) {
+    $errors[] = t('Invalid value.');
+    return array('update' => FALSE);
+  }
+  catch (Exception $e) {
+    $message  = 'Error attempting to compute field: @f';
+    $msg_vars = array(
+      '@f' => $data['field'],
+    );
+    watchdog_exception('bluemarble_services', $e, $message, $msg_vars);
+
+    $errors[] = t('An unknown error occurred.');
+    return array('update' => FALSE);
+  }
+
+  $field_info    = field_info_field($field_name);
+  $instance_info = field_info_instance($entity_type, $field_name, $bundle);
+  if (empty($instance_info['widget']['computation_callbacks'])) {
+    return array('update' => FALSE);
+  }
+  $callbacks = $instance_info['widget']['computation_callbacks'];
+
+  try {
+    foreach ($callbacks as $callback) {
+      if (function_exists($callback)) {
+        $callback($entity);
+      }
+    }
+
+    $tempRecord = tom_dedrupalize_fields($entity, $entity_type, $bundle);
+    $return_data = $tempRecord[$data['field']];
+  }
+  catch (Exception $e) {
+    $message  = 'Error attempting to compute field: @f';
+    $msg_vars = array(
+      '@f' => $field_name,
+    );
+    watchdog_exception('bluemarble_services', $e, $message, $msg_vars);
+    return array('update' => FALSE);
+  }
+
+  // Some strict data massaging
+  switch ($field_info['type']) {
+    case 'list_boolean':
+      $return_data = (bool) $return_data;
+      break;
+  }
+
+  return array('update' => TRUE, 'value' => $return_data);
+}
+
+
+/**
+ * Implements hook_services_request_postprocess_alter().
+ */
+function bluemarble_services_services_request_postprocess_alter($controller, $args, &$results) {
+  if ($controller['callback'] == '_node_resource_index') {
+    if (isset($args[4]['bmb_fullnode_index'])) {
+      _bmb_fullnode_index($results);
+    }
+  }
+}
+
+/**
+ * Add field data to Services response.
+ */
+function _bmb_fullnode_index(&$results) {
+  foreach ($results as $result) {
+    // Load the entity wrapper.
+    $node = node_load($result->nid, NULL, TRUE);
+    $entity = entity_metadata_wrapper('node', $node, array('bundle' => $node->type));
+
+    // Add each field's value. For the sake of brevity in the response,
+    // assigns the entity value(), rather than the full Drupal field array.
+    foreach ($entity->getPropertyInfo() as $p_name => $p_info) {
+      if (strpos($p_name, 'field') === 0) {
+
+        switch ($p_info['type']) {
+          // taxonomy entity reference
+          case 'list<taxonomy_term>':
+            $result->{$p_name} = array();
+            foreach ($entity->{$p_name}->value() as $term) {
+              $result->{$p_name}[] = $term->name;
+            }
+            break;
+
+          // Node entity reference
+          case 'node':
+            $result->{$p_name} = $entity->{$p_name}->value()->title;
+            break;
+
+          // Files
+          case 'field_item_file':
+          case 'field_item_image':
+            if (!empty($entity->{$p_name}->value())) {
+              $result->{$p_name} = file_create_url($entity->{$p_name}->value()['uri']);
+            }
+            break;
+
+          // Multi-value file
+          case 'list<field_item_image>':
+            $result->{$p_name} = array();
+            foreach ($entity->{$p_name}->value() as $file) {
+              $result->{$p_name}[] = file_create_url($file['uri']);
+            }
+            break;
+
+          // text, date, etc
+          default:
+            $result-> {$p_name} = $entity->{$p_name}->value();
+            break;
+        }
+      }
+    }
+  }
+}

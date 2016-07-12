@@ -1,0 +1,58 @@
+<?php
+
+function bmb_vendors_update_7001(&$sandbox) {
+  // This update can only run if the field has been created, which will not
+  // happen until the feature-revert occurs.
+  $instance = field_info_instance('taxonomy_term', 'field_macola_name', 'vendor');
+  if (empty($instance)) {
+    module_load_include('inc', 'features', 'features.export');
+    $fields = features_get_default('field_instance', 'bmb_vendors');
+    if (isset($fields['taxonomy_term-vendor-field_macola_name'])) {
+      try {
+        field_create_instance($fields['taxonomy_term-vendor-field_macola_name']);
+      }
+      catch (Exception $e) {
+        throw new DrupalUpdateException('Error creating field instance: ' . $e->getMessage());
+      }
+    }
+
+    cache_clear_all();
+    $sandbox['#finished'] = 0;
+    return;
+  }
+
+  module_load_include('inc', 'bmb_vendors', 'bmb_vendors.import.temp');
+  $import_data = _bmb_vendors_get_import_data_update_7001();
+  if (!isset($sandbox['progress'])) {
+    $sandbox['progress'] = 0;
+    $sandbox['max']      = count($import_data);
+    $sandbox['limit']    = 10;
+
+    $vocab          = taxonomy_vocabulary_machine_name_load('vendor');
+    $sandbox['vid'] = $vocab->vid;
+  }
+
+  $slice = array_slice($import_data, $sandbox['progress'], $sandbox['limit'], TRUE);
+  foreach ($slice as $macola_name => $vendor_name) {
+    $term = entity_create('taxonomy_term', array(
+      'vid'               => $sandbox['vid'],
+      'name'              => $vendor_name,
+      'field_macola_name' => array(
+        'und' => array(
+          0 => array(
+            'value' => $macola_name,
+          ),
+        ),
+      ),
+    ));
+    entity_save('taxonomy_term', $term);
+    $sandbox['progress']++;
+  }
+
+  if (empty($sandbox['max'])) {
+    $sandbox['#finsihed'] = 1;
+  }
+  else {
+    $sandbox['#finished'] = $sandbox['progress'] / $sandbox['max'];
+  }
+}

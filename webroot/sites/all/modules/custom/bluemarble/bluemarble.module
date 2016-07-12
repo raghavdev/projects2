@@ -1,0 +1,335 @@
+<?php
+/**
+ * @file
+ * Code for the Blue Marble feature.
+ */
+
+/**
+ * @file
+ * Primarily Drupal hooks and global functions to support the Blue Marble.
+ */
+
+/**
+ * Implementation of hook_ctools_plugin_directory().
+ */
+function bluemarble_ctools_plugin_directory($module, $plugin) {
+  if ($module == 'field_validation' && $plugin == 'validator') {
+    return 'plugins/' . $plugin;
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function bluemarble_menu() {
+  $items = array();
+
+  $items['bluemarble/autocomplete/%/%/%/%'] = array(
+    'title' => 'Bluemarble Autocomplete',
+    'page callback' => 'bluemarble_autocomplete_callback',
+    'page arguments' => array(2, 3, 4, 5),
+    'access callback' => 'bluemarble_autocomplete_access_callback',
+    'access arguments' => array(2, 3, 4, 5),
+    'type' => MENU_CALLBACK,
+  );
+
+  $items['admin/config/bmb_settings'] = array(
+    'title'            => t('BMB Settings'),
+    'description'      => t('Configure the default BMB settings.'),
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('bmb_custom_settings_form'),
+    'access arguments' => array('admin bmb settings'),
+  );
+
+  $items['admin/config/bmb_settings/settings'] = array(
+    'type'   => MENU_DEFAULT_LOCAL_TASK,
+    'title'  => 'Main',
+    'weight' => 0,
+  );
+
+  return $items;
+}
+
+/**
+ * Form for general, custom configurations for BMB.
+ */
+function bmb_custom_settings_form($form, &$form_state) {
+  // Acting as a placeholder for now...
+  return system_settings_form($form);
+}
+
+/**
+ * Page callback: Autocomplete
+ */
+function bluemarble_autocomplete_callback($type, $field_name, $entity_type, $bundle_name, $entity_id = '', $string = '') {
+  $field = field_info_field($field_name);
+
+  // --- Stolen from taxonomy_autocomplete(), should apply to all autocomplete fields --- //
+  // If the request has a '/' in the search text, then the menu system will have
+  // split it into multiple arguments, recover the intended $tags_typed.
+  $args = func_get_args();
+  if (count($args) > 6) {
+    // Shift off the $type, $field_name, $entity_type, $bundle_name and $entity_id arguments.
+    array_shift($args);
+    array_shift($args);
+    array_shift($args);
+    array_shift($args);
+    array_shift($args);
+    $string = implode('/', $args);
+  }
+
+  $items = array();
+
+  if ($field['type'] == 'taxonomy_term_reference') {
+    $tags_typed = $string;
+
+    // --- Stolen and modified from taxonomy_autocomplete() --- //
+
+    // The user enters a comma-separated list of tags. We only autocomplete the last tag.
+    $tags_typed = drupal_explode_tags($tags_typed);
+    $tag_last = drupal_strtolower(array_pop($tags_typed));
+
+    if ($tag_last != '') {
+
+      // Part of the criteria for the query come from the field's own settings.
+      $vids = array();
+      $vocabularies = taxonomy_vocabulary_get_names();
+      foreach ($field['settings']['allowed_values'] as $tree) {
+        $vids[] = $vocabularies[$tree['vocabulary']]->vid;
+      }
+
+      $query = db_select('taxonomy_term_data', 't');
+      $query->addTag('translatable');
+      $query->addTag('term_access');
+
+      // Do not select already entered terms.
+      if (!empty($tags_typed)) {
+        $query->condition('t.name', $tags_typed, 'NOT IN');
+      }
+      // Select rows that match by term name.
+      $items = $query
+        ->fields('t', array('tid', 'name'))
+        ->condition('t.vid', $vids)
+        ->condition('t.name', '%' . db_like($tag_last) . '%', 'LIKE')
+        ->range(0, 10)
+        ->execute()
+        ->fetchAllKeyed();
+    }
+  }
+  else if ($field['type'] == 'entityreference') {
+    $instance = field_info_instance($entity_type, $field_name, $bundle_name);
+
+    // --- Stolen and modified from entityreference_autocomplete_callback_get_matches() --- //
+    $entity = NULL;
+    if ($entity_id !== 'NULL') {
+      $entity = entity_load_single($entity_type, $entity_id);
+      $has_view_access = (entity_access('view', $entity_type, $entity) !== FALSE);
+      $has_update_access = (entity_access('update', $entity_type, $entity) !== FALSE);
+      if (!$entity || !($has_view_access || $has_update_access)) {
+        return MENU_ACCESS_DENIED;
+      }
+    }
+
+    $handler = entityreference_get_selection_handler($field, $instance, $entity_type, $entity);
+
+    if ($type == 'tags') {
+      // The user enters a comma-separated list of tags. We only autocomplete the last tag.
+      $tags_typed = drupal_explode_tags($string);
+      $tag_last = drupal_strtolower(array_pop($tags_typed));
+    }
+    else {
+      // The user enters a single tag.
+      $tag_last = $string;
+    }
+
+    if (isset($tag_last)) {
+      // Get an array of matching entities.
+      $entity_labels = $handler->getReferencableEntities($tag_last, $instance['widget']['settings']['match_operator'], 10);
+
+      // Loop through the products and convert them into autocomplete output.
+      foreach ($entity_labels as $values) {
+        foreach ($values as $entity_id => $label) {
+          $items[$entity_id] = $label;
+        }
+      }
+    }
+
+  }
+  else if ($field['type'] == 'node_reference') {
+    $instance = field_info_instance($entity_type, $field_name, $bundle_name);
+
+    // --- Stolen and modified from node_reference_autocomplete() --- //
+    $options = array(
+      'string' => $string,
+      'match' => $instance['widget']['settings']['autocomplete_match'],
+      'limit' => 10,
+    );
+    $references = node_reference_potential_references($field, $options);
+    foreach ($references as $id => $row) {
+      $items[$id] = $row['title'];
+    }
+  }
+
+  drupal_json_output($items);
+}
+
+/**
+ * Access callback: Autocomplete
+ */
+function bluemarble_autocomplete_access_callback($type, $field_name, $entity_type, $bundle_name) {
+  $field = field_info_field($field_name);
+  if ($field['type'] == 'taxonomy_term_reference') {
+    return user_access('access content');
+  }
+  else if ($field['type'] == 'entityreference') {
+    return entityreference_autocomplete_access_callback($type, $field_name, $entity_type, $bundle_name);
+  }
+  else if ($field['type'] == 'node_reference') {
+    return reference_autocomplete_access($entity_type, $bundle_name, $field_name);
+  }
+  return FALSE;
+}
+
+/**
+ * Implementation of hook_services_authentication_info().
+ */
+function bluemarble_services_authentication_info() {
+  return array(
+    'title'             => t('Blue Marble authentication'),
+    'description'       => t("Setup to allow for Session OR OAuth authentication"),
+    'authenticate_call' => 'bluemarble_service_auth',
+  );
+}
+
+//will allow for either version of the auth
+//session or oauth, since they wont play together by themself, doing it this way
+function bluemarble_service_auth($auth_settings, $controller, $args) {
+  global $user;
+
+  $server_name = variable_get("auth_server_name", "auth_server");
+
+  // Verify access. The request will be aborted if verification fails.
+  $server = oauth2_server_load($server_name);
+  $oauth2_server = oauth2_server_start($server);
+  $response = new OAuth2\Response();
+  $token = $oauth2_server->getAccessTokenData(OAuth2\Request::createFromGlobals(), $response, "");
+
+  // If the resource owner is known, switch the current user to it.
+  if ($token['user_id']) {
+    //oauth token validation
+    $user = user_load_by_name($token['user_id']);
+  }
+  else if(array_key_exists("auth", $_GET)) {
+    //since we dont know the user that they are trying to use, we have to
+    //pull up a list of all of the secret keys
+
+    //but since very few will use this there will be only a few to loop
+    $keys = db_select("field_data_field_secret_key")
+      ->fields("field_data_field_secret_key", array("entity_id", "field_secret_key_value"))
+      ->execute()
+      ->fetchAll();
+
+    foreach($keys as $key) {
+      //run through and create the hash
+      $url = $_SERVER['HTTP_HOST'] . $_SERVER['REDIRECT_URL'] .  "|" . $key->field_secret_key_value;
+      $hash = md5($url);
+
+      if($hash == $_GET['auth']) {
+        $user = user_load($key->entity_id);
+        break;
+      }
+    }
+  }
+  else {
+
+    //sesison based
+
+    $original_user = services_get_server_info('original_user');
+    if ($original_user->uid == 0) {
+      return;
+    }
+
+    if ($controller['callback'] != '_user_resource_get_token') {
+      $non_safe_method_called = !in_array($_SERVER['REQUEST_METHOD'], array('GET', 'HEAD', 'OPTIONS', 'TRACE'));
+      $csrf_token_invalid = !isset($_SERVER['HTTP_X_CSRF_TOKEN']) || !drupal_valid_token($_SERVER['HTTP_X_CSRF_TOKEN'], 'services');
+      if ($non_safe_method_called && $csrf_token_invalid) {
+        return t('CSRF validation failed');
+      }
+    }
+
+    if ($user->uid != $original_user->uid) {
+      $user = $original_user;
+    }
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function bluemarble_permission() {
+  return array(
+    'admin bmb settings' =>  array(
+      'title' => t('Administer BMB Settings'),
+    ),
+    'access blue marble product tab' =>  array(
+      'title' => t('access blue marble product tab'),
+    ),
+    'edit blue marble products categories tab' =>  array(
+      'title' => t('edit blue marble products categories tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit blue marble products certification tab' =>  array(
+      'title' => t('edit blue marble products certification tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit blue marble products exports tab' =>  array(
+      'title' => t('edit blue marble products exports tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit blue marble products identifiers tab' =>  array(
+      'title' => t('edit blue marble products identifiers tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit blue marble products item-master-basics tab' =>  array(
+      'title' => t('edit blue marble products item-master-basics tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit blue marble products macola-transmit tab' =>  array(
+      'title' => t('edit blue marble products other tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit blue marble products dimensions-weights tab' =>  array(
+      'title' => t('edit blue marble products dimensions-weights tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit blue marble products nutrition tab' =>  array(
+      'title' => t('edit blue marble products nutrition tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit blue marble products supplier-portal-select-fields tab' =>  array(
+      'title' => t('edit blue marble products supplier-portal-select-fields tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit blue marble products product-basics tab' =>  array(
+      'title' => t('edit blue marble products product-basics tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit blue marble products product-info-and-attrib tab' =>  array(
+      'title' => t('edit blue marble products packaging-detail tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit blue marble products shelf-life-info tab' =>  array(
+      'title' => t('edit blue marble products shelf-life-info tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit blue marble products vendor-info tab' =>  array(
+      'title' => t('edit blue marble products vendor-info tab'),
+      'restrict access' => TRUE,
+    ),
+    'edit blue marble products location-freight tab' =>  array(
+      'title' => t('edit blue marble products location-freight tab'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+

@@ -1,0 +1,4 @@
+<div id="detail-menu">
+  <select ng-model="selectedItem" ng-options="menu.view as menu.text for menu in menuMap[view]" ng-change="loadDetailTemplate()">
+  </select>
+</div>

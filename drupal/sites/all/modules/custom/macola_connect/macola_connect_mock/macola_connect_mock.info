@@ -1,0 +1,4 @@
+name = Macola Connect Mock Server
+description = Macola mock server for testing.
+package = Blue Marble
+core = 7.x

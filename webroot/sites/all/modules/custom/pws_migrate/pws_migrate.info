@@ -1,0 +1,7 @@
+core = "7.x"
+dependencies[] = "digital_core_data"
+
+description = "PWS Data Migration"
+name = "pws_migrate"
+package = "unfi"
+php = "5.2.4"

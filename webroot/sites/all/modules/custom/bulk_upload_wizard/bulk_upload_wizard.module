@@ -1,0 +1,527 @@
+<?php
+
+/*
+ * asset array(type_id => {
+ *    "type" => "",
+ *    "file_mappings => array({
+ *                              "option" => handler_callback
+ *                           });
+ *    "analysys_callback" => callback / false;
+ *    "apply_callback" => callback;
+ *    "uploader" => "excel" / "plupload"
+ *    "uploader
+ *
+ * });
+ */
+
+/**
+ * Implements hook_menu().
+ * Sets up the page where the app can be seen from
+ */
+function bulk_upload_wizard_menu() {
+
+  $items = array();
+
+  //process page
+  $items["bulk_upload"] = array(
+    'title' => "Bulk Upload",
+    'description' => "",
+    'page callback' => 'bulk_upload_wizard_upload_page',
+    'access arguments' => array('access bulk uploads'),
+    'type' => MENU_NORMAL_ITEM,
+    'access callback' => 'user_access',
+  );
+
+  $items["bulk_upload/analysis"] = array(
+    'title' => "Bulk Upload",
+    'description' => "",
+    'page callback' => 'bulk_upload_wizard_page_analysis',
+    'access arguments' => array('access bulk uploads'),
+    'type' => MENU_NORMAL_ITEM,
+    'access callback' => 'user_access',
+  );
+
+  $items["bulk_upload/upload_report"] = array(
+    'title' => "Bulk Upload",
+    'description' => "",
+    'page callback' => 'bulk_upload_wizard_page_upload_report',
+    'access arguments' => array('access bulk uploads'),
+    'type' => MENU_NORMAL_ITEM,
+    'access callback' => 'user_access',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function bulk_upload_wizard_permission() {
+  return array(
+    'access bulk uploads' =>  array(
+      'title' => t('Access / utilize bulk uploads page'),
+    ),
+  );
+};
+
+//process page
+function bulk_upload_wizard_upload_page() {
+
+  drupal_add_js(drupal_get_path("module", 'bulk_upload_wizard') . "/bulk_upload_wizard.js");
+
+  return drupal_get_form("bulk_upload_wizard_page_upload_form");
+}
+
+function bulk_upload_wizard_page_upload_form($form, $form_state) {
+
+  $assets_info = module_invoke_all("bulk_upload_wizard_get_asset_info");
+
+  $form = array();
+
+  $assets = array("" => "Select an Upload Type");
+
+  //make the js aware of what uploader to turn on
+  $js_settings = array(
+    'bulk_upload_wizard' => array(
+        "asset_info" => $assets_info
+    )
+  );
+
+  foreach($assets_info as $type => $options) {
+    $assets[$type] = $options['type'];
+  }
+
+  drupal_add_js($js_settings, 'setting');
+
+  $form['asset'] = array(
+    '#title' => 'What are you uploading?',
+    '#type' => 'select',
+    '#description' => t(""),
+    '#required' => TRUE,
+    '#maxlength' => 500,
+    '#size' => 1,
+    '#options' => $assets,
+    '#default_value' => "",
+  );
+
+  //include any options exposed by this module
+  foreach($assets_info as $type => $options) {
+
+    //Excel File uploader
+    $form["{$type}-options"] = array(
+      '#type' => "fieldset",
+      '#attributes' => array("style" => "display:none", "id" => "{$type}-options", "class" => array("asset-options")),
+    );
+
+    if($options['options']) {
+      foreach($options['options'] as $key => $option) {
+        $form["{$type}-options"][$key] = $option;
+      }
+    }
+  }
+
+  //Excel File uploader
+  $form['file-upload-fieldset'] = array(
+    '#type' => "fieldset",
+    '#attributes' => array("style" => "display:none"),
+  );
+
+  $form['file-upload-fieldset']['spreadsheet_header'] = array(
+      '#type' => 'checkbox',
+      '#title' => 'Spreadsheet contains a header row?',
+      '#default_value' => TRUE,
+    );
+
+  $form['file-upload-fieldset']['file'] = array(
+    '#title' => 'Upload your spreadsheet',
+    '#type' => 'file',
+    '#description' => t(""),
+  );
+
+  $form['file-upload-fieldset']['file_upload_process'] = array(
+      '#type' => 'submit',
+      '#value' => 'Process Spreadsheet',
+    );
+
+  //Pluploader
+
+  $form['upload-fieldset'] = array(
+    '#type' => "fieldset",
+    '#attributes' => array("style" => "display:none"),
+  );
+
+  $form['upload-fieldset']['pluploader'] = array(
+    '#type' => 'plupload',
+    '#title' => t('Upload your files'),
+    '#description' => t('This multi-upload widget uses Plupload library.'),
+    '#autoupload' => TRUE,
+    '#autosubmit' => TRUE,
+    '#submit_element' => '#id-of-your-submit-element',
+    '#upload_validators' => array(
+      'file_validate_extensions' => array('jpg jpeg gif png txt doc xlsx xls pdf ppt pps odt ods odp tif rtf tiff'),
+      'my_custom_file_validator' => array('some validation criteria'),
+    ),
+    '#plupload_settings' => array(
+      'runtimes' => 'html5',
+      'chunk_size' => '1mb',
+    ),
+    '#event_callbacks' => array(
+      'FilesAdded' => 'filesAddedCallback',
+      'UploadComplete' => 'uploadCompleteCallback',
+    ),
+  );
+
+  $form['upload-fieldset']['analyze_uploads'] = array(
+    '#type' => 'submit',
+    '#value' => t('Proceed to Results'),
+  );
+
+  $form['uploader'] = array(
+    '#attributes' => array('id' => 'uploader_type'),
+    '#type' => 'hidden',
+    '#value' => 'plupload'
+  );
+
+  return $form;
+}
+
+function bulk_upload_wizard_page_upload_form_validate($form, &$form_state) {
+
+  if($form_state['values']['op'] == "Process Spreadsheet") {
+    $file = file_save_upload('file', array(
+        'file_validate_extensions' => array('xls xlsx'),
+    ));
+    if ($file) {
+     // if ($file = file_move($file, variable_get("digital_core_asset_protocol", "s3://"))) {
+        $form_state['values']['file'] = $file;
+//      }
+//      else {
+//        form_set_error('file', t('Failed to write the uploaded file the site\'s file folder.'));
+//      }
+    }
+    else {
+      form_set_error('file', t('No file was uploaded.'));
+    }
+  }
+}
+
+function bulk_upload_wizard_page_upload_form_submit(&$form, &$form_state){
+  module_load_include('inc', 'phpexcel');
+  $assets_info = module_invoke_all("bulk_upload_wizard_get_asset_info");
+
+  //if($form_state['values']['uploader'] == "file") {
+  if($form_state['values']['op'] == "Process Spreadsheet") {
+    //upload the file
+    $file=$form_state['values']['file'];
+    unset($form_state['values']['file']);
+    $file->status = FILE_STATUS_PERMANENT;
+    file_save($file);
+
+    $excel_data = array();
+
+    $file_path = drupal_realpath($file->uri);
+
+    //open up the specified excel file and read some rows from it
+    $excel_data = phpexcel_import($file_path, false);
+
+    //each image is an item in the batch
+    $operations = array();
+
+    if(count($excel_data) > 0) {
+
+      //allow for hijacking the processing flow and using custom
+      if(!$assets_info[$form_state['values']['asset']]['analysis_callback']) {
+        return $assets_info[$form_state['values']['asset']]['process_callback']($excel_data, $form_state['values']['spreadsheet_header'], $form_state['values']);
+      }
+
+      $header = false;
+      foreach($excel_data[0] as $row) {
+        //skip the header row
+        if($form_state['values']['spreadsheet_header'] && !$header) {
+          $header = true;
+          continue;
+        }
+        $operations[] = array("batch_file_analysis", array($row, $assets_info[$form_state['values']['asset']], $file->fid));
+      }
+
+      batch_set(array(
+                      'title' => t('Excel Data Analysis'),
+                      'operations' => $operations,
+                      'finished' => 'bulk_upload_analysis_finish', // Finished batch callback.
+                    )
+      );
+    }
+    else {
+      drupal_set_message(t("Error processing Excel file. No data found."));
+    }
+
+    //set the step and job id
+    //drupal_goto(current_path(), array('query' => array("op" => 'excel_analysis', "job_id" => $job_id)));
+  }
+  else if($form_state['values']['op'] == 'Proceed to Results') {
+
+    //Build the batch operations
+
+    //each image is an item in the batch
+    $operations = array();
+
+    for($i = 0; $i < count($form_state['values']['pluploader']); $i++) {
+
+      //get the file extension from the file
+      $ext = pathinfo($form_state['values']['pluploader'][$i]["name"], PATHINFO_EXTENSION);
+
+      //the post data lies, its throwing .jpg on to the end of the files, but they
+      // are stored .tmp so need to fix that
+      $tmpFile = basename(strtolower($form_state['values']['pluploader'][$i]["tmpname"]), ".{$ext}");
+
+      $file = array(
+                    "name" => $form_state['values']['pluploader'][$i]["name"],
+                    "tmp" => $tmpFile,
+                    "status" => $form_state['values']['pluploader'][$i]["status"],
+                   );
+
+      $assets_info[$form_state['values']['asset']]['file'] = $file;
+
+      $operations[] = array("batch_file_analysis", array($file, $assets_info[$form_state['values']['asset']], $form_state['values']));
+    }
+
+    batch_set(array(
+                    'title' => t('File Analysis'),
+                    'operations' => $operations,
+                    'finished' => 'bulk_upload_analysis_finish', // Finished batch callback.
+                  )
+    );
+  }
+}
+
+function batch_file_analysis($data, $asset_type, $options, $context) {
+  $res = false;
+
+  if(isset($asset_type['analysis_callback'])) {
+    $res = $asset_type['analysis_callback']($data, $asset_type, $options);
+  }
+
+  $context['results']["asset_info"] = $asset_type;
+  $context['results']["options"] = $options;
+  $context['results'][] = $res;
+}
+
+function bulk_upload_analysis_finish($success, $results, $operations) {
+
+//  db_insert("bulk_upload_wizard_jobs")
+//    ->fields(array("job_id" => $_GET['id'], "job_results" => serialize($results)))
+//    ->execute();
+
+  foreach($results as $idx => $result) {
+    if(is_numeric($idx)) {
+      db_insert("bulk_upload_wizard_jobs")
+        ->fields(array("job_id" => $_GET['id'], "job_record" => serialize($result), "record_type" => "record"))
+        ->execute();
+    }
+    else {
+      db_insert("bulk_upload_wizard_jobs")
+        ->fields(array("job_id" => $_GET['id'], "job_record" => serialize($result), "record_type" => $idx))
+        ->execute();
+    }
+  }
+
+  drupal_goto("bulk_upload/analysis", array("query" => array("job_id" => $_GET['id'])));
+}
+
+function bulk_upload_wizard_page_analysis() {
+  return drupal_get_form("bulk_upload_wizard_page_analysis_form");
+}
+
+function bulk_upload_wizard_page_analysis_form($form, $form_state) {
+
+  if(!array_key_exists("job_id", $_GET)) {
+    drupal_set_message(t("Error: Request missing job id"));
+    drupal_goto("bulk_upload");
+  }
+
+  $job_id = $_GET['job_id'];
+
+  $form = array();
+
+  $results = db_select("bulk_upload_wizard_jobs")
+                ->condition("job_id", $job_id)
+                ->fields("bulk_upload_wizard_jobs", array("job_record"))
+                ->condition("record_type", "record")
+                ->execute()
+                ->fetchCol();
+
+  $asset_info = db_select("bulk_upload_wizard_jobs")
+                  ->condition("job_id", $job_id)
+                  ->fields("bulk_upload_wizard_jobs", array("job_record"))
+                  ->condition("record_type", "asset_info")
+                  ->execute()
+                  ->fetchField();
+
+  $asset_info = unserialize($asset_info);
+
+  $options = db_select("bulk_upload_wizard_jobs")
+                ->condition("job_id", $job_id)
+                ->fields("bulk_upload_wizard_jobs", array("job_record"))
+                ->condition("record_type", "options")
+                ->execute()
+                ->fetchField();
+
+  $options = unserialize($options);
+
+  if(!$results) {
+    drupal_set_message(t("Error job not found"));
+    drupal_goto("bulk_upload/");
+  }
+
+  //$results = unserialize($r);
+
+  if(count($results) > 0) {
+
+    //$asset_info = $results['asset_info'];
+
+    $form['analysis_table'] = array (
+      '#type' => 'fieldset',
+      '#title' => 'Review the analysis results',
+      '#theme' => $asset_info["analysis_table_theme_callback"],
+      '#tree' => TRUE,
+    );
+
+    //Insert the output of the analysis callback
+    $analyze_table = $asset_info['analysis_results_callback']($results, $asset_info, $options);
+
+    //apply the table to the form structure
+    foreach($analyze_table['table'] as $key => $value) {
+      $form["analysis_table"][$key] = $value;
+    }
+
+    foreach($analyze_table['summary'] as $key => $value) {
+      $form[$key] = $value;
+    }
+
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Process Batch'),
+    );
+
+    $form['or'] = array(
+      '#markup' => "OR"
+    );
+
+    $form['job_id'] = array(
+      "#type" => "hidden",
+      "#value" => $job_id
+    );
+
+    $form['cancel'] = array(
+      '#type' => 'submit',
+      '#value' => t('Cancel'),
+    );
+  }
+  else {
+    //no results
+    drupal_set_message(t("No records found in the analysis. Please check your input"));
+
+    drupal_goto("bulk_upload");
+  }
+
+  return $form;
+}
+
+function bulk_upload_wizard_page_analysis_form_submit(&$form, &$form_state) {
+  if($form_state['values']['op'] == "Cancel") {
+    drupal_goto("bulk_upload/");
+  }
+
+  if(array_key_exists("job_id", $form_state['values'])) {
+    bulk_upload_wizard_apply($form_state['values']['job_id']);
+  }
+}
+
+function bulk_upload_wizard_apply($job_id) {
+
+//  $analysis_results = db_select("bulk_upload_wizard_jobs")
+//              ->condition("job_id", $job_id)
+//              ->fields("bulk_upload_wizard_jobs", array("job_results"))
+//              ->execute()
+//              ->fetchField();
+
+  $analysis_results = db_select("bulk_upload_wizard_jobs")
+                        ->condition("job_id", $job_id)
+                        ->fields("bulk_upload_wizard_jobs", array("job_record"))
+                        ->condition("record_type", "record")
+                        ->execute()
+                        ->fetchCol();
+
+  $asset_info = db_select("bulk_upload_wizard_jobs")
+                  ->condition("job_id", $job_id)
+                  ->fields("bulk_upload_wizard_jobs", array("job_record"))
+                  ->condition("record_type", "asset_info")
+                  ->execute()
+                  ->fetchField();
+
+  $asset_info = unserialize($asset_info);
+
+  $options = db_select("bulk_upload_wizard_jobs")
+              ->condition("job_id", $job_id)
+              ->fields("bulk_upload_wizard_jobs", array("job_record"))
+              ->condition("record_type", "options")
+              ->execute()
+              ->fetchField();
+
+  $options = unserialize($options);
+
+  if(!$analysis_results) {
+    drupal_set_message(t("Error job id not found"));
+    drupal_goto("bulk_upload/");
+  }
+
+  //$analysis_results = unserialize($analysis_results);
+
+  if(array_key_exists("analysis_pre_callback", $asset_info)) {
+    $asset_info['analysis_pre_callback']();
+  }
+
+  $operations = array();
+
+  foreach($analysis_results as $idx => $result) {
+    $operations[] = array($asset_info['apply_callback'],
+        array(unserialize($result), $job_id, $asset_info, $options));
+  }
+
+  batch_set(array(
+                  'title' => t('Processing'),
+                  'operations' => $operations,
+                  'finished' => 'bulk_upload_finished', // Finished batch callback.
+                )
+  );
+}
+
+function bulk_upload_finished ($success, $results, $operations) {
+  if($success) {
+
+    //pull up the job
+    $asset_info = db_select("bulk_upload_wizard_jobs")
+                  ->condition("job_id", $results['job_id'])
+                  ->fields("bulk_upload_wizard_jobs", array("job_record"))
+                  ->condition("record_type", "asset_info")
+                  ->execute()
+                  ->fetchField();
+
+    $asset_info = unserialize($asset_info);
+
+    //call the clean up callback
+    $asset_info['cleanup_callback']($results['job_id']);
+
+    //clean up the table and remove this job so as not to leave a mess
+    db_delete("bulk_upload_wizard_jobs")
+      ->condition("job_id", $results['job_id'])
+      ->execute();
+
+    drupal_set_message(t("Batch Processed Successfully"));
+  }
+  else {
+    drupal_set_message(t("Error Processing Batch"));
+  }
+
+  drupal_goto("bulk_upload");
+}

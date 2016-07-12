@@ -1,0 +1,6 @@
+name = Digital Core Feed Export
+description = Digital Core feed export processor
+package = Digital Core
+core = 7.x
+dependencies[] = digital_core
+files[] = digital_core_data_products.inc

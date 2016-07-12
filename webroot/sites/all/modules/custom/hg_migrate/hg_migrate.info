@@ -1,0 +1,9 @@
+core = "7.x"
+dependencies[] = "migrate"
+files[] = hg_migrate.module
+files[] = hg_migrate_products.inc
+
+description = "Honest Green Data Migration"
+name = "hg_migrate"
+package = "unfi"
+php = "5.2.4"

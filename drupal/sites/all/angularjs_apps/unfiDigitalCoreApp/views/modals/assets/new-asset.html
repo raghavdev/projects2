@@ -1,0 +1,64 @@
+<div class="upload-asset">
+  <div class="dialog-box">
+    <h5>Upload Asset</h5>
+    <div ng-hide="new_asset">
+      <ul class="upload-content">
+        <li><img class="upload-marquee" ng-show="uploadStarted" src="/sites/all/angularjs_apps/unfiDigitalCoreApp/images/marquee.gif"></li>
+        <li ng-show="errormessage"><span class="error-message">{{errormessage}}</span></li>
+        <li><input type="file" id="new_file"></li>
+      </ul>
+      <div class="upload-asset-button uploader">
+        <button ng-disabled="uploadStarted" ng-click="uploadAsset({new_asset: true})">Upload</button>
+      </div>
+    </div>
+  </div>
+  <div>
+    <div ng-show="new_asset">
+      <div class="detail-main twelve columns row" ng-validation="record">
+        <div>
+          <label>Title</label>
+          <input ng-model="record.title"/>
+        </div>
+        <div class="six columns">
+          <fieldset class="filter">
+            <legend>Categories</legend>
+            <div class="filter-rows-wrapper">
+              <div class="filter-row-wrapper" ng-repeat="category in categories | orderBy:'order'">
+                <div class="filter-row" accordion accordion-state="closed" accordion-model="category" accordion-header-template="multi-select-header.html" on-accordion-item-click="assignCategory" accordion-content-template="filter-accordion-content.html">
+              </div>
+            </div>
+            </div>
+          </fieldset>
+          <fieldset>
+              <legend>Copyright Notice</legend>
+              <textarea ng-model="record.copyright_notice"></textarea>
+          </fieldset>
+          <fieldset>
+
+              <legend>Asset Creator</legend>
+              <input type="text" ng-model="record.creator">
+
+          </fieldset>
+        </div>
+        <div class="six columns">
+          <fieldset class="description">
+            <legend>Description</legend>
+            <div>
+              <textarea ng-model="record.description"></textarea>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>Keywords</legend>
+            <div>
+              <input type="text" ng-model="record.keywords">
+            </div>
+          </fieldset>
+        </div>
+        <div class="clearfix"></div>
+      </div>
+    </div>
+  </div>
+  <div class="upload-asset-button">
+    <button ng-click="close('clearNewAsset')">Done</button>
+  </div>
+</div>

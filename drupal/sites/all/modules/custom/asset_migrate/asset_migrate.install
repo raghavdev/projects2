@@ -1,0 +1,225 @@
+<?php
+
+function asset_migrate_install() {
+  _asset_migrate_populate_brand_aliases();
+}
+
+function asset_migrate_schema() {
+  $schema = array();
+
+  $schema['asset_migrate_stage_files'] = array(
+    'description' => 'External files to processed into Drupal.',
+    'fields'      => array(
+      'file_path' => array(
+        'description' => 'External stream or file path.',
+        'type'        => 'text',
+      ),
+      'state'     => array(
+        'description' => 'The state of migration of the file.',
+        'type'        => 'varchar',
+        'length'      => 8,
+      ),
+    ),
+  );
+
+  $schema['asset_migrate_brand_aliases'] = array(
+    'description' => 'Brand names and their short, filename aliases.',
+    'fields'      => array(
+      'name' => array(
+        'description' => 'Full brand name.',
+        'type'        => 'varchar',
+        'length'      => 255,
+      ),
+      'alias'     => array(
+        'description' => 'Short alias.',
+        'type'        => 'varchar',
+        'length'      => 8,
+      ),
+    ),
+  );
+
+  return $schema;
+}
+
+function asset_migrate_update_7001() {
+  db_create_table('asset_migrate_stage_files', array(
+    'description' => 'External files to processed into Drupal.',
+    'fields'      => array(
+      'file_path' => array(
+        'description' => 'External stream or file path.',
+        'type'        => 'text',
+      ),
+      'state'     => array(
+        'description' => 'The state of migration of the file.',
+        'type'        => 'varchar',
+        'length'      => 8,
+        'default'     => 'stage',
+      ),
+    ),
+  ));
+}
+
+function asset_migrate_update_7002() {
+  db_create_table('asset_migrate_brand_aliases', array(
+    'description' => 'Brand names and their short, filename aliases.',
+    'fields'      => array(
+      'name' => array(
+        'description' => 'Full brand name.',
+        'type'        => 'varchar',
+        'length'      => 255,
+      ),
+      'alias'     => array(
+        'description' => 'Short alias.',
+        'type'        => 'varchar',
+        'length'      => 8,
+      ),
+    ),
+  ));
+  _asset_migrate_populate_brand_aliases();
+}
+
+function asset_migrate_update_7003(&$sandbox) {
+  if (!isset($sandbox['progress'])) {
+    $sandbox['progress'] = 0;
+    $sandbox['limit']   = 10;
+    $sandbox['max']     = (int) db_select('file_managed', 'fm')
+      ->condition('fm.uri', 's3://%', 'LIKE')
+      ->condition('timestamp', 1440559886, '<')
+      ->countQuery()->execute()->fetchField();
+
+    db_delete('amazons3_file')
+      ->condition('timestamp', 1440559886, '<')
+      ->execute();
+  }
+
+  $query = db_select('file_managed', 'fm');
+  $query->fields('fm', array('fid'));
+  $query->condition('fm.uri', 's3://%', 'LIKE');
+  $query->condition('fm.timestamp', 1440559886, '<');
+  $query->orderBy('fm.fid');
+  $query->range(0, $sandbox['limit']);
+  $results = $query->execute();
+  $file_ids = $results->fetchCol();
+
+  if (!empty($file_ids)) {
+    db_delete('file_usage')
+      ->condition('fid', $file_ids)
+      ->execute();
+
+    db_delete('file_metadata')
+      ->condition('fid', $file_ids)
+      ->execute();
+
+    db_delete('file_managed')
+      ->condition('fid', $file_ids)
+      ->execute();
+  }
+
+  $sandbox['progress'] += count($file_ids);
+
+  if (!empty($sandbox['max'])) {
+    $sandbox['#finished'] = $sandbox['progress'] / $sandbox['max'];
+  }
+}
+
+function asset_migrate_update_7004(&$sandbox) {
+  $usage_query = db_select('file_usage', 'fu');
+  $usage_query->leftJoin('file_managed', 'fm', 'fu.fid=fm.fid');
+  $usage_query->isNull('fm.fid');
+  $usage_query->groupBy('fu.fid');
+
+  $meta_query = db_select('file_metadata', 'fmd');
+  $meta_query->leftJoin('file_managed', 'fm', 'fmd.fid=fm.fid');
+  $meta_query->isNull('fm.fid');
+  $meta_query->groupBy('fmd.fid');
+
+  if (!isset($sandbox['progress'])) {
+    $temp_count = (int) $usage_query->countQuery()->execute()->fetchField();
+    $temp_count += (int) $meta_query->countQuery()->execute()->fetchField();
+
+    $sandbox['progress'] = 0;
+    $sandbox['limit']    = 5;
+    $sandbox['max']      = $temp_count;
+  }
+
+  // ---- File Usage
+
+  $usage_query->orderBy('fu.fid');
+  $usage_query->fields('fu', array('fid'));
+  $usage_query->range(0, $sandbox['limit']);
+  $results = $usage_query->execute();
+  $file_ids = $results->fetchCol();
+
+  if (!empty($file_ids)) {
+    db_delete('file_usage')
+      ->condition('fid', $file_ids)
+      ->execute();
+  }
+
+  $sandbox['progress'] += count($file_ids);
+
+  // ---- File Managed
+
+  $meta_query->orderBy('fmd.fid');
+  $meta_query->fields('fmd', array('fid'));
+  $meta_query->range(0, $sandbox['limit']);
+  $results = $meta_query->execute();
+  $file_ids = $results->fetchCol();
+
+  if (!empty($file_ids)) {
+    db_delete('file_metadata')
+      ->condition('fid', $file_ids)
+      ->execute();
+  }
+
+  $sandbox['progress'] += count($file_ids);
+
+  if (!empty($sandbox['max'])) {
+    $sandbox['#finished'] = $sandbox['progress'] / $sandbox['max'];
+  }
+}
+
+function _asset_migrate_populate_brand_aliases() {
+  $aliases = array(
+    'FIELD DAY' => 'FD',
+    'A. VOGEL'  => 'AV',
+    'AH!LASKA'  => 'AH',
+    'FANTASTIC WORLD FOODS' => 'FWF',
+    'HARVEST BAY' => 'HB',
+    'INES ROSALES' => 'IR',
+    'KOYO' => 'KO',
+    'MEDITERRANEAN ORGANICS' => 'MO',
+    'MT. VIKOS' => 'MV',
+    'NATURAL SEA' => 'NS',
+    'OLD WESSEX' => 'OW',
+    'RISING MOON ORGANICS' => 'RMO',
+    'TUMARO\'S' => 'TUM',
+    'TUMARO\'S-FLOUR' => 'TUM',
+    'WOODSTOCK' => 'WD',
+    'WOODSTOCK MINIMES' => 'MM',
+    'WOODSTOCK MINI-MES' => 'MM',
+    'PRIVATE LABEL' => 'PL',
+    'GOURMET ARTISAN' => 'GA',
+  );
+
+  while (count($aliases)) {
+    $sub_aliases = array_slice($aliases, 0, 10, TRUE);
+    $aliases     = array_diff_key($aliases, $sub_aliases);
+
+    foreach ($sub_aliases as $brand_name => $alias) {
+      $values[] = array(
+        'name'  => $brand_name,
+        'alias' => $alias,
+      );
+    }
+
+    if (!empty($values)) {
+      $query = db_insert('asset_migrate_brand_aliases');
+      $query->fields(array('name', 'alias'));
+      foreach ($values as $value) {
+        $query->values($value);
+      }
+      $query->execute();
+    }
+  }
+}

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the BMB Single Product Data feature.
+ */
+
+include_once 'bmb_single_product_data.features.inc';

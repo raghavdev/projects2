@@ -1,0 +1,9 @@
+<div id="pane-action-header" class="pane-action__header pane-header">
+  <md-tabs md-selected="filterSelectedIndex" class="dark-theme">
+  <md-tab ng-repeat="menu in actionPaneMenu" class="tab tab{{$index%4}}" ng-class="isSelected" label="{{menu.text}}" ng-click="visibleTabSelect(menu.view, $index);" md-on-select="isSelected='active'"></md-tab>
+  </md-tabs>
+</div>
+<div id="pane-action-content" class="pane-action__content pane-content scroll-full-height clearfix">
+  <div filterpane ng-show="selectedTab == 'filterpane'"></div>
+  <div searchadvanced ng-show="selectedTab == 'searchadvanced'"></div>
+</div>

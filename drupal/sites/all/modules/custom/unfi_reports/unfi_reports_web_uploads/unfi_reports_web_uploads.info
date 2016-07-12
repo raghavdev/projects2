@@ -1,0 +1,6 @@
+name = UNFI Reports : Web Uploads Report
+description = Report to view the web uploads.
+package = UNFI
+core = 7.x
+
+dependencies[] = unfi_reports

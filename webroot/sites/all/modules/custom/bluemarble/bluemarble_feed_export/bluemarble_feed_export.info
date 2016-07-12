@@ -1,0 +1,6 @@
+name = Blue Marble Feed Export
+description = Blue Marble feed export processor
+package = Blue Marble
+core = 7.x
+dependencies[] = bluemarble
+files[] = bluemarble_data_products.inc

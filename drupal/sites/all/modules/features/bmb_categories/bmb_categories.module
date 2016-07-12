@@ -1,0 +1,309 @@
+<?php
+/**
+ * @file
+ * Code for the Blue Marble - Product Categories feature.
+ */
+
+include_once 'bmb_categories.features.inc';
+
+/**
+ * Implements hook_permission().
+ */
+function bmb_categories_permission() {
+  return array(
+    'access category terms import' => array(
+      'title' => t('Access Category Terms Import'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function bmb_categories_menu() {
+  $items = array();
+
+  $items['admin/config/bmb_settings/spins_categories'] = array(
+    'type'             => MENU_LOCAL_TASK,
+    'title'            => 'Import SPINS Categories',
+    'description'      => '',
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('bmb_categories_spins_import'),
+    'access arguments' => array('access category terms import'),
+    'weight'           => 50,
+  );
+
+  return $items;
+}
+
+/**
+ * Upload form that allows the user to submit a .csv file for processing.
+ */
+function bmb_categories_spins_import() {
+
+  $form['csv_file'] = array(
+    '#type'               => 'managed_file',
+    '#title'              => t('Comma Separated File'),
+    '#upload_location'    => 'temporary://',
+    '#upload_validators'  => array('file_validate_extensions' => array('csv txt')),
+    '#description'        => t('File must be in .csv format.'),
+  );
+
+  $form['delimiter'] = array(
+    '#type'    => 'select',
+    '#title'   => t('Delimiter'),
+    '#options' => array(
+      'comma' => 'comma ,',
+      'tab'   => 'tab \t',
+      'pipe'  => 'pipe |',
+      'tilde' => 'tilde ~',
+    ),
+    '#required'      => false,
+    '#default_value' => 'comma',
+    '#description'   => t('Delimiter of the data file.'),
+  );
+
+  $form['contains_header'] = array(
+    '#type'          => 'checkbox',
+    '#title'         => t('File contains a header'),
+    '#default_value' => TRUE,
+    '#description'   => t('Skip the first line because it is a header.'),
+  );
+
+  $form['batch_limit'] = array(
+    '#type'          => 'textfield',
+    '#title'         => t('Processing Throttle'),
+    '#size'          => 6,
+    '#required'      => TRUE,
+    '#default_value' => 10,
+    '#description'   => t('The number of lines to process per iteration.')
+  );
+
+  $form['submit'] = array(
+    '#type'  => 'submit',
+    '#value' => t('Upload Data'),
+  );
+
+  return $form;
+}
+
+function bmb_categories_spins_import_validate($form, &$form_state) {
+  if (
+    empty($form_state['values']['csv_file'])
+    || !file_load($form_state['values']['csv_file'])
+  ) {
+    form_set_error('csv_file', t('No file was uploaded.'));
+  }
+
+  if (
+    empty($form_state['values']['batch_limit'])
+    || !is_numeric($form_state['values']['batch_limit'])
+    || $form_state['values']['batch_limit'] < 1
+  ) {
+    form_set_error('batch_limit', t('Processing Throttle must be a positive whole number greater than zero.'));
+  }
+}
+
+function bmb_categories_spins_import_submit($form, &$form_state) {
+  switch ($form_state['values']['delimiter']) {
+    default:
+    case 'comma':
+      $delimiter = ',';
+      break;
+    case 'tab':
+      $delimiter = "\t";
+      break;
+    case 'pipe':
+      $delimiter = '|';
+      break;
+    case 'tilde':
+      $delimiter = '~';
+      break;
+  }
+
+  $file = file_load($form_state['values']['csv_file']);
+
+  batch_set(array(
+    'operations' => array(
+      array('bmb_categories_import_data', array(
+        $form_state['values']['csv_file'], // $file_id
+        (bool)$form_state['values']['contains_header'], // $contains_header
+        $delimiter,
+        (int)$form_state['values']['batch_limit']), // $limit
+      ),
+    ),
+    'finished'         => 'bmb_categories_import_data_finished',
+    'title'            => t('Importing !v', array('!v' => $file->filename)),
+    'init_message'     => t('!v import is starting.', array('!v' => $file->filename)),
+    'progress_message' => '',
+    'error_message'    => t('!v import has encountered an error.', array('!v' => $file->filename)),
+    'file'             => drupal_get_path('module', 'bmb_categories') . '/bmb_categories.module',
+  ));
+}
+
+/**
+ * Read the csv file into the database
+ */
+function bmb_categories_import_data($file_id, $contains_header, $delimiter, $limit, &$context) {
+  $auto_detect_line_endings = ini_get('auto_detect_line_endings');
+  ini_set('auto_detect_line_endings', TRUE);
+
+  // Query file data
+  if (($file = file_load($file_id)) == FALSE) {
+    throw new Exception('File not found.');
+  }
+  // Read records from the csv file
+  if (($handle = fopen($file->uri, 'r')) == FALSE) {
+    throw new Exception('Unable to open file.');
+  }
+
+  // Initialize iteration tracking sandbox
+  if (!isset($context['sandbox']['progress'])) {
+    // Prepare counters for results
+    $context['results']['parents']  = 0;
+    $context['results']['children'] = 0;
+    // Prepare sandbox for progress tracking
+    $context['sandbox']['progress'] = 0;
+    $context['sandbox']['total']    = 0;
+    // Count total amounts of lines
+    while (!feof($handle)) {
+      $context['sandbox']['total']++;
+      fgets($handle);
+    }
+    // Rewind to the first line of the file
+    fseek($handle, 0);
+    // Obtain the taxonomy vocab ID
+    $spins_vocab = taxonomy_vocabulary_machine_name_load('spins_category');
+    if (empty($spins_vocab->vid)) {
+      throw new Exception('Unable to load SPINS Category taxonomy vocabulary.');
+    }
+    else {
+      $context['sandbox']['vocab_id'] = $spins_vocab->vid;
+    }
+  }
+  $vocab_id = $context['sandbox']['vocab_id'];
+
+  // Temp progress counter to seek to start for this iteration of the process
+  $ix = 0;
+  // Get lines to move pointer until the end of file or where the last iteration ended
+  while (!feof($handle) && $ix < $context['sandbox']['progress']) {
+    $ix++;
+    fgets($handle);
+  }
+
+  // Track parents to prevent unnecessary querying within an iteration
+  $parents = array();
+  // Reset iteration counter
+  $ix = 0;
+  // Loop to the end of the file or to the limit per iteration
+  while (!feof($handle) && $ix < $limit) {
+    // Increment counters
+    $ix++;
+    $context['sandbox']['progress']++;
+    // Get line and parse CSV data
+    $row = fgetcsv($handle, 0, $delimiter, '"');
+    // A blank line will return as array(0 => NULL)
+    if (isset($row[0]) && isset($row[1])) {
+      // Skip the header line if the form was told to expect a header
+      if($contains_header && $context['sandbox']['progress'] == 1) {
+        continue;
+      }
+      $parent_name = trim($row[0]);
+      $child_name  = trim($row[1]);
+      // Get parent from list (like a mini cache)
+      if (isset($parents[$parent_name])) {
+        $parent_id = $parents[$parent_name];
+      }
+      else {
+        // Query for existing term
+        $query = db_select('taxonomy_term_data', 'ttd');
+        $query->join('taxonomy_term_hierarchy', 'tth', 'ttd.tid=tth.tid');
+        $query->fields('ttd', array('tid'));
+        $query->condition('tth.parent', 0);
+        $query->condition('ttd.name', $parent_name);
+        $parent_id = $query->execute()->fetchField();
+        // If unable to find, create
+        if (empty($parent_id)) {
+          $parent_term                          = new stdClass();
+          $parent_term->name                    = $parent_name;
+          $parent_term->vid                     = $vocab_id;
+          $parent_term->parent                  = 0;
+          $parent_term->vocabulary_machine_name = 'spins_category';
+          taxonomy_term_save($parent_term);
+          // If that fails, notify and continue
+          if (empty($parent_term->tid)) {
+            watchdog('bmb_categories', 'Failed to create SPINS Category: @p - @c', array(
+              '@p' => $parent_name,
+              '@c' => $child_name
+            ), WATCHDOG_ERROR);
+            continue;
+          }
+          $parent_id = $parent_term->tid;
+          $context['results']['parents']++;
+        }
+        $parents[$parent_name] = $parent_id;
+      }
+      // Check if the child exists for the parent
+      $query = db_select('taxonomy_term_data', 'ttd');
+      $query->join('taxonomy_term_hierarchy', 'tth', 'ttd.tid=tth.tid');
+      $query->fields('ttd', array('tid'));
+      $query->condition('tth.parent', $parent_id);
+      $query->condition('ttd.tid', $parent_id, '!=');
+      $query->condition('ttd.name', $child_name);
+      $child_id = $query->execute()->fetchField();
+      // If unable to find (hopefully), create
+      if (empty($child_id)) {
+        $child_term                          = new stdClass();
+        $child_term->name                    = $child_name;
+        $child_term->vid                     = $vocab_id;
+        $child_term->parent                  = $parent_id;
+        $child_term->vocabulary_machine_name = 'spins_category';
+        taxonomy_term_save($child_term);
+        // If that fails, $child_term and continue
+        if (empty($child_term->tid)) {
+          watchdog('bmb_categories', 'Failed to create SPINS Sub-Category: @p - @c', array(
+            '@p' => $parent_name,
+            '@c' => $child_name
+          ), WATCHDOG_ERROR);
+        }
+        else {
+          $context['results']['children']++;
+        }
+      }
+    }
+  }
+  // Close file stream
+  fclose($handle);
+  ini_set('auto_detect_line_endings', $auto_detect_line_endings);
+  // Notify user of progess
+  $context['message'] = t('Processed @c out of @t lines', array(
+    '@c' => $context['sandbox']['progress'],
+    '@t' => $context['sandbox']['total'],
+  ));
+
+  if (!empty($context['sandbox']['total'])) {
+    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['total'];
+  }
+}
+
+function bmb_categories_import_data_finished($success, $results, $operations) {
+  if ($success) {
+    $message = t('Created ');
+    $message .= format_plural($results['parents'], 'one SPINS Category.', '@count SPINS Category.');
+    drupal_set_message($message);
+
+    $message = t('Created ');
+    $message .= format_plural($results['children'], 'one SPINS Sub-Category.', '@count SPINS Sub-Category.');
+    drupal_set_message($message);
+  }
+  // An error occurred
+  // $operations contains the operations that remained unprocessed
+  else {
+    $error_operation = reset($operations);
+    $message = t('An error occurred while processing %op with arguments: <pre>@arg</pre>', array(
+      '%op'  => $error_operation[0],
+      '@arg' => print_r($error_operation[1], TRUE)
+    ));
+    drupal_set_message($message, 'error');
+  }
+}

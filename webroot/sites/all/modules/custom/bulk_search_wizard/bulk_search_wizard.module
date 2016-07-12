@@ -1,0 +1,680 @@
+<?php
+
+/**
+ * Implements hook_menu().
+ * Sets up the page where the app can be seen from
+ */
+function bulk_search_wizard_menu() {
+
+  $items = array();
+
+  //process page
+  $items["quick_search"] = array(
+    'title' => "Quick Search",
+    'description' => "",
+    'page callback' => 'bulk_search_wizard_page',
+    'access arguments' => array('access bulk search'),
+    'type' => MENU_NORMAL_ITEM,
+    'access callback' => 'user_access',
+  );
+
+  $items["quick_search/analysis"] = array(
+    'title' => "Quick Search",
+    'description' => "",
+    'page callback' => 'bulk_search_wizard_page_analysis',
+    'access arguments' => array('access bulk search'),
+    'type' => MENU_NORMAL_ITEM,
+    'access callback' => 'user_access',
+  );
+
+  $items["quick_search/download"] = array(
+    'description' => "",
+    'page callback' => 'bulk_search_wizard_download_report',
+    'access arguments' => array('access bulk search'),
+    'type' => MENU_CALLBACK,
+    'access callback' => 'user_access',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function bulk_search_wizard_permission() {
+  return array(
+    'access bulk search' =>  array(
+      'title' => t('Access / utilize bulk (quick) search page'),
+    ),
+  );
+};
+
+//process page
+function bulk_search_wizard_page() {
+
+  drupal_add_js(drupal_get_path("module", 'bulk_search_wizard') . "/bulk_search_wizard.js");
+
+  return drupal_get_form("bulk_search_wizard_page_form");
+}
+
+function bulk_search_wizard_page_form($form, $form_state) {
+  $form = array();
+  $jobid = '';
+
+  if(isset($_GET['job_id'])) {
+    $jobid = $_GET['job_id'];
+  }
+
+  if($jobid == "") {
+
+    $form['keyword'] = array(
+      '#type' => 'textfield',
+      '#title' => 'Enter UPC, Product ID, or Keyword',
+      '#description' => t("For multiple enter comma seperated"),
+      '#required' => FALSE,
+      '#maxlength' => 100,
+      '#size' => 100,
+    );
+
+    $form['keyword_search'] = array(
+      '#type' => 'submit',
+      '#value' => 'Search Products',
+    );
+
+    $form['file'] = array(
+      '#title' => 'Upload a spreadsheet of products',
+      '#type' => 'file',
+      '#required' => FALSE,
+      '#description' => t(""),
+    );
+
+    $form['step'] = array (
+      "#type" => "hidden",
+      "#value" => "1"
+    );
+
+    $form['file_upload_process'] = array(
+      '#type' => 'submit',
+      '#value' => 'Process Spreadsheet',
+    );
+  }
+  else {
+
+    $data = db_select("bulk_search_wizard_jobs")
+              ->fields("bulk_search_wizard_jobs", array('job_results'))
+              ->condition("job_id", $jobid)
+              ->execute()
+              ->fetchField();
+
+    if(!$data || $data == "") {
+      $step = 1;
+      drupal_set_message(t("Job not found"));
+    }
+    else {
+      $data = unserialize($data);
+
+      //pull up the job information, the excel data will be stored with it
+
+      //build out the table of the info from the result set
+
+      $form['file_upload_remove_sheet'] = array(
+        '#type' => 'button',
+        '#value' => '< Back',
+      );
+
+      $form['spreadsheet_header'] = array(
+        '#type' => 'checkbox',
+        '#title' => 'Spreadsheet contains a header row?',
+        '#default_value' => TRUE,
+      );
+
+      $form['identity_select'] = array(
+        '#type' => 'select',
+        '#options' => array("upc" => 'UPC', "east_product_id" => 'East Product ID', "west_product_id" => 'West Product ID'),
+        '#default_value' => "upc",
+        '#title' => "Selected column type",
+        '#required' => TRUE
+      );
+
+      $form['identity_table'] = array(
+        '#type' => "fieldset",
+        '#title' => "What column can be used to identify products?",
+        '#theme' => 'bulk_search_wizard_identity_table',
+        '#tree' => TRUE,
+      );
+
+      foreach($data['excel_sample_data'] as $row_idx => $row) {
+        foreach($row as $idx => $column) {
+          if($row_idx == 0) {
+            $form['identity_table']["idt_rows"][$row_idx][$idx] = array(
+              $radio = array(
+                '#type' => 'radios',
+                '#default_value' => 0,
+                '#options' => array($idx => t('')),
+                '#attributes' => array('name' => array("identity_radio"), 'class' => array('idt_radio'))
+              )
+            );
+          }
+
+          $form['identity_table']["idt_rows"][$row_idx + 1][$idx] = array(
+            "#markup" => $column
+          );
+        }
+      }
+
+      //will hold the value of the selection from above
+      //uses jquery to update when checked, couldnt figure out how to get the
+      //value otherwise
+      $form['identity_column'] = array (
+        "#type" => "hidden",
+        "#default_value" => 0,
+        '#attributes' => array('id' => array("identity_col"))
+      );
+
+      $form['step'] = array (
+        "#type" => "hidden",
+        "#value" => "2"
+      );
+
+      $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => t('Find Products'),
+      );
+    }
+  }
+
+  return $form;
+}
+
+function bulk_search_wizard_page_form_validate($form, &$form_state) {
+
+  $step = 1;
+
+  if(isset($form_state['values']['step'])) {
+    $step = $form_state['values']['step'];
+  }
+
+  if($step == 1) {
+
+    if($form_state['values']['op'] == "Process Spreadsheet") {
+
+      $file = file_save_upload('file', array(
+          'file_validate_extensions' => array('xls', 'xlsx'),
+      ));
+      if ($file != null) {
+        if ($file = file_move($file, variable_get("digital_core_asset_protocol", "s3://"))) {
+          $form_state['values']['file'] = $file;
+        }
+        else {
+          form_set_error('file', t('Failed to write the uploaded file the site\'s file folder.'));
+        }
+      }
+      else {
+        form_set_error('file', t('No file was uploaded.'));
+      }
+    }
+  }
+}
+
+function bulk_search_wizard_page_form_submit(&$form, &$form_state){
+  module_load_include('inc', 'phpexcel');
+
+  $job_id = false;
+  $next_path = current_path();
+
+  if(isset($form_state['values']['step'])) {
+    $step = $form_state['values']['step'];
+  }
+
+  if(isset($_GET['job_id'])) {
+    $job_id = $_GET['job_id'];
+  }
+
+  if(!$job_id) {
+
+    $file=$form_state['values']['file'];
+
+    if($form_state['values']['file']) {
+      //upload the file
+
+      unset($form_state['values']['file']);
+      $file->status = FILE_STATUS_PERMANENT;
+      file_save($file);
+
+      //open up the specified excel file and read some rows from it
+      $excel_data = phpexcel_import($file->uri, false);
+
+      //setup the result array
+      $results = array();
+      $sample_data = array();
+
+      if(count($excel_data) > 0) {
+        $sample_data = array_splice($excel_data[0], 0, 5);
+      }
+
+      $results['excel_sample_data'] = $sample_data;
+      $results['excel_file_id'] = $file->fid;
+      $results['excel_file_uri'] = $file->uri;
+    }
+    else if($form_state['values']['keyword']) {
+      //explode the keywords to search for
+      $results['keywords'] = array_map('trim', explode(',', $form_state['values']['keyword']));
+
+      $next_path .= "/analysis";
+    }
+
+    //save the job info
+    $job_id = db_insert("bulk_search_wizard_jobs")
+                ->fields(array("job_results" => serialize($results)))
+                ->execute();
+
+    //set the step and job id
+    drupal_goto($next_path, array('query' => array("job_id" => $job_id)));
+  }
+  else if($job_id) {
+
+    //update the job info on the table
+    $data = db_select("bulk_search_wizard_jobs")
+              ->fields("bulk_search_wizard_jobs", array('job_results'))
+              ->condition("job_id", $job_id)
+              ->execute()
+              ->fetchField();
+
+    $data_array = unserialize($data);
+
+    $data_array['key_col'] = $form_state['values']['identity_column'];
+    $data_array['identity_select'] = $form_state['values']['identity_select'];
+
+    if(array_key_exists("excel_file_id", $data_array)) {
+      //trigger analysis
+      //the batch api stuff
+      $excel_data = phpexcel_import($data_array['excel_file_uri'], false);
+
+      $operations = array();
+
+      if(count($excel_data) > 0) {
+
+        $product_data = array();
+
+        for($i = 0; $i < count($excel_data[0]); $i++) {
+          //skip the header row
+          if($form_state['values']['spreadsheet_header'] == 1 && $i == 0) {
+            continue;
+          }
+
+          $id = $excel_data[0][$i][$data_array['key_col']];
+
+          if($id != "") {
+            $product_data[] = $id;
+          }
+        }
+
+        $data_array['excel_ids'] = $product_data;
+      }
+      else {
+        drupal_set_message(t("Error parsing the excel file"));
+      }
+    }
+
+    $result = db_update("bulk_search_wizard_jobs")
+                ->fields(array("job_results" => serialize($data_array)))
+                ->condition("job_id", $job_id)
+                ->execute();
+
+    drupal_goto(current_path() . '/analysis', array('query' => array("job_id" => $job_id)));
+  }
+  else {
+    drupal_set_message(t("Error finding specified job id."));
+  }
+}
+
+function bulk_search_wizard_page_analysis() {
+  return drupal_get_form("bulk_search_wizard_page_analysis_form", $_GET['job_id']);
+}
+
+function bulk_search_wizard_page_analysis_form($form, $form_state, $job_id) {
+
+  module_load_include('inc', 'digital_core_data', 'digital_core_data_products');
+
+  $form = array();
+
+  $upload_type = false;
+  $key_name = false;
+  $key_col = false;
+
+   $product_data = bulk_search_wizard_get_product_data($job_id);
+
+  //either there was an error and there wasnt anyting to search
+  //or nothing was found
+  if($product_data['total'] == 0) {
+    drupal_set_message(t("No Products found"));
+    drupal_goto("quick_search");
+  }
+
+  $form['download'] = array(
+       '#type' => 'select',
+       '#title' => t('Download As'),
+       '#options' => array(
+          "select" => t('Select a file format'),
+          "xls" => t('Excel (.xls)'),
+          "xlsx" => t('Excel (.xlsx)'),
+          "csv" => t('CSV (.csv)'),
+       ),
+   );
+
+  $form['report_download'] = array(
+    '#type' => 'submit',
+    '#value' => 'Generate Report',
+  );
+
+  $form['job_id'] = array(
+    '#type' => 'hidden',
+    '#value' => $job_id,
+  );
+
+  $form['result_table'] = array (
+    '#type' => 'fieldset',
+    '#title' => 'Results',
+    '#theme' => 'bulk_search_wizard_analysis_table',
+    '#tree' => TRUE,
+  );
+
+  foreach($product_data['results'] as $result) {
+
+    //there isnt a way to do this format with form api, but straigh html sure
+    //TODO add some classes here
+
+    $row = "<img src='{$result['thumb_url']}'>";
+    $row .= "<div>{$result['title']}</div>";
+
+    if(array_key_exists("brand", $result)) {
+      $row .= "<div>Brand: {$result['brand']['title']}</div>";
+    }
+
+    $row .= "<div>UPC: {$result['upc']}</div>";
+    $row .= "<div>Last Updated: {$result['changed']}</div>";
+
+    $image_types = bulk_search_wizard_get_image_type_list();
+
+    foreach($image_types as $image_name) {
+      if(array_key_exists($image_name, $result['image_urls'])) {
+
+        $img_key = strtolower($image_name);
+
+        //remove the trailing image part
+        $img_key = str_replace(" image", "", $img_key);
+
+        if(array_key_exists("uploaded_timestamp", $result['image_urls'][$img_key])) {
+          $dt = date("Y-m-d", $result['image_urls'][$img_key]['uploaded_timestamp']);
+
+          $row .= "<div>{$image_name} Updated: {$dt}</div>";
+        }
+        else {
+          $row .= "<div>{$image_name} Not Uploaded</div>";
+        }
+      }
+    }
+
+    $form['result_table']['row'][$result['east_product_id']] = array(
+      "#markup" => $row
+    );
+  }
+
+  return $form;
+}
+
+function bulk_search_wizard_page_analysis_form_submit(&$form, &$form_state) {
+  drupal_goto("/quick_search/download", array('query' => array("job_id" =>
+      $form_state['values']['job_id'], "download_type" => $form_state['values']['download'])));
+}
+
+
+function theme_bulk_search_wizard_analysis_table($variables) {
+
+  $form = $variables['form'];
+
+  $header = array('');
+
+  $rows = array();
+
+  foreach (element_children($form['row']) as $key) {
+
+    $record = array();
+    $record[] = drupal_render($form['row'][$key]);
+    $rows[] = $record;
+  }
+
+  $output = theme('table', array(
+      'header' => $header,
+      'rows' => $rows
+  ));
+
+  return $output;
+}
+
+function theme_bulk_search_wizard_identity_table($variables) {
+  $form = $variables['form'];
+
+  $rows = array();
+
+  //add the rows
+  foreach (element_children($form['idt_rows']) as $key) {
+    $record = array();
+
+    foreach (element_children($form['idt_rows'][$key]) as $col) {
+      $record[] = drupal_render($form['idt_rows'][$key][$col]);
+    }
+
+    $rows[] = $record;
+  }
+
+  $output = theme('table', array(
+      'rows' => $rows
+  ));
+
+  return $output;
+}
+
+function bulk_search_wizard_theme($existing, $type, $theme, $path) {
+
+  $theme_hooks = array(
+    'bulk_search_wizard_analysis_table' => array(
+      'render element' => 'form',
+      'file' => 'bulk_search_wizard.module'
+     ),
+    'bulk_search_wizard_identity_table' => array(
+      'render element' => 'form',
+      'file' => 'bulk_search_wizard.module'
+     )
+  );
+
+  return $theme_hooks;
+}
+
+//generate and initiate or offer download link
+function bulk_search_wizard_download_report() {
+
+  module_load_include('inc', 'digital_core_data', 'digital_core_data_products');
+  module_load_include('inc', 'phpexcel');
+
+  $job_id = false;
+  $download_type = false;
+
+  if(array_key_exists("job_id", $_GET)) {
+    $job_id = $_GET['job_id'];
+  }
+
+  if(array_key_exists("download_type", $_GET)) {
+    $download_type = $_GET['download_type'];
+  }
+
+  if(!$job_id || !$download_type) {
+    return false;
+  }
+
+  //get the product data
+  $product_data = bulk_search_wizard_get_product_data($job_id);
+
+  $export_path = "public://unfi_reports/";
+
+  if (!file_prepare_directory($export_path, FILE_CREATE_DIRECTORY)) {
+    drupal_set_message(t('Unable to generate file: destination directory could not be created.'), 'error');
+    return FALSE;
+  }
+
+  $fileuri = $export_path . "product_report_" . date("Ymds") . "." . $download_type;
+
+  $filename = $fileuri;
+
+  //generate the rows and header
+  //write the header
+  $header = array("Product Name","Brand","UPC","Last Updated");
+
+  $image_types = bulk_search_wizard_get_image_type_list();
+
+  foreach($image_types as $image_name) {
+    $header[] = $image_name . " last updated";
+  }
+
+  $rows = array();
+
+  //write the product data
+  foreach($product_data['results'] as $product) {
+    $row = array();
+    $row[] = $product['title'];
+    if(array_key_exists("brand", $product)) {
+      $row[] = $product["brand"]['title'];
+    }
+    else {
+      $row[] = "";
+    }
+    $row[] = $product['upc'];
+    $row[] = $product['changed'];
+
+    foreach($image_types as $image_name) {
+
+      $img_key = strtolower($image_name);
+
+      //remove the trailing image part
+      $img_key = str_replace(" image", "", $img_key);
+
+      if($product['image_urls'] != null && count($product['image_urls']) > 0 &&
+              array_key_exists($img_key, $product['image_urls']) &&
+              $product['image_urls'][$img_key] != null &&
+              array_key_exists("uploaded_timestamp", $product['image_urls'][$img_key])) {
+        $row[] = $product['image_urls'][$img_key]['uploaded_timestamp'];
+      }
+    }
+
+    $rows[] = $row;
+  }
+
+  if($download_type == "csv") {
+    $fp = fopen($filename, 'w');
+
+    fputcsv($fp, $header);
+
+    foreach($rows as $r) {
+      fputcsv($fp, $r);
+    }
+
+    fclose($fp);
+  }
+  else if($download_type == "xls") {
+    phpexcel_export($header, $rows, $filename, array("format"=> "xls"));
+  }
+  else if($download_type == "xlsx") {
+    //the file format is processed different in this library, need to pass it
+    //a different value
+
+    $path = drupal_realpath($filename);
+    phpexcel_export($header, $rows, $path, array("format"=> "xlsx"));
+  }
+
+  $download_link = file_create_url($fileuri);
+
+  drupal_set_message(t("Report is ready to download. Click here to download:") . l(t("Download"), $download_link));
+  drupal_goto("/quick_search");
+}
+
+function bulk_search_wizard_get_image_type_list() {
+
+  $image_types = array();
+
+  //pull up all of the image references on a product record
+  $query = db_select("field_config_instance");
+  $query->fields("field_config_instance", array("field_name", "data"));
+  $query->join("field_config", "field_config", "field_id = field_config.id");
+  $query->condition("bundle", "product_details");
+  $query->condition("field_config.type", "entityreference");
+  $asset_data = $query->execute()
+              ->fetchAll();
+
+  foreach($asset_data as $data) {
+    $field_data = unserialize($data->data);
+
+    $image_types[] = $field_data['label'];
+  }
+
+  return $image_types;
+}
+
+function bulk_search_wizard_get_product_data($job_id) {
+
+  $chunkSize = 200;
+
+  $search_parameters = db_select("bulk_search_wizard_jobs")
+              ->condition("job_id", $job_id)
+              ->fields("bulk_search_wizard_jobs", array("job_results"))
+              ->execute()
+              ->fetchField();
+
+  if(!$search_parameters) {
+    drupal_set_message(t("Error job id not found"));
+    drupal_goto("quick_search/");
+  }
+
+  $search_parameters = unserialize($search_parameters);
+
+  $product_data = array();
+
+  $parameters = array("perPage" => 0,
+                        "page" => 0);
+
+  if(array_key_exists("keywords", $search_parameters)) {
+
+    $searched_fields = array("upc", "field_keywords"
+                            , "east_product_id", "west_product_id");
+
+    //query solr for the product data to build out the results page
+    $parameters["search"] = $search_parameters['keywords'];
+
+    $product_data = digital_core_data_products_read($parameters, $searched_fields);
+  }
+  else if($search_parameters['excel_ids']) {
+
+    $parameters[$search_parameters['identity_select']] = $search_parameters['excel_ids'];
+
+    $chunks = array_chunk($parameters[$search_parameters['identity_select']], $chunkSize);
+
+    //remove the excel file from the server
+    if(array_key_exists("excel_file_id", $search_parameters)) {
+      file_delete_multiple(array($search_parameters['excel_file_id']));
+    }
+
+    $product_data = array("total" => 0, "count" => 0, "results" => array());
+
+    foreach($chunks as $chunk) {
+      $parameters[$search_parameters['identity_select']] = $chunk;
+
+      $p = array_merge($product_data, digital_core_data_products_read($parameters));
+
+      $product_data['results'] = array_merge($product_data['results'], $p['results']);
+
+      $product_data['total'] += $p['total'];
+      $product_data['count'] += $p['count'];
+    }
+  }
+
+  return $product_data;
+}

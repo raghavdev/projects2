@@ -1,0 +1,7 @@
+name = Bulk Search Wizard
+description = Search for products in digital core thru an excel product list
+package = Bulk Search Wizard
+core = 7.x
+dependencies[] = phpexcel
+dependencies[] = digital_core_data
+dependencies[] = digital_core_assets

@@ -1,0 +1,5 @@
+core = "7.x"
+description = "Product Information processor"
+name = "buw_product_information"
+package = "Bulk Upload Wizard"
+php = "5.2.4"

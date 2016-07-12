@@ -1,0 +1,19 @@
+<?php
+
+function buw_product_planogram_images_bulk_upload_wizard_get_asset_info () {
+ return array("product_planogram_images" => array(
+      "type" => "Product Planogram Images",
+      "file_mappings" => array(                              
+                              ),
+      "analysis_callback" => "buw_product_planogram_images_analysis",
+      "apply_callback" => "buw_product_planogram_images_apply",
+   ));
+}
+
+function buw_product_planogram_images_analysis() {
+  
+}
+
+function buw_product_planogram_images_apply() {
+  
+}

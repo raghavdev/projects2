@@ -1,0 +1,169 @@
+<?php
+/**
+ * @file
+ * Macola Connect Mock module functions.
+ */
+
+/**
+ * Implements hook_init().
+ */
+function macola_connect_mock_init() {
+  global $conf, $base_url;
+  if (variable_get('macola_connect_mock_enabled', FALSE)) {
+    $conf['macola_connect_api_url'] = $base_url . '/macola';
+  }
+}
+
+/**
+ * Implements hook_menu().
+ */
+function macola_connect_mock_menu() {
+  $items = array();
+
+  $items['macola/ProductCategories/ListAll'] = array(
+    'title' => 'Macola Mock Server Product Categories',
+    'description' => 'Macola mock server for product categories.',
+    'page callback' => 'macola_connect_mock_product_categories',
+    'access callback' => TRUE,
+    'delivery callback' => 'macola_connect_mock_deliver',
+    'file' => 'macola_connect_mock.server.inc',
+  );
+
+  $items['macola/MaterialCostTypes/ListAll'] = array(
+    'title' => 'Macola Mock Server Material Cost Types',
+    'description' => 'Macola mock server for material cost types.',
+    'page callback' => 'macola_connect_mock_material_cost_types',
+    'access callback' => TRUE,
+    'delivery callback' => 'macola_connect_mock_deliver',
+    'file' => 'macola_connect_mock.server.inc',
+  );
+
+  $items['macola/Locations/ListAll'] = array(
+    'title' => 'Macola Mock Server Locations',
+    'description' => 'Macola mock server for locations.',
+    'page callback' => 'macola_connect_mock_locations',
+    'access callback' => TRUE,
+    'delivery callback' => 'macola_connect_mock_deliver',
+    'file' => 'macola_connect_mock.server.inc',
+  );
+
+  $items['macola/Users/ListAll'] = array(
+    'title' => 'Macola Mock Server Users',
+    'description' => 'Macola mock server for users.',
+    'page callback' => 'macola_connect_mock_users',
+    'access callback' => TRUE,
+    'delivery callback' => 'macola_connect_mock_deliver',
+    'file' => 'macola_connect_mock.server.inc',
+  );
+
+  $items['macola/Customers/ListAll'] = array(
+    'title' => 'Macola Mock Server Customers',
+    'description' => 'Macola mock server for customers.',
+    'page callback' => 'macola_connect_mock_customers',
+    'access callback' => TRUE,
+    'delivery callback' => 'macola_connect_mock_deliver',
+    'file' => 'macola_connect_mock.server.inc',
+  );
+
+  $items['macola/Products/List'] = array(
+    'title' => 'Macola Mock Server Products',
+    'description' => 'Macola mock server for products.',
+    'page callback' => 'macola_connect_mock_product_search',
+    'access callback' => TRUE,
+    'delivery callback' => 'macola_connect_mock_deliver',
+    'file' => 'macola_connect_mock.server.inc',
+  );
+
+  $items['macola/Products/Load'] = array(
+    'title' => 'Macola Mock Server Products',
+    'description' => 'Macola mock server for products.',
+    'page callback' => 'macola_connect_mock_product_load',
+    'access callback' => TRUE,
+    'delivery callback' => 'macola_connect_mock_deliver',
+    'file' => 'macola_connect_mock.server.inc',
+  );
+
+  $items['macola/Products/Create'] = array(
+    'title' => 'Macola Mock Server Products',
+    'description' => 'Macola mock server for products.',
+    'page callback' => 'macola_connect_mock_product_create',
+    'access callback' => TRUE,
+    'delivery callback' => 'macola_connect_mock_deliver',
+    'file' => 'macola_connect_mock.server.inc',
+  );
+
+  $items['macola/Products/Update'] = array(
+    'title' => 'Macola Mock Server Products',
+    'description' => 'Macola mock server for products.',
+    'page callback' => 'macola_connect_mock_product_update',
+    'access callback' => TRUE,
+    'delivery callback' => 'macola_connect_mock_deliver',
+    'file' => 'macola_connect_mock.server.inc',
+  );
+
+  // ProductVendorPrices
+  $items['macola/ProductVendorPrices/List'] = array(
+    'title' => 'Macola Mock Server ProductVendorPrices',
+    'description' => 'Macola mock server for product vendor prices.',
+    'page callback' => 'macola_connect_mock_product_vendor_prices_search',
+    'access callback' => TRUE,
+    'delivery callback' => 'macola_connect_mock_deliver',
+    'file' => 'macola_connect_mock.server.inc',
+  );
+
+  $items['macola/ProductVendorPrices/Load'] = array(
+    'title' => 'Macola Mock Server ProductVendorPrices',
+    'description' => 'Macola mock server for product vendor prices.',
+    'page callback' => 'macola_connect_mock_product_vendor_prices_load',
+    'access callback' => TRUE,
+    'delivery callback' => 'macola_connect_mock_deliver',
+    'file' => 'macola_connect_mock.server.inc',
+  );
+
+  $items['macola/ProductVendorPrices/Create'] = array(
+    'title' => 'Macola Mock Server ProductVendorPrices',
+    'description' => 'Macola mock server for product vendor prices.',
+    'page callback' => 'macola_connect_mock_product_vendor_prices_create',
+    'access callback' => TRUE,
+    'delivery callback' => 'macola_connect_mock_deliver',
+    'file' => 'macola_connect_mock.server.inc',
+  );
+
+  $items['macola/ProductVendorPrices/Update'] = array(
+    'title' => 'Macola Mock Server ProductVendorPrices',
+    'description' => 'Macola mock server for product vendor prices.',
+    'page callback' => 'macola_connect_mock_product_vendor_prices_update',
+    'access callback' => TRUE,
+    'delivery callback' => 'macola_connect_mock_deliver',
+    'file' => 'macola_connect_mock.server.inc',
+  );
+
+  return $items;
+}
+
+function macola_connect_mock_deliver($result) {
+  drupal_add_http_header('Content-Type', 'application/json; charset=utf-8');
+  if (is_int($result)) {
+    switch ($result) {
+      case MENU_NOT_FOUND:
+        drupal_add_http_header('Status', '404 Not Found');
+        $response = '{}';
+        break;
+
+      case MENU_ACCESS_DENIED:
+        drupal_add_http_header('Status', '403 Forbidden');
+        $response = '{}';
+        break;
+
+      case MENU_SITE_OFFLINE:
+        drupal_add_http_header('Status', '503 Service unavailable');
+        $response = '{}';
+        break;
+    }
+  }
+  else {
+    $response = json_encode($result);
+  }
+  print $response;
+  drupal_exit();
+}

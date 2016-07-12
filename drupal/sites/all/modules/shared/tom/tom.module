@@ -1,0 +1,1281 @@
+<?php
+/**
+ * @file
+ * TOM: The Object Manager module code.
+ */
+
+/**
+ * Create an entity in drupal based on the supplied data.
+ *
+ * @param string
+ *   The entity type to create. Examples: 'node', 'user'
+ * @param string
+ *   The bundle of the given entity type to create. Examples: 'page', 'blog'
+ * @param array
+ *   An array of values, keyed by property names.
+ *
+ * @return object
+ *   The saved entity object.
+ */
+function tom_create_drupal_entity($entity_type, $drupalBundle, $entityData) {
+  $entityInfo = array("type" => $drupalBundle);
+
+  if(array_key_exists("uid", $entityData)) {
+    $entityInfo['uid'] = $entityData['uid'];
+    unset($entityData['uid']);
+  }
+
+  $entity = entity_create($entity_type, $entityInfo);
+
+  $wrapper = entity_metadata_wrapper($entity_type, $entity);
+
+  foreach($entityData as $field => $value) {
+    tom_entity_field_set($wrapper, $field, $value);
+  }
+
+  $wrapper->save();
+
+  return $entity;
+}
+
+/**
+ * Creates an number of entities.
+ *
+ * @param string
+ *   The entity type to create. Examples: 'node', 'user'
+ * @param string
+ *   The bundle of the given entity type to create. Examples: 'page', 'blog'
+ * @param array
+ *   An array of entities as entity data arrays.
+ *
+ * @return boolean
+ *   TRUE if every call returns successfully. FALSE if there is a failure.
+ */
+function tom_create_drupal_entities($entity_type, $drupalBundle, $entities) {
+  return tom_iterate_on_entities("tom_create_drupal_entity", $entity_type, $drupalBundle, $entities);
+}
+
+/**
+ * Reads entity data.
+ *
+ * @param string
+ *   The entity type to create. Examples: 'node', 'user'
+ * @param array
+ *   An array of query parameters with the following special keys:
+ *     - page int: Current page number, starting at 0.
+ *     - perPage int: Number of results per page.
+ *     - sort string: Field name to sort on.
+ *     - sort_dir string: ASC or DESC
+ *     - properties array: array of property values keyed by property name
+ *     - All other keys are treated as field names.
+ * @param string
+ *   The bundle of the given entity type to create. Examples: 'page', 'blog'
+ *
+ * @return array
+ *   An array with the following keys:
+ *     - total int: Total number of results.
+ *     - count int: Number of results returned.
+ *     - results array: Array of entity data arrays.
+ */
+function tom_get_entities($entity_type, $parameters = null, $drupalBundle = null) {
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', $entity_type);
+
+  $countOffset = 0;
+  $perPage = 100;
+
+  if(array_key_exists("q", $parameters)) {
+    unset($parameters['q']);
+  }
+
+  if(array_key_exists("page", $parameters)) {
+
+    //pass 0 to get all of the entities in the index
+    if($parameters['perPage'] != 0) {
+      $countOffset = $parameters['page'] * $parameters['perPage'];
+      $perPage = $parameters['perPage'];
+    }
+
+    //remove it from the list
+    unset($parameters['page']);
+    unset($parameters['perPage']);
+  }
+
+  if(array_key_exists("sort", $parameters)) {
+    $sort_dir = "ASC";
+
+    if(array_key_exists("sort_dir", $parameters)) {
+      $sort_dir = $parameters['sort_dir'];
+      unset($parameters["sort_dir"]);
+    }
+
+    if($parameters['sort'] != 0) {
+      $query->fieldOrderBy($parameters['sort'], "value", $sort_dir);
+    }
+
+    unset($parameters['sort']);
+  }
+
+  if(array_key_exists("properties", $parameters)) {
+    foreach($parameters['properties'] as  $property => $value) {
+      //multivalue is | delim
+      $values = explode("|", $value);
+      $query->propertyCondition($property, $values);
+    }
+    unset($parameters['properties']);
+  }
+
+  foreach($parameters as $parameter => $value) {
+    if(strpos($parameter, 'field_') === 0) {
+
+      //deterimine the column value for this field
+      $field_info = field_info_field($parameter);
+
+      $column = array_keys(array_splice($field_info['columns'], 0, 1 ));
+
+      if(count($column) > 0) {
+        $column = $column[0];
+      }
+
+      $query->fieldCondition($parameter, $column, $value);
+    }
+    else {
+      $query->propertyCondition($parameter, $value);
+    }
+  }
+
+  if($drupalBundle != null) {
+    $query->entityCondition('bundle', $drupalBundle);
+  }
+
+  $totalQuery = clone $query;
+
+  $total = $totalQuery->count()->execute();
+
+  $query->range($countOffset, $perPage);
+
+  $result = $query->execute();
+
+  if (isset($result[$entity_type])) {
+    $id = array_keys($result[$entity_type]);
+    $data = entity_load($entity_type, $id);
+
+    $data = array_values($data);
+
+    $count = count($data);
+
+    foreach($data as $idx => $object) {
+      $data[$idx] = (array)$object;
+    }
+
+    $ret = array();
+
+    $ret['total'] = (int)$total;
+    $ret['count'] = $count;
+    $ret['results'] = array_values($data);
+    return $ret;
+  }
+
+  return '{}';
+}
+
+/**
+ * Updates an entity.
+ *
+ * @param integer
+ *   Id of the entity to update.
+ * @param string
+ *   The entity type to create. Examples: 'node', 'user'
+ * @param string
+ *   The bundle of the given entity type to create. Examples: 'page', 'blog'
+ * @param array
+ *   An array of values, keyed by property names.
+ *
+ * @return object
+ *   The updated entity object or FALSE on failure.
+ */
+function tom_update_drupal_entity($entity_id, $entity_type, $entityData) {
+  try {
+    $entity = array();
+
+    $field_map = field_info_field_map();
+
+    if($entity_type == "node") {
+      $entity = node_load($entity_id);
+    }
+    else if($entity_type == "file") {
+      $entity = file_load($entity_id);
+    }
+    else {
+      $entity = entity_load_single($entity_type, $entity_id);
+    }
+
+    $wrapper = entity_metadata_wrapper($entity_type, $entity);
+
+    foreach($entityData as $field => $value) {
+      if(is_string($value)) {
+        $value = strip_tags($value);
+      }
+
+      tom_entity_field_set($wrapper, $field, $value);
+    }
+
+    // Save the changes
+    $wrapper->save();
+  }
+  catch(Exception $ex) {
+    return FALSE;
+  }
+
+  return $entity;
+}
+
+/**
+ * Updates a number of entities.
+ *
+ * @param string
+ *   The entity type to create. Examples: 'node', 'user'
+ * @param string
+ *   The bundle of the given entity type to create. Examples: 'page', 'blog'
+ * @param array
+ *   An array of entities as entity data arrays.
+ *
+ * @return boolean
+ *   TRUE if every call returns successfully. FALSE if there is a failure.
+ */
+function tom_update_drupal_entities($entity_type, $drupalBundle, $entities) {
+  return tom_iterate_on_entities("tom_update_drupal_entity", $entity_type, $drupalBundle, $entities, TRUE);
+}
+
+/**
+ * Deletes an entity.
+ *
+ * @param integer
+ *   Id of the entity to update.
+ * @param string
+ *   The entity type to create. Examples: 'node', 'user'
+ * @param string
+ *   The bundle of the given entity type to create. Examples: 'page', 'blog'
+ * @param array
+ *   An array of values, keyed by property names.
+ *
+ * @return object
+ *   The updated entity object or FALSE on failure.
+ */
+function tom_delete_drupal_entity($entity_id, $entity_type, $entityData) {
+
+  try {
+    node_delete($entity_id);
+  }
+  catch(Exception $ex) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Deletes a number of entities.
+ *
+ * @param string
+ *   The entity type to create. Examples: 'node', 'user'
+ * @param string
+ *   The bundle of the given entity type to create. Examples: 'page', 'blog'
+ * @param array
+ *   An array of entities as entity data arrays.
+ *
+ * @return boolean
+ *   TRUE if every call returns successfully. FALSE if there is a failure.
+ */
+function tom_delete_drupal_entities($entity_type, $drupalBundle, $entities) {
+  return tom_iterate_on_entities("tom_delete_drupal_entity", $entity_type, $drupalBundle, $entities, TRUE);
+}
+
+
+/**
+ * Helper function: iterates over entities calling a function on each of them.
+ *
+ * @param string
+ *   The function name to call.
+ * @param string
+ *   The entity type to create. Examples: 'node', 'user'
+ * @param string
+ *   The bundle of the given entity type to create. Examples: 'page', 'blog'
+ * @param array
+ *   An array of entities.
+ *
+ * @return boolean
+ *   TRUE if every call returns successfully. FALSE if there is a failure.
+ */
+function tom_iterate_on_entities($function, $entity_type, $drupalBundle, $entities, $entityExists = FALSE) {
+  $response = TRUE;
+
+  if (!function_exists($function)) {
+    return FALSE;
+  }
+
+  foreach ($entities as $entity_data) {
+    if($entityExists) {
+      list($entityId, $revisionId, $bundle) = entity_extract_ids($entity_type, $entity_data);
+      if(!$function($entityId, $entity_type, $entity_data)) {
+        $response = FALSE;
+      }
+    }
+    else if(!$function($entity_type, $drupalBundle, $entity_data)) {
+      $response = FALSE;
+    }
+  }
+
+  return $response;
+}
+
+/**
+ * Helper function: breaks up the request into the singular and calls the filter
+ * function on them.
+ *
+ * The syntax is parameters | delimited and+values
+ * Example: 1|4|5+TID1|TID2|TI3
+ * it will apply those parameters to that value list
+ */
+function tom_apply_many_multi_filter(&$query, &$query_parameters, $master_condition, $condition) {
+
+  if(array_key_exists($master_condition, $query_parameters)) {
+    //break up the parameters and the values
+    $data = explode("+", $query_parameters[$master_condition]);
+    $values = explode("|", $data[1]);
+    $parameters = explode("|", $data[0]);
+
+    if($parameters[0] == 0) {
+      $filter = $query->createFilter("AND");
+    }
+    else {
+      $filter = $query->createFilter("OR");
+    }
+
+    foreach($values as $value) {
+      //$query_parameters[$condition] = $data[0]."|".$value;
+      //key 0 is the boolean, 0 = false, 1 = true
+      if($parameters[0] == 0) {
+        $filter->condition("field_{$condition}", $value, "<>");
+      }
+      else {
+        $filter->condition("field_{$condition}", $value);
+      }
+    }
+
+    $query->filter($filter);
+
+    unset($query_parameters[$master_condition]);
+  }
+}
+
+/**
+ * Helper function: apply filter with multiple values to solr query.
+ */
+function tom_apply_multi_filter(&$query, &$query_parameters, $condition) {
+  if(array_key_exists($condition, $query_parameters)) {
+
+    if(!is_array($query_parameters[$condition])) {
+      $query_parameters[$condition] = explode("|", $query_parameters[$condition]);
+    }
+
+    if($query_parameters[$condition][0] == 0) {
+      $filter = $query->createFilter("AND");
+    }
+    else {
+      $filter = $query->createFilter("OR");
+    }
+
+    //key 0 is the boolean, 0 = false, 1 = true
+    for($i = 1; $i < count($query_parameters[$condition]); $i++) {
+      if($query_parameters[$condition][0] == 0) {
+        $filter->condition("field_{$condition}", $query_parameters[$condition][$i], "<>");
+      }
+      else {
+        $filter->condition("field_{$condition}", $query_parameters[$condition][$i]);
+      }
+    }
+
+    $query->filter($filter);
+
+    unset($query_parameters[$condition]);
+  }
+}
+
+/**
+ * Helper function: apply empty filter to solr query.
+ */
+function tom_apply_empty_boolean_filter(&$query, &$query_parameters, $condition) {
+  if(array_key_exists($condition, $query_parameters)) {
+
+    if(!is_array($query_parameters[$condition])) {
+      $parameters = explode("|", $query_parameters[$condition]);
+    }
+
+    if($parameters[0] == 0) {
+      $query->condition("field_{$condition}", NULL);
+    }
+    else {
+      $query->condition("field_{$condition}", NULL, "<>");
+    }
+
+    unset($query_parameters[$condition]);
+  }
+}
+
+/**
+ * Helper function: apply boolean filter to solr query.
+ */
+function tom_apply_boolean_filter(&$query, &$query_parameters, $condition) {
+  if(array_key_exists($condition, $query_parameters)) {
+
+    $query->condition("field_{$condition}", $query_parameters[$condition]);
+
+    unset($query_parameters[$condition]);
+  }
+}
+
+/**
+ * Implements hook_search_api_data_type_info().
+ */
+function tom_search_api_data_type_info() {
+  return array(
+    'text_single' => array(
+      'name' => t('Fulltext Single'),
+      'fallback' => 'text',
+      'prefix' => 't',
+    ),
+  );
+}
+
+/**
+ * Implements hook_search_api_solr_query_alter
+ */
+function tom_search_api_solr_query_alter(&$call_args, $query) {
+  //either missing something or this is a bug, and going to fix this here
+
+  //convert any OR field1 = OR field1= crap into an IN statement
+
+  //get the parameters from the OR and condense them
+  foreach($call_args['params']['fq'] as $idx => $paramList) {
+
+    //check if the parameter has an " OR "
+    //TODO does this support <> not equals?
+    if(strpos($paramList, " OR ") > 0) {
+      $fields = explode(" OR ", $paramList);
+
+      $uniqueFields = array();
+
+      foreach ($fields as $field) {
+        preg_match("/\(([]a-z].*):\"(.*?)\"/", $field, $matches);
+
+        if ($matches) {
+          if (array_key_exists($matches[1], $uniqueFields)) {
+            $uniqueFields[$matches[1]][] = $matches[2];
+          } else {
+            $uniqueFields[$matches[1]] = array($matches[2]);
+          }
+        }
+      }
+
+      $newParameters = array();
+
+      //loop through the values and rewite the query
+      foreach ($uniqueFields as $field => $values) {
+        if (count($values) > 1) {
+          $values = "(" . implode(" OR ", $values) . ")";
+          $newParameters[] = "({$field}:{$values})";
+        } else {
+          $newParameters[] = "({$field}:\"{$values[0]}\")";
+        }
+      }
+
+      if ($newParameters) {
+        $p = "(" . implode(" OR ", $newParameters) . ")";
+        $call_args['params']['fq'][$idx] = $p;
+      }
+    }
+  }
+
+  //remove the "" around the queries that contain wild cards
+  foreach($call_args['params']['fq'] as $id => $param) {
+    if(preg_match("/:\"\*.*?\*\"/", $param) === 1) {
+
+      //remove the quotes
+      $new_value = preg_filter("/:\"\*/", ":*", $param);
+      $param = ($new_value == NULL ? $param : $new_value);
+
+      $new_value = preg_filter("/\*\"\)/", "*)", $param);
+      $param = ($new_value == NULL ? $param : $new_value);
+
+      $new_value = preg_filter("/\*\"$/", "*", $param);
+      $param = ($new_value == NULL ? $param : $new_value);
+
+      $call_args['params']['fq'][$id] = $param;
+    }
+  }
+}
+
+/**
+ * Helper function: remove the drupal formatting for a field.
+ */
+function tom_dedrupalize_field($field, $value) {
+
+  //remove the field_ prefix
+  if(strpos($field, "field_") === 0) {
+    $field = preg_replace("/^field_/", "", $field);
+  }
+
+  if(is_array($value) && array_key_exists("und", $value) && count($value['und']) == 1) {
+
+    $array = true;
+
+    while($array) {
+      $value = array_shift($value);
+      $array = is_array($value);
+    }
+
+    if($value == null) {
+      $value = "";
+    }
+  }
+  else if(is_array($value) && array_key_exists("und", $value) && count($value['und']) > 1) {
+
+    $values = array();
+    $value = array_shift($value);
+
+    foreach($value as $v) {
+      $values = array_merge($values, array_values($v));
+    }
+    $value = $values;
+  }
+
+  //kill empty arrays
+  if(is_array($value) && count($value) == 0) {
+    $value = "";
+  }
+
+
+  return array($field => $value);
+}
+
+/**
+ * Helper function: process a block of fields, flattening them out
+ */
+function tom_dedrupalize_fields($field_data, $entity_type = false, $bundle = false, $ignore_list = array()) {
+  $new_data = array();
+
+  foreach($field_data as $field => $value) {
+
+    //remove unneeded drupal fields
+    if(in_array($field, array("rdf_mapping",
+                              "translate",
+                              "language",
+                              "sticky",
+                              "promote",
+                              "comment",
+                              "tnid",
+                              "cid",
+                              "comment_count",
+                              "last_comment_timestamp",
+                              "last_comment_name",
+                              "last_comment_uid",
+                              "vid"))) {
+      continue;
+    }
+    else if(in_array($field, $ignore_list)) {
+      $new_data[$field] = $value;
+      continue;
+    }
+
+    if(strpos($field, "field_") === 0) {
+      $new_data = array_merge($new_data, tom_dedrupalize_field($field, $value));
+    }
+    else {
+      $new_data[$field] = $value;
+    }
+  }
+
+  //do clean up on the fields to be more proper
+  if($entity_type) {
+    $new_data = tom_reformat_taxonomy_reference_field_response($entity_type, $bundle, $new_data);
+    $new_data = tom_reformat_entity_reference_field_response($entity_type, $bundle, $new_data);
+    $new_data = tom_reformat_field_collection_field_response($entity_type, $bundle, $new_data);
+
+    $new_data = tom_reformat_text_field_response($entity_type, $bundle, $new_data);
+  }
+
+  return $new_data;
+}
+
+/**
+ * Helper function: process the fields adding the proper drupal field names and structure
+ */
+function tom_drupalize_fields($entity_type, $bundle, $field_data, $ignore_list = array()) {
+  $new_data = array();
+
+  //we will simply add the field_ back to fields it was removed from
+
+  //get a list of fields used by this entity
+  $query = db_select("field_config_instance")
+              ->fields("field_config_instance", array("field_name"))
+              ->condition("entity_type", $entity_type)
+              ->condition("deleted", 0);
+
+  if($bundle) {
+    $query->condition("bundle", $bundle);
+  }
+
+  $fields = $query->execute()
+                  ->fetchCol();
+
+  //these are kind of a passthrough doenst exist on the list but let it thru lists
+  if($entity_type == "node") {
+    $fields[] = "nid";
+    $fields[] = "vid";
+    $fields[] = "uid";
+    $fields[] = "title";
+  }
+  else if($entity_type == "file") {
+    $fields[] = "fid";
+    $fields[] = "filename";
+    $fields[] = "uid";
+    $fields[] = "filemime";
+    $fields[] = "uri";
+    $fields[] = "filesize";
+    $fields[] = "type";
+    $fields[] = "file";
+  }
+  else if ($entity_type == "taxonomy_term") {
+    $fields[] = "tid";
+    $fields[] = "name";
+    $fields[] = "parent";
+    $fields[] = "order";
+    $fields[] = "depth";
+    $fields[] = "weight";
+  }
+  else if ($entity_type == 'field_collection_item') {
+    $fields[] = 'item_id';
+    $fields[] = 'revision_id';
+    $fields[] = 'field_name';
+  }
+
+  $fields = array_merge($fields, $ignore_list);
+
+  foreach($field_data as $field => $value) {
+    //massage the fields, if there are any that have [0] indexes, move into an array
+    if(preg_match('/(.*)\[([0-9])\]/', $field, $name_data) === 1) {
+      if(!array_key_exists($name_data[1], $field_data)) {
+        $field_data[$name_data[1]] = array();
+      }
+
+      $field_data[$name_data[1]][$name_data[2]] = $value;
+    }
+  }
+
+  foreach($field_data as $field => $value) {
+
+    //its always lower case in drupal
+    $field = strtolower($field);
+
+    //check if the field exists in the list
+    if(!in_array($field, $fields)) {
+      //if not check if the augmented one does
+      if(in_array("field_{$field}", $fields)) {
+        $new_data["field_{$field}"] = $value;
+      }
+    }
+    else {
+      $new_data[$field] = $value;
+    }
+  }
+
+  //touch up any of the taxonomy term reference field data that was passed in
+  $new_data = tom_process_taxonomy_reference_fields($entity_type, $bundle, $new_data);
+  $new_data = tom_process_entity_reference_fields($entity_type, $bundle, $new_data);
+  $new_data = tom_process_field_collection_fields($entity_type, $bundle, $new_data);
+
+  return $new_data;
+}
+
+/**
+ * Helper function: handles the input of taxonomy reference field data,
+ * converting the data into something that can be used by drupal.
+ */
+function tom_process_taxonomy_reference_fields($entity_type, $bundle, $parameters) {
+
+  //determine which fields that this entity has that are taxonomy references
+  $query = db_select("field_config_instance")
+            ->fields("field_config_instance", array('field_name', "data"))
+            ->fields("fc", array("data", "cardinality"));
+
+  $query->addJoin("inner", "field_config", "fc", "field_config_instance.field_id = fc.id");
+  $query->condition("fc.type", "taxonomy_term_reference");
+  $query->condition("field_config_instance.entity_type", $entity_type);
+  $query->condition("fc.deleted", 0);
+  $query->condition("field_config_instance.deleted", 0);
+
+  if($bundle) {
+    $query->condition("field_config_instance.bundle", $bundle);
+  }
+
+  $query->distinct();
+
+  $term_refs = $query->execute()
+                      ->fetchAll();
+
+  foreach ($term_refs as $field) {
+    if (array_key_exists($field->field_name, $parameters)) {
+      $term_ids = array();
+
+      // We only allow data in the format we provide it.
+      // @see tom_reformat_taxonomy_reference_field_response()
+      if(is_array($parameters[$field->field_name])) {
+        foreach ($parameters[$field->field_name] as $tid => $label) {
+          $term_ids[] = $tid;
+        }
+
+        if ($field->cardinality == 1) {
+          $term_ids = array_shift($term_ids);
+        }
+
+        $parameters[$field->field_name] = $term_ids;
+      }
+    }
+  }
+
+  return $parameters;
+}
+
+/**
+ * Helper function: handles the input of entity reference field data,
+ * converting the data into something that can be used by drupal.
+ */
+function tom_process_entity_reference_fields($entity_type, $bundle, $parameters) {
+  //determine which fields that this entity has that are reference fields
+  // currently supports entityreference, node_reference and user_reference
+  $query = db_select("field_config_instance")
+            ->fields("field_config_instance", array('field_name'))
+            ->fields("fc", array("cardinality", "data", "type"));
+
+  $query->addJoin("inner", "field_config", "fc", "field_config_instance.field_id = fc.id");
+  $query->condition("fc.type", array("node_reference", "entityreference", "user_reference"));
+  $query->condition("field_config_instance.entity_type", $entity_type);
+  $query->condition("fc.deleted", 0);
+  $query->condition("field_config_instance.deleted", 0);
+
+  if($bundle) {
+    $query->condition("field_config_instance.bundle", $bundle);
+  }
+
+  $query->distinct();
+
+  $ref_fields = $query->execute()
+                      ->fetchAll();
+
+  if(!is_array($parameters)) {
+    $parameters = (array)$parameters;
+  }
+
+  foreach($ref_fields as $field) {
+    if(array_key_exists($field->field_name, $parameters)) {
+      $entity_ids = array();
+
+      // We only allow data in the format we provide it.
+      // @see tom_reformat_entity_reference_field_response()
+      if(is_array($parameters[$field->field_name])) {
+        foreach ($parameters[$field->field_name] as $eid => $label) {
+          $entity_ids[] = $eid;
+        }
+
+        if ($field->cardinality == 1) {
+          $entity_ids = array_shift($entity_ids);
+        }
+
+        $parameters[$field->field_name] = $entity_ids;
+      }
+    }
+  }
+
+  return $parameters;
+}
+
+/**
+ * Helper function: handles the input of field collection field data,
+ * converting the data into something that can be used by drupal.
+ */
+function tom_process_field_collection_fields($entity_type, $bundle, $parameters) {
+  // Determine which fields that this entity has that are field collections
+  $query = db_select('field_config_instance', 'fci')
+    ->fields('fci', array('field_name'));
+  $query->innerJoin('field_config', 'fc', 'fci.field_id=fc.id');
+  $query->condition('fc.type', 'field_collection')
+    ->condition('fc.deleted', 0)
+    ->condition('fci.deleted', 0);
+  if ($bundle) {
+    $query->condition('fci.bundle', $bundle);
+  }
+  $field_collections = $query->distinct()
+    ->execute()
+    ->fetchAll();
+  if(!is_array($parameters)) {
+    $parameters = (array)$parameters;
+  }
+  foreach ($field_collections as $field) {
+    if (array_key_exists($field->field_name, $parameters)) {
+      $original = $parameters[$field->field_name];
+      $parameters[$field->field_name] = array();
+      foreach ($original as $row) {
+        $parameters[$field->field_name][] = tom_drupalize_fields('field_collection_item', $field->field_name, $row);
+      }
+    }
+  }
+
+  return $parameters;
+}
+
+/**
+ * Helper function: reformat the taxonomy term reference data that is returned
+ * to the feed, to make it more useful, include the tid and the value, not just
+ * the value.
+ */
+function tom_reformat_taxonomy_reference_field_response($entity_type, $bundle, $parameters) {
+
+  //determine which fields that this entity has that are taxonomy references
+  $query = db_select("field_config_instance")
+            ->fields("field_config_instance", array('field_name'))
+            ->fields("fc", array("cardinality", "data"));
+
+  $query->addJoin("inner", "field_config", "fc", "field_config_instance.field_id = fc.id");
+  $query->condition("fc.type", "taxonomy_term_reference");
+  $query->condition("field_config_instance.entity_type", $entity_type);
+  $query->condition("fc.deleted", 0);
+  $query->condition("field_config_instance.deleted", 0);
+
+  if($bundle) {
+    $query->condition("field_config_instance.bundle", $bundle);
+  }
+
+  $query->distinct();
+
+  $term_refs = $query->execute()
+                      ->fetchAll();
+
+  if(!is_array($parameters)) {
+    $parameters = (array)$parameters;
+  }
+
+  $term_ids = array();
+  $term_ids_by_field = array();
+  $check_fields = array();
+
+  foreach($term_refs as $field) {
+    $check_field = $field->field_name;
+
+    //remove the field_ at this point they would have been removed
+    if(strpos($check_field, "field_") === 0) {
+      $check_field = preg_replace("/^field_/", "", $check_field);
+    }
+
+    if(array_key_exists($check_field, $parameters)) {
+      $check_fields[] = $check_field;
+
+      // Single-value field, should be a single tid.
+      if ($field->cardinality == 1) {
+        if (is_array($parameters[$check_field])) {
+          $tid = array_shift($parameters[$check_field]);
+          $term_ids[] = $tid;
+          $term_ids_by_field[$check_field] = array($tid);
+        }
+        elseif (!empty($parameters[$check_field])) {
+          $tid = $parameters[$check_field];
+          $term_ids[] = $tid;
+          $term_ids_by_field[$check_field] = array($tid);
+        }
+      }
+      // Multi-value field, should be an array of tids.
+      else {
+        if (is_array($parameters[$check_field])) {
+          $tids = array_values($parameters[$check_field]);
+          $term_ids = array_merge($term_ids, $tids);
+          $term_ids_by_field[$check_field] = $tids;
+        }
+      }
+    }
+  }
+
+  if (!empty($term_ids)) {
+    $terms = taxonomy_term_load_multiple($term_ids);
+    foreach ($check_fields as $field) {
+      $parameters[$field] = array();
+      if (isset($term_ids_by_field[$field])) {
+        foreach ($term_ids_by_field[$field] as $tid) {
+          if (isset($terms[$tid]->name)) {
+            $parameters[$field][$tid] = $terms[$tid]->name;
+          }
+        }
+      }
+      $parameters[$field] = (object) $parameters[$field];
+    }
+  }
+
+  return $parameters;
+}
+
+/**
+ * Helper function: reformat the entity reference data that is returned to the
+ * feed, to make it more useful, include the entity id, entity type, bundle and
+ * label.
+ */
+function tom_reformat_entity_reference_field_response($entity_type, $bundle, $parameters) {
+  //determine which fields that this entity has that are reference fields
+  // currently supports entityreference, node_reference and user_reference
+  $query = db_select('field_config_instance', 'fci');
+  $query->innerJoin('field_config', 'fc', 'fci.field_id = fc.id');
+  $query->fields('fc', array('cardinality', 'data', 'type'));
+  $query->fields('fci', array('field_name', 'data'));
+  $query->condition('fc.type', array('node_reference', 'entityreference', 'user_reference'));
+  $query->condition('fci.entity_type', $entity_type);
+  $query->condition('fc.deleted', 0);
+  $query->condition('fci.deleted', 0);
+
+  if($bundle) {
+    $query->condition('fci.bundle', $bundle);
+  }
+
+  $query->distinct();
+
+  $results = $query->execute();
+
+  $ref_fields = array();
+  foreach ($results as $row) {
+    $row->data     = unserialize($row->data);
+    $row->fci_data = unserialize($row->fci_data);
+
+    //remove the field_ at this point they would have been removed
+    $check_field = $row->field_name;
+    if(strpos($check_field, 'field_') === 0) {
+      $check_field = preg_replace('/^field_/', '', $check_field);
+    }
+
+    $ref_fields[$check_field] = $row;
+  }
+
+  if(!is_array($parameters)) {
+    $parameters = (array)$parameters;
+  }
+
+  $entity_ids = array();
+  $entity_ids_by_field = array();
+  $check_fields = array();
+
+  foreach ($ref_fields as $check_field => &$ref_field) {
+
+    if(array_key_exists($check_field, $parameters)) {
+      switch ($ref_field->type) {
+        case 'node_reference':
+          $ref_type = 'node';
+          break;
+
+        case 'user_reference':
+          $ref_type = 'user';
+          break;
+
+        case 'entityreference':
+          $ref_type = $ref_field->data['settings']['target_type'];
+          break;
+
+        default:
+          throw new Exception('Unsupported field type.');
+          break;
+      }
+
+      if (!isset($entity_ids[$ref_type])) {
+        $entity_ids[$ref_type] = array();
+      }
+
+      // Single-value field, should be a single entity id.
+      if ($ref_field->cardinality == 1) {
+        if (is_array($parameters[$check_field])) {
+          $eid = array_shift($parameters[$check_field]);
+          $entity_ids[$ref_type][] = $eid;
+          $entity_ids_by_field[$check_field] = array($eid);
+        }
+        elseif (!empty($parameters[$check_field])) {
+          $eid = $parameters[$check_field];
+          $entity_ids[$ref_type][] = $eid;
+          $entity_ids_by_field[$check_field] = array($eid);
+        }
+      }
+      // Multi-value field, should be an array of entity ids.
+      else {
+        if (is_array($parameters[$check_field])) {
+          $eids = array_values($parameters[$check_field]);
+          $entity_ids[$ref_type] = array_merge($entity_ids[$ref_type], $eids);
+          $entity_ids_by_field[$check_field] = $eids;
+        }
+      }
+
+      if (!isset($check_fields[$ref_type])) {
+        $check_fields[$ref_type] = array();
+      }
+      $check_fields[$ref_type][] = $check_field;
+    }
+  }
+
+  foreach ($entity_ids as $ref_type => $eids) {
+    if (!empty($eids)) {
+      $entities = entity_load($ref_type, $eids);
+      foreach ($check_fields[$ref_type] as $field) {
+
+        $label_field = NULL;
+        if (isset($ref_fields[$field]->fci_data['widget']['label_field'])) {
+          $label_field = $ref_fields[$field]->fci_data['widget']['label_field'];
+        }
+
+        $parameters[$field] = array();
+        if (isset($entity_ids_by_field[$field])) {
+          foreach ($entity_ids_by_field[$field] as $eid) {
+            if (isset($entities[$eid])) {
+              $wrapper = entity_metadata_wrapper($ref_type, $entities[$eid]);
+              if (
+                !empty($label_field)
+                && !empty($wrapper->{$label_field})
+              ) {
+                $parameters[$field][$eid] = $wrapper->{$label_field}->value();
+              }
+              else {
+                $parameters[$field][$eid] = entity_label($ref_type, $entities[$eid]);
+              }
+            }
+          }
+        }
+        $parameters[$field] = (object) $parameters[$field];
+      }
+    }
+  }
+
+  return $parameters;
+}
+
+
+/**
+ * Helper function: things like a text field coming thru as a single value array
+ * or an empty text field being an empty array need to clean this up.
+ */
+function tom_reformat_text_field_response($entity_type, $bundle, $data) {
+  //determine which fields that this entity has that are taxonomy references
+  $query = db_select("field_config_instance")
+            ->fields("field_config_instance", array('field_name'));
+
+  $query->addJoin("inner", "field_config", "fc", "field_config_instance.field_id = fc.id");
+  $query->condition("fc.type", array("text", "number", "text_long"), "IN");
+  $query->condition("fc.deleted", 0);
+  $query->condition("field_config_instance.deleted", 0);
+  $query->distinct();
+
+  $term_refs = $query->execute()
+                      ->fetchCol();
+
+  foreach($term_refs as $field) {
+
+    //remove the field_ at this point they would have been removed
+    if(strpos($field, "field_") === 0) {
+      $field = preg_replace("/^field_/", "", $field);
+    }
+
+    if(array_key_exists($field, $data)) {
+      //if its an array thats wrong
+      if(is_array($data[$field])) {
+        //if its empty make it a ""
+        if(count($data[$field]) == 0) {
+          $data[$field] = "";
+        }
+        else if(count($data[$field]) == 1) {
+          $data[$field] = $data[$field][0];
+        }
+      }
+    }
+  }
+
+  return $data;
+}
+
+/**
+ * Helper function: reformat the field collection data that is returned to the
+ * feed, to make it more useful.
+ */
+function tom_reformat_field_collection_field_response($entity_type, $bundle, $data) {
+  // Determine which fields that this entity has that are field collections
+  $query = db_select('field_config_instance', 'fci')
+    ->fields('fci', array('field_name'));
+  $query->innerJoin('field_config', 'fc', 'fci.field_id=fc.id');
+  $field_collections = $query->condition('fc.type', 'field_collection')
+    ->condition('fc.deleted', 0)
+    ->condition('fci.deleted', 0)
+    ->distinct()
+    ->execute()
+    ->fetchCol();
+
+  foreach ($field_collections as $field_name) {
+    $field = $field_name;
+    //remove the field_ at this point they would have been removed
+    if (strpos($field_name, "field_") === 0) {
+      $field = preg_replace("/^field_/", "", $field_name);
+    }
+
+    if (array_key_exists($field, $data)) {
+      $rows = array();
+
+      // Handle field collection ID coming back as a single string
+      if (!is_array($data[$field])) {
+        $data[$field] = array($data[$field]);
+      }
+
+      $fcids = array_values($data[$field]);
+      $field_collection_items = field_collection_item_load_multiple($fcids);
+      foreach ($field_collection_items as $field_collection_item) {
+        $item = new ArrayObject($field_collection_item);
+        $row = tom_dedrupalize_fields($item, 'field_collection_item', $field_name, array('field_name'));
+        $rows[] = (object) $row;
+      }
+
+      $data[$field] = $rows;
+    }
+  }
+
+  return $data;
+}
+
+/**
+ * Helper function: gets the tid of the term if it exists, if not will create
+ * and return that new term tid.
+ */
+function tom_get_term_id_from_value($term_value, $vid, $create_not_found = true) {
+  //convert the term values into term ids
+  $tid = db_select("taxonomy_term_data")
+          ->fields("taxonomy_term_data", array("tid"))
+          ->condition("vid", $vid)
+          ->condition("name", $term_value)
+          ->execute()
+          ->fetchField();
+
+  //if there isnt a term for this id create it
+  if($create_not_found && !$tid) {
+
+    $term = new stdClass();
+    $term->name = $term_value;
+    $term->vid = $vid;
+
+    if(taxonomy_term_save($term) == SAVED_NEW) {
+      $tid = $term->tid;
+    }
+  }
+
+  return $tid;
+}
+
+/**
+ * Set a field value on an entity.
+ *
+ * @param EntityMetadataWrapper $wrapper
+ *   The wrapper from entity_metadata_wrapper().
+ * @param string $field_name
+ *   The field name to set.
+ * @param mixed $value
+ *   The value to set.
+ */
+function tom_entity_field_set($wrapper, $field_name, $value) {
+  $field_map = field_info_field_map();
+
+  // If the field is a file field, the value should be a file object.
+  if (isset($field_map[$field_name]) && in_array($field_map[$field_name]['type'], array('file', 'image'))) {
+    // Multi-dimensional array, means this is probably a multi-valued file field
+    if (is_array($value) && array_key_exists(0, $value) && is_array($value[0])) {
+      $values = array();
+      foreach ($value as $delta => $val) {
+        if (is_numeric($val)) {
+          $val = file_load($val);
+        }
+        else {
+          $val = (object) $val;
+        }
+        if (isset($val->fid) && $val->fid) {
+          $val->display = isset($val->display) ? $val->display : 0;
+          $values[] = (array) $val;
+        }
+      }
+      $wrapper->{$field_name}->set($values);
+    }
+    else {
+      if (is_numeric($value)) {
+        $value = file_load($value);
+      }
+      else {
+        $value = (object) $value;
+      }
+      $wrapper->$field_name->file->set($value);
+    }
+  }
+  else if (isset($field_map[$field_name]) && in_array($field_map[$field_name]['type'], array('datetime', 'date', 'datestamp'))) {
+    $original = $value;
+    if (empty($value)) {
+      $value = NULL;
+    }
+    else {
+      // Convert it to an array so we can loop through the values (start/end date)
+      if (!is_array($value)) {
+        $value = array('value' => $value);
+      }
+
+      foreach ($value as $key => $date) {
+        // No matter the type apparently it should always be a unix timestamp
+        $value[$key] = strtotime($date);
+      }
+
+      // If there is only a start date, then set will fail if we pass an array
+      if (count($value) == 1 && isset($value['value'])) {
+        $value = $value['value'];
+      }
+    }
+
+    $wrapper->$field_name->set($value);
+  }
+  else if (isset($field_map[$field_name]) && $field_map[$field_name]['type'] == 'field_collection') {
+    $original_value = array();
+    if ($wrapper->getIdentifier()) {
+      $original_entity = entity_load_single($wrapper->type(), $wrapper->getIdentifier());
+      if ($original_entity) {
+        $original_wrapper = entity_metadata_wrapper($wrapper->type(), $original_entity);
+        $original_value = $original_wrapper->{$field_name}->value();
+      }
+    }
+    foreach ($value as $delta => $item) {
+      $data = $item;
+      unset($data['item_id'], $data['revision_id'], $data['field_name']);
+
+      if (isset($item['item_id'])) {
+        tom_update_drupal_entity($item['item_id'], 'field_collection_item', $data);
+      }
+      else if (isset($original_value[$delta])) {
+        tom_update_drupal_entity($original_value[$delta]->item_id, 'field_collection_item', $data);
+      }
+      else {
+        if (!empty($data)) {
+          $fci = entity_create('field_collection_item', $item);
+          $fci->setHostEntity($wrapper->type(), $wrapper->value());
+          // YES THIS IS DOUBLED, DO NOT REMOVE, see BMB-725 & BMB-701
+          $fci->save(TRUE);
+          // YES THIS IS DOUBLED, DO NOT REMOVE, see BMB-725 & BMB-701
+          $fci->save();
+          if ($fci->item_id) {
+            tom_update_drupal_entity($fci->item_id, 'field_collection_item', $data);
+          }
+        }
+      }
+    }
+  }
+  else {
+    $wrapper->$field_name->set($value);
+  }
+}

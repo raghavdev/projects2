@@ -1,0 +1,13 @@
+<div class="filter">
+  <div class="filter-header">
+    <h3>{{filterName}}</h3>
+  </div>
+  <!-- Filter -->
+  <div class="filter-rows-wrapper">
+    <div class="filter-row-wrapper" ng-repeat="item in filter | orderBy:'order'">
+      <div class="filter-row" accordion accordion-state="closed" accordion-model="item" accordion-header-template="filter-accordion-header.html" on-accordion-item-click="filterRecords" accordion-content-template="filter-accordion-content.html">
+      </div>
+    </div>
+  </div>
+</div>
+

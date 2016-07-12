@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Blue Marble - Amazon S3 feature.
+ */
+
+include_once 'bmb_amazons3.features.inc';

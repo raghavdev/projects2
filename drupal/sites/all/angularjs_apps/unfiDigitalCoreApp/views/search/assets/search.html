@@ -1,0 +1,78 @@
+<div id="assets-search" class="assets-search search-form">
+  <div id="search-instructions">Enter Item #, UPC, Keyword or leave empty.</div>
+
+  <!-- Categories -->
+  <div id="categories-query" class="query-section">
+    <div class="query-instructions">
+      <p>Asset <button ng-model="search.assets.asset_category.qualifier" value="1" ng-click="search.assets.asset_category.qualifier = 1" ng-class="(search.assets.asset_category.qualifier)? selected : ''">Must</button>
+          <button ng-model="search.assets.asset_category.qualifier" value="0" ng-click="search.assets.asset_category.qualifier = 0" ng-class="(search.assets.asset_category.qualifier == 0)? selected : ''">Must Not</button> be in these categories.</p>
+    </div>
+    <div tagimacator-save-to="search.assets.asset_category.categories" tagimacator tagimacator-data="getCategories" tagimacator-filter-by="name" tagimacator-save-by="tid" tagimacator-on-select="updateModel()" tagimacator-debounce-interval="50"></div>
+  </div>
+
+  <!-- FIle Type -->
+  <div id="type-query" class="query-section">
+    <div class="query-instructions">
+      <p>Asset <button ng-model="search.assets.file_extension.qualifier" value="1" ng-click="search.assets.file_extension.qualifier = 1" ng-class="(search.assets.file_extension.qualifier)? selected : ''">Must</button>
+          <button ng-model="search.assets.file_extension.qualifier" value="0" ng-click="search.assets.file_extension.qualifier = 0" ng-class="(search.assets.file_extension.qualifier == 0)? selected : ''">Must Not</button> be of these file types.</p>
+    </div>
+    <!-- <div typetagger="brands"></div> -->
+    <div tagimacator-save-to="search.assets.file_extension.types" tagimacator tagimacator-data="supportedFileTypes" tagimacator-filter-by="ext" tagimacator-save-by="ext" tagimacator-on-select="updateModel()"></div>
+  </div>
+
+  <!-- Name -->
+  <div id="name-query" class="query-section">
+    <div class="query-instructions">
+      <p>Asset <button ng-model="search.assets.asset_name.qualifier" value="1" ng-click="search.assets.asset_name.qualifier = 1" ng-class="(search.assets.asset_name.qualifier)? selected : ''">Must</button>
+          <button ng-model="search.assets.asset_name.qualifier" value="0" ng-click="search.assets.asset_name.qualifier = 0" ng-class="(search.assets.asset_name.qualifier == 0)? selected : ''">Must Not</button></p>
+    </div>
+        <md-select ng-model="search.assets.asset_name.parameter" class="dark-theme" placeholder="Start With">
+          <md-option value="0">Start With</md-option>
+          <md-option value="1">End With</md-option>
+          <md-option value="2">Contains</md-option>
+        </md-select>
+      <md-input-container class="dark-theme">
+        <input type="text" ng-model="search.assets.asset_name.keywords" class="dark-theme search-form__input">
+      </md-input-container>
+  </div>
+
+  <!-- Date-range -->
+  <div id="date-query">
+    <div class="query-instructions">
+      <p>Asset <button ng-model="search.assets.asset_dates.qualifier" value="1" ng-click="search.assets.asset_dates.qualifier = 1" ng-class="(search.assets.asset_dates.qualifier)? selected : ''">Must</button>
+          <button ng-model="search.assets.asset_dates.qualifier" value="0" ng-click="search.assets.asset_dates.qualifier = 0" ng-class="(search.assets.asset_dates.qualifier == 0)? selected : ''">Must Not</button>
+      <md-select ng-model="search.assets.asset_dates.option" class="dark-theme" placeholder="Added Since">
+        <md-option value="0">Have Been Added Between</md-option>
+        <md-option value="1">Added Since</md-option>
+        <md-option value="2">Added Before</md-option>
+        <md-option value="3">Have Been Updated Between</md-option>
+        <md-option value="4">Modified Since</md-option>
+        <md-option value="5">Modified Before</md-option>
+      </md-select>
+      </p>
+    </div>
+      <md-input-container class="dark-theme">
+          <input type="date" ng-model="search.assets.asset_dates.start">
+      </md-input-container>
+      <div ng-hide="(search.assets.asset_dates.option != 0) && (search.assets.asset_dates.option != 3)">
+          <md-input-container class="dark-theme">
+              <input type="date" ng-model="search.asset.asset_dates.end">
+          </md-input-container>
+      </div>
+  </div>
+  <!-- Attributes-->
+  <div id="attribute-query">
+    <!-- Primary Image -->
+    <div id="primary-image" class="query-instructions">
+      <ul class="attribute-row">
+        <li>
+          <md-checkbox ng-model="search.assets.internal_only.enabled"></md-checkbox>
+        </li>
+        <li>Only Assets that</li>
+        <li><button ng-model="search.assets.internal_only.qualifier" value="1" ng-click="search.assets.internal_only.qualifier = 1" ng-class="(search.assets.internal_only.qualifier)? selected : ''">are</button>
+            <button ng-model="search.assets.internal_only.qualifier" value="0" ng-click="search.assets.internal_only.qualifier = 0" ng-class="(search.assets.internal_only.qualifier == 0)? selected : ''">are not</button></li>
+        <li>for internal_only use.</li>
+      </ul>
+    </div>
+  </div>
+</div>

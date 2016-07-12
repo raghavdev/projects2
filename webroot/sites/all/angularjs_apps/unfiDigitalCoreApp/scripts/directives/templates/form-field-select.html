@@ -1,0 +1,17 @@
+<div class="{{field_name}} form-field form-field-select">
+  <label ng-show="section_meta.label">{{section_meta.label}}<span ng-show="{{section_meta.required}}"> *</span>
+  <div ng-if="section_meta.marketing_icons != ''" class="marketing-icons">
+    <i ng-repeat="icon in section_meta.marketing_icons" class="{{icon}}"></i>
+  </div>
+</label>
+<md-select name="{{field_name}}" ng-required="{{section_meta.required}}" id="{{section_meta.record}}" ng-model="record[field_name]" ng-model-options="{debounce:500}" placeholder="None Selected" ng-if="!nopermission" drupal-validate>
+<md-option ng-repeat="option in getOptions()" ng-value="option.value" ng-selected="isSelected(option.value, record[field_name])">{{option.label}}</md-option>
+</md-select>
+<div class="disabled" ng-if="nopermission && isString(record[field_name])">{{record[field_name]}}</div>
+<div class="disabled" ng-if="nopermission && isObject(record[field_name])" ng-repeat="value in record[field_name] track by $index">{{value}}</div>
+<div ng-messages="recordForm[field_name].$error">
+  <div ng-message="required">This is required!</div>
+  <div ng-message="drupal">{{drupal_messages}}</div>
+</div>
+<div class="field-description" ng-bind-html="section_meta.description"></div>
+</div>

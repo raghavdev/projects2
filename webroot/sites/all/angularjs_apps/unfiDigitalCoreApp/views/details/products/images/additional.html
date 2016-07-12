@@ -1,0 +1,82 @@
+<!-- Products detail pane Images tab Additional Images section -->
+
+<legend>{{formatImageTitle(image_type)}} Images</legend>
+
+<!-- Update image form -->
+<section class="additional-image-wrapper"ng-repeat="image in image_data" class="twelve columns" ng-show="image_data.length">
+  <!-- Left detail column -->
+  <section class="detail-main-left six columns">
+    <!-- Update image form (an image already exists)-->
+    <form class="image-form image-form-update detail-meta">
+      <header>
+        <div class="image-form__image-wrapper">
+          <img ng-src="{{image.thumb_url}}" class="detail-image">
+        </div>
+        <div class="image-form__meta-wrapper">
+
+          <md-select ng-model="asset_models.rendition" ng-change="downloadAsset(asset_models.rendition)" class="field-image-style-select button-icon button-download">
+            <md-option ng-value="{{image.renditions.thumbnail}}">Thumbnail</md-option>
+            <md-option ng-value="{{image.renditions.medium}}">Medium</md-option>
+            <md-option ng-value="{{image.renditions.large}}">Large</md-option>
+          </md-select>
+          <a class="button-delete button-icon clickable" ng-click="modal('delete-asset-confirm', record[meta[view].identifier], image.fid)">Remove Image</a>
+          <ul class="meta-wrapper__meta-data">
+            <li>{{ image.filename }}</li>
+            <li ng-repeat="descriptor in meta[view].detail_pane.images.descriptors">{{ image | records: descriptor.field:descriptor }}</li>
+          </ul>
+        </div>
+      </header>
+      <section class="field-image-upload field-file-upload">
+        <label>Update Image</label>
+        <md-input-container>
+          <label>Alt Text</label>
+          <input resource="assets" identifier="{{image.fid}}" type="text" record="alt" ng-model="image.alt">
+        </md-input-container>
+        <md-checkbox resource="assets" identifier="{{image.fid}}" record="internal_only" validator="always" ng-model="image.internal_only">Internal Only
+        </md-checkbox>
+      </section>
+    </form>
+  </section>
+  <!-- File detail table -->
+  <section ng-show="image_data.filename" class="detail-data detail-main-right six columns">
+    <!-- File detail table -->
+    <section class="detail-data">
+      <div class="asset-detail-title">
+        <header>
+          <label>File Name</label>
+          <h1>{{image.filename}}</h1>
+        </header>
+      </div>
+      <table class="detail-table">
+        <tbody>
+          <tr ng-repeat="descriptor in meta[view].detail_pane.images.descriptors" >
+            <th class="table-label">{{descriptor.label}}</th>
+            <td class="table-data">{{image | records: descriptor.field:descriptor}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </section>
+</section>
+
+<!-- Upload image form -->
+<section class="twelve columns">
+  <!-- Left detail column -->
+  <section class="detail-main-left six columns">
+    <!-- Upload image form (no image exists)-->
+    <form class="image-form image-form-upload">
+      <div class="field-image-upload field-file-upload">
+        <label>Upload Image</label>
+        <input type="file" id="{{record[meta[view].identifier] + '_' + image_type}}_image">
+        <md-button ng-click="uploadAsset({ident: record[meta[view].identifier], type: image_type, use_modal:true})" class="button-upload button-text-only">Upload</md-button>
+        <img class="upload-marquee" ng-show="uploadStarted" src="/sites/all/angularjs_apps/unfiDigitalCoreApp/images/marquee.gif">
+        <md-input-container>
+          <label>Alt Text</label>
+          <input resource="assets" identifier="{{image.fid}}" type="text" record="alt" ng-model="image.alt">
+        </md-input-container>
+        <md-checkbox resource="assets" identifier="{{image.fid}}" record="internal_only" validator="always" ng-model="image.internal_only">Internal Only
+        </md-checkbox>
+      </div>
+    </form>
+  </section>
+</section>

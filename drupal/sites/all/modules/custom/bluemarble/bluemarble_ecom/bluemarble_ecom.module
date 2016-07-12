@@ -1,0 +1,48 @@
+<?php
+/**
+ * @file
+ * Code for the Blue Marble Ecom feature.
+ */
+
+include_once 'bluemarble_ecom.features.inc';
+
+/**
+ * Implements hook_menu().
+ *
+ */
+function bluemarble_ecom_menu() {
+    $items = array();
+
+    // small helper endpoint for the ecommerce categories
+    $items['service/digitalcore/ecommerce_categories'] = array(
+      'page callback' => 'bluemarble_ecom_categories',
+      'access arguments' => array('access blue marble ecomm tab'),
+      'type' => MENU_CALLBACK,
+      'delivery callback' => 'drupal_json_output'
+    );
+
+    return $items;
+}
+
+function bluemarble_ecom_categories() {
+
+  $categories = "";
+
+  $vid = db_select("taxonomy_vocabulary")
+              ->fields("taxonomy_vocabulary", array("vid"))
+              ->condition("machine_name", "ecom_categories")
+              ->execute()
+              ->fetchField();
+
+  $q = db_select("taxonomy_term_data")
+        ->fields("taxonomy_term_data", array("tid", "name"));
+  $q->addJoin("inner", "taxonomy_term_hierarchy", "h", "h.tid = taxonomy_term_data.tid");
+  $q->fields("h", array("parent"));
+  $q->condition("taxonomy_term_data.vid", $vid);
+  $q->orderBy("parent");
+
+  $categories = $q->execute()->fetchAll();
+
+  return $categories;
+
+}

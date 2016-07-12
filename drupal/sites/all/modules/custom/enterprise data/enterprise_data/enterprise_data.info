@@ -1,0 +1,10 @@
+core = "7.x"
+files[] = enterprise_data.inc
+dependencies[] = digital_core_staging
+dependencies[] = digital_core_data
+dependencies[] = field_group
+
+description = "Enterprise Data"
+name = "enterprise_data"
+package = "unfi"
+php = "5.2.4"

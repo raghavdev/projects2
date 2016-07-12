@@ -1,0 +1,5 @@
+core = "7.x"
+description = "Product Primary Images processor"
+name = "product_primary_images"
+package = "Bulk Upload Wizard"
+php = "5.2.4"

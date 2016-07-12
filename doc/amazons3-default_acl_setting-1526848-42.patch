@@ -1,0 +1,198 @@
+From 7aa39cf59b5723140664625480a9aaa19ca3909a Mon Sep 17 00:00:00 2001
+From: tinker <tinker@200883.no-reply.drupal.org>
+Date: Apr 7, 2015 1:21:25 PM
+
+Issue #1526848 by tinker, chunty, gbirch, tripper54, Jody Lynn: Include an admin setting for uploaded files to have Private ACL.
+
+diff --git a/AmazonS3StreamWrapper.inc b/AmazonS3StreamWrapper.inc
+index 2bc7616..4b95521 100644
+--- a/AmazonS3StreamWrapper.inc
++++ b/AmazonS3StreamWrapper.inc
+@@ -120,11 +120,22 @@
+   protected $cf = NULL;
+ 
+   /**
++   * @var string Access Control List constant name.
++   */
++  protected $acl = NULL;
++
++  /**
++   * @var string Access Control List constant value.
++   */
++  protected $aclS3 = NULL;
++
++  /**
+    * Object constructor.
+    */
+   public function __construct() {
+     $this->hostname = variable_get('amazons3_hostname', '');
+     $this->bucket = $bucket = variable_get('amazons3_bucket', '');
++    $this->setAcl(variable_get('amazons3_acl_object', 'ACL_PUBLIC'));
+ 
+     // CNAME support for customising S3 URLs.
+     if (variable_get('amazons3_cname', 0)) {
+@@ -243,9 +254,13 @@
+       'download_type' => 'http',
+       'https' => FALSE,
+       'presigned_url' => FALSE,
+-      'presigned_url_timeout' => 60,
++      'presigned_url_timeout' => variable_get('amazons3_acl_timeout', 60),
+       'response' => array(),
+     );
++
++    if (!in_array($this->acl, array('ACL_PUBLIC', 'ACL_OPEN'))) {
++      $info['presigned_url'] = TRUE;
++    }
+ 
+     // Allow other modules to change the download link type.
+     $info = array_merge($info, module_invoke_all('amazons3_url_info', $local_path, $info));
+@@ -626,7 +641,7 @@
+         $response = $this->getS3()
+           ->create_object($this->bucket, $local_path, array(
+             'body' => $this->buffer,
+-            'acl' => AmazonS3::ACL_PUBLIC,
++            'acl' => $this->aclS3,
+             'contentType' => AmazonS3StreamWrapper::getMimeType($this->uri),
+             'storage' => $s3_storage_type,
+             'headers' => $headers,
+@@ -728,8 +743,7 @@
+ 
+       $response = $s3->copy_object(
+         array('bucket' => $this->bucket, 'filename' => $from),
+-        array('bucket' => $this->bucket, 'filename' => $to),
+-        array('acl' => AmazonS3::ACL_PUBLIC)
++        array('bucket' => $this->bucket, 'filename' => $to)
+       );
+ 
+       // Check the response and then remove the original.
+@@ -1213,6 +1227,40 @@
+   }
+ 
+   /**
++   * Set the permission type for file upload.
++   *
++   * @param string $acl
++   *   The AmazonS3 constant name. Possible value are:
++   *   ACL_PUBLIC, ACL_PRIVATE, ACL_AUTH_READ, ACL_OWNER_READ,
++   *   ACL_OWNER_FULL_CONTROL, ACL_OPEN (not recommended).
++   *
++   * @return constant
++   *   The AmazonS3 permission constant value.
++   */
++  public function setAcl($acl) {
++    // Make sure the AmazonS3 class is loaded.
++    $s3 = $this->getS3();
++
++    $acl_s3 = constant('AmazonS3::' . $acl);
++    if (isset($acl_s3)) {
++      $this->acl = $acl;
++      $this->aclS3 = $acl_s3;
++    }
++  }
++
++  /**
++   * Get the permission type for file upload.
++   *
++   * @return string
++   *   The AmazonS3 constant name. Possible value are:
++   *   ACL_PUBLIC, ACL_PRIVATE, ACL_AUTH_READ, ACL_OWNER_READ,
++   *   ACL_OWNER_FULL_CONTROL, ACL_OPEN.
++   */
++  public function getAcl() {
++    return $this->acl;
++  }
++
++  /**
+    * CACHING FUNCTIONS
+    */
+ 
+diff --git a/amazons3.module b/amazons3.module
+index f6fa309..51f6f87 100644
+--- a/amazons3.module
++++ b/amazons3.module
+@@ -92,6 +92,57 @@
+     '#default_value' => variable_get('amazons3_cname', 0),
+   );
+ 
++  $acl_options = array(
++    'ACL_PUBLIC' => t('Public'),
++    'ACL_PRIVATE' => t('Private'),
++    'ACL_AUTH_READ' => t('Authenticated read'),
++    'ACL_OWNER_READ' => t('Bucket owner read'),
++    'ACL_OWNER_FULL_CONTROL' => t('Bucket owner full control'),
++  );
++
++  $acl_description = t('Defines the Access Control List (ACL) for files uploaded'
++    . ' to AmazonS3. It is not linked to drupal access control. If Amazon ACL is'
++    . ' set to %public then all internet users can access the file. When Amazon'
++    . ' ACL is not %public then anonymous internet will not have access but'
++    . ' drupal user have access via presigned URL.', array(
++    '%public' => t('Public'),
++  ));
++  $acl_description .= '<ul>';
++  $acl_description .= '<li>' . t('%public - File owner has full control and %allusers AmazonS3 group gets read access.', array(
++      '%public' => t('Public'),
++      '%allusers' => t('AllUsers'),
++    )) . '</li>';
++  $acl_description .= '<li>' . t('%private - File owner has full control and no one else has access rights.', array(
++      '%private' => t('Private')
++    )) . '</li>';
++
++  $acl_description .= '<li>' . t('%auth_read - File owner has full control, %auth_users AmazonS3 group has read access, no one else has access rights.', array(
++      '%auth_read' => t('Authenticated read'),
++      '%auth_users' => t('AuthenticatedUsers'),
++    )) . '</li>';
++  $acl_description .= '<li>' . t('%owner_read - File owner gets full control, Bucket owner gets read access, no one else has access rights.', array(
++      '%owner_read' => t('Bucket owner read'),
++    )) . '</li>';
++  $acl_description .= '<li>' . t('%owner_full_control - File owner and the bucket owner get full control. No one else has access rights.', array(
++      '%owner_full_control' => t('Bucket owner full control'),
++    )) . '</li>';
++  $acl_description .= '</ul>';
++
++  $form['amazons3_acl_object'] = array(
++    '#type' => 'select',
++    '#title' => t('File Access Control'),
++    '#description' => $acl_description,
++    '#options' => $acl_options,
++    '#default_value' => variable_get('amazons3_acl_object', 'ACL_PUBLIC'),
++  );
++
++  $form['amazons3_acl_timeout'] = array(
++    '#type' => 'textfield',
++    '#title' => t('Presigned URL timeout'),
++    '#description' => t('The default timeout for presigned URLs in seconds.'),
++    '#default_value' => variable_get('amazons3_acl_timeout', 60),
++  );
++
+   $form['amazons3_domain'] = array(
+     '#type' => 'textfield',
+     '#title' => t('CDN Domain Name'),
+@@ -142,7 +193,15 @@
+   $form['amazons3_presigned_urls'] = array(
+     '#type' => 'textarea',
+     '#title' => t('Presigned URLs'),
+-    '#description' => t('A list of timeouts and paths that should be delivered through a presigned url. Enter one value per line, in the format &lt;timeout&gt;|&lt;path&gt;|&lt;protocol&gt;. e.g. "60|mydir/*" or "60|mydir/*|https". Paths are relative to the Drupal file directory and use patterns as per <a href="@preg_match">preg_match</a>.', array('@preg_match' => 'http://php.net/preg_match')),
++    '#description' => t('A list of timeouts and paths that should be delivered'
++      . ' through a presigned url. Enter one value per line, in the format'
++      . ' &lt;timeout&gt;|&lt;path&gt;|&lt;protocol&gt;. e.g. "60|mydir/*" or'
++      . ' "60|mydir/*|https". Paths are relative to the Drupal file directory'
++      . ' and use patterns as per <a href="@preg_match">preg_match</a>. Timeout'
++      . ' settings specified here will override the %default_timeout.', array(
++        '@preg_match' => 'http://php.net/preg_match',
++        '%default_timeout' => t('Presigned URL timeout'),
++      )),
+     '#default_value' => variable_get('amazons3_presigned_urls', ''),
+     '#rows' => 10,
+   );
+@@ -184,6 +243,10 @@
+   $bucket = $form_state['values']['amazons3_bucket'];
+   $cloudfront = $form_state['values']['amazons3_cloudfront'];
+ 
++  if (empty(intval($form_state['values']['amazons3_acl_timeout']))) {
++    form_set_error('amazons3_acl_timeout', t('%presigned must be a positive number.', array('%presigned' => t('Presigned URL timeout'))));
++  }
++
+   if ($cloudfront) {
+     $keypair = variable_get('aws_cloudfront_keypair', '');
+     $pem = variable_get('aws_cloudfront_pem', '');

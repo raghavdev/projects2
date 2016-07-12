@@ -1,0 +1,152 @@
+<?php
+
+/**
+* Implements hook_update_N().
+* Set the amazon s3 variable to time out watermarked images after 10 years
+*/
+function digital_core_update_7000() {
+  variable_set("amazons3_presigned_urls", '300000000|watermarked/*
+60|*');
+}
+
+/**
+ * Implements hook_update_N()
+ * Change order of menu links
+ */
+function digital_core_update_7001() {
+  db_update('menu_links')
+    ->fields(array(
+       'weight' => '-48',
+    ))
+    ->condition('link_title', 'Products')
+    ->execute();
+  db_update('menu_links')
+    ->fields(array(
+       'weight' => '-49',
+    ))
+    ->condition('link_title', 'Assets')
+    ->execute();
+
+  menu_rebuild();
+}
+
+/**
+ * Implements hook_update_N().
+ * Add ecom_feed user with proper permissions
+ * create ecom_feed node
+ * enable permissions for the digital core user for new ui perms
+ */
+function digital_core_update_7002() {
+  $password = user_password(8);
+
+  $f = user_role_load_by_name("Feed Account");
+
+  //set up the user fields
+  $fields = array(
+    'name' => 'ecom_feed',
+    'mail' => 'ecom_feed@doesntexist.com',
+    'pass' => $password,
+    'status' => 1,
+    'init' => 'email address',
+    'roles' => array(
+      DRUPAL_AUTHENTICATED_RID => 'authenticated user',
+      $f->rid, true
+    ),
+  );
+
+  //the first parameter is left blank so a new user is created
+  $account = user_save('', $fields);
+
+  //save the ecom node
+  $node = new stdClass();
+  $node->title = "ecom_feed";
+  $node->type = "product_feed";
+  node_object_prepare($node); // Sets some defaults. Invokes hook_prepare() and hook_node_prepare().
+  $node->language = LANGUAGE_NONE; // Or e.g. 'en' if locale is enabled
+  $node->uid = $account->uid;
+  $node->status = 1; //(1 or 0): published or not
+  $node->promote = 0; //(1 or 0): promoted to front page
+  $node->comment = 1; // 0 = comments disabled, 1 = read only, 2 = read/write
+
+  $node->field_feed_owner[$node->language][]['uid'] = $account->uid;
+  $node->field_included_fields[$node->language][]['value'] = "east_product_id";
+  $node->field_included_fields[$node->language][]['value'] = "master_case_upc";
+  $node->field_included_fields[$node->language][]['value'] = "item_advertising_text";
+  $node->field_included_fields[$node->language][]['value'] = "item_dept_name";
+  $node->field_included_fields[$node->language][]['value'] = "product_name";
+  $node->field_included_fields[$node->language][]['value'] = "upc";
+  $node->field_included_fields[$node->language][]['value'] = "vendoracctnm";
+  $node->field_included_fields[$node->language][]['value'] = "vendoracctnum";
+  $node->field_included_fields[$node->language][]['value'] = "west_product_id";
+  $node->field_included_fields[$node->language][]['value'] = "changed";
+  $node->field_included_fields[$node->language][]['value'] = "case_component_qty";
+  $node->field_included_fields[$node->language][]['value'] = "base_item_size_measurement";
+  $node->field_included_fields[$node->language][]['value'] = "created";
+  $node->field_included_renditions[$node->language][]['value'] = 'primary';
+
+  $node = node_submit($node); // Prepare node for saving
+  node_save($node);
+
+  //set role permissions for the digital core user and programmer for these new ui perms
+  $prg = user_role_load_by_name("Programmer");
+  $dcu = user_role_load_by_name("DigitalCore User");
+
+  user_role_change_permissions($prg->rid, array('access digital core product tab' => 1,
+    'access digital core cmp tab' => 1,
+    'access digital core marketing tab' => 1,
+    'access digital core images tab' => 1,
+    'access digital core descriptions tab' => 1,
+    'access digital core nutritional tab' => 1,
+    'access digital core other tab' => 1,
+    'access digital core specs tab' => 1,
+    'access digital core ecomm tab' => 1,
+    'access digital core asset tab' => 1,
+    'access digital core assets additional information tab' => 1,
+    'edit digital core products product tab' => 1,
+    'edit digital core products cmp tab' => 1,
+    'edit digital core products marketing tab' => 1,
+    'edit digital core products images tab' => 1,
+    'edit digital core products descriptions tab' => 1,
+    'edit digital core products nutritional tab' => 1,
+    'edit digital core products other tab' => 1,
+    'edit digital core products specs tab' => 1,
+    'edit digital core products ecommercefeed tab' => 1,
+    'edit digital core assets asset tab' => 1));
+
+  user_role_change_permissions($dcu->rid, array('access digital core product tab' => 1,
+    'access digital core cmp tab' => 1,
+    'access digital core marketing tab' => 1,
+    'access digital core images tab' => 1,
+    'access digital core descriptions tab' => 1,
+    'access digital core nutritional tab' => 1,
+    'access digital core other tab' => 1,
+    'access digital core specs tab' => 1,
+    'access digital core ecomm tab' => 1,
+    'access digital core asset tab' => 1,
+    'access digital core assets additional information tab' => 1,
+    'edit digital core products product tab' => 1,
+    'edit digital core products cmp tab' => 1,
+    'edit digital core products marketing tab' => 1,
+    'edit digital core products images tab' => 1,
+    'edit digital core products descriptions tab' => 1,
+    'edit digital core products nutritional tab' => 1,
+    'edit digital core products other tab' => 1,
+    'edit digital core products specs tab' => 1,
+    'edit digital core products ecommercefeed tab' => 1,
+    'edit digital core assets asset tab' => 1));
+}
+
+/*
+ * Enable and configure the system_status module.
+ */
+function digital_core_update_7003() {
+  // Enable system_status module.
+  if (!module_exists('system_status')) {
+    array_push($modules, 'system_status');
+  }
+
+  // Run module enable scripts.
+  module_enable($modules);
+
+  variable_set('system_status_match_contrib_mode', 1);
+}

@@ -1,0 +1,29 @@
+<?php
+
+/**
+ * Implements hook_schema().
+ */
+function bulk_download_wizard_schema() {
+  $schema = array();
+
+  $schema['bulk_download_wizard_jobs'] = array(
+    'description' => 'Holds information about the jobs that are passed thru the wizard',
+    'fields' => array(
+      'job_id' => array(
+        'description' => 'Job ID',
+        'type'        => 'serial',
+        'length'      => 11,
+        'not null'    => TRUE,
+      ),
+      'job_results' => array(
+        'description' => 'Serialized array of the job information',
+        'type'        => 'text',
+        'size'        => 'big',
+        'not null'    => FALSE,
+      )
+    ),
+    'primary key' => array('job_id'),
+  );
+
+  return $schema;
+}

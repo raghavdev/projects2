@@ -1,0 +1,4 @@
+name = Bulk Upload Wizard
+description = Upload Bulk files through a stepped interface.
+package = Bulk Upload Wizard
+core = 7.x

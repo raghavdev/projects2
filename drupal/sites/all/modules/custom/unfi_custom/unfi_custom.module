@@ -1,0 +1,70 @@
+<?php
+/**
+ * @file
+ * A module for handling miscellaneous UNFI stuff
+ */
+
+/**
+ * Implements hook_form_alter().
+ */
+function unfi_custom_form_alter(&$form, &$form_state, $form_id) {
+  // Per request by Depth Security
+  if (strpos(current_path(), 'user') === 0) {
+    $form['#attributes']['autocomplete'] = 'off';
+  }
+}
+
+/**
+ * Implements hook_html_head_alter().
+ */
+function unfi_custom_html_head_alter(&$head_elements) {
+  // Per request by Depth Security
+  unset($head_elements['system_meta_generator']);
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function unfi_custom_menu_alter(&$items) {
+  // Remove unused node list pages
+  unset($items['rss.xml']);
+  unset($items['node']);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function unfi_custom_form_user_login_alter(&$form, &$form_state) {
+  $form['name']['#title_display'] = 'invisible';
+  $form['name']['#attributes']['placeholder'] = t('Email');
+  $form['name']['#description'] = '';
+
+  $form['pass']['#title_display'] = 'invisible';
+  $form['pass']['#attributes']['placeholder'] = t('Password');
+  $form['pass']['#description'] = '';
+
+  $form['actions']['submit']['#title'] = t('Log In');
+
+  $form['actions']['reset'] = array(
+      '#markup' => l(t('I Forgot My Password'), 'user/password', array(
+          'attributes' => array(
+              'class' => array('forgot-pass'),
+          ),
+      )),
+  );
+
+  drupal_set_title('');
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function unfi_custom_form_user_pass_alter(&$form, &$form_state) {
+  $form['name']['#title_display'] = 'invisible';
+  $form['name']['#attributes']['placeholder'] = t('Email');
+  $form['name']['#description'] = '';
+
+  $form['actions']['submit']['#title'] = t('Email New Password');
+
+  drupal_set_title('');
+}

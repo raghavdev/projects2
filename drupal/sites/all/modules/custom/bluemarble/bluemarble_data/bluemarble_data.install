@@ -1,0 +1,22 @@
+<?php
+/**
+ * @file
+ * Blue Marble Data installation and update functions.
+ */
+
+/**
+ * Implements hook_update_N().
+ *
+ * Remove RCM Category vocabulary.
+ */
+function bluemarble_data_update_7000() {
+  $vocab = taxonomy_vocabulary_machine_name_load('rcm_categories');
+  taxonomy_vocabulary_delete($vocab->vid);
+}
+
+/**
+ * enable bluemarble_assets module to that uploads work again
+ */
+function bluemarble_data_update_7001() {
+  module_enable(array('bluemarble_assets'));
+}

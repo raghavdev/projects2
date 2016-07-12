@@ -1,0 +1,251 @@
+<?php
+
+function buw_product_print_images_bulk_upload_wizard_get_asset_info () {
+
+  $options = array('print_file_naming' => array(
+      '#title' => 'How are your files named?',
+      '#type' => 'select',
+      '#description' => t(""),
+      '#required' => FALSE,
+      '#maxlength' => 500,
+      '#size' => 1,
+      '#options' => array(
+                          "upc" => "File Names are the UPC",
+                          "epid" => "File Names are the East Product ID",
+                          "wpid" => "File Names are the West Product ID"
+                         ),
+      '#default_value' => '',
+    )
+  );
+
+  return array("product_print_images" => array(
+    "options" => $options,
+    "type" => "Product Print Images",
+    "uploader" => "plupload",
+    "analysis_table_theme_callback" => "buw_product_print_images_analysis_table",
+    "analysis_results_callback" => "buw_product_print_images_results_analysis",
+    "analysis_callback" => "buw_product_print_images_analysis",
+    "apply_callback" => "buw_product_print_images_apply",
+    "cleanup_callback" => "buw_pimary_product_images_cleanup",
+   ));
+}
+
+function buw_product_print_images_analysis($file, $asset_info, &$options) {
+
+  $id = false;
+
+  $mapping = $options['print_file_naming'];
+
+  //take the file name off the path
+  $pathinfo = pathinfo($file['name']);
+
+  $filename = $pathinfo['filename'];
+
+  switch($mapping) {
+    case "upc": {
+      $query = db_select("node")
+                ->fields("node", array("nid"));
+      $query->join('field_data_field_productsid', 'psid', 'psid.entity_id = node.nid');
+      $query->join('digital_core_data_products', 'd', 'd.productsid = psid.field_productsid_value');
+      $query->condition("d.upc", $filename);
+      $id = $query->execute()->fetchField();
+
+      break;
+    }
+    case "epid": {
+
+      $query = db_select("node")
+                ->fields("node", array("nid"));
+      $query->join('field_data_field_productsid', 'psid', 'psid.entity_id = node.nid');
+      $query->join('digital_core_data_products', 'd', 'd.productsid = psid.field_productsid_value');
+      $query->condition("d.east_product_id", $filename);
+      $id = $query->execute()->fetchField();
+
+      break;
+    }
+    case "wpid": {
+      $query = db_select("node")
+                ->fields("node", array("nid"));
+      $query->join('field_data_field_productsid', 'psid', 'psid.entity_id = node.nid');
+      $query->join('digital_core_data_products', 'd', 'd.productsid = psid.field_productsid_value');
+      $query->condition("d.west_product_id", $filename);
+      $id = $query->execute()->fetchField();
+
+      break;
+    }
+  }
+
+  $status = "ok";
+  $message = "";
+
+  //check if this image will overwrite an existing one
+
+  if($id) {
+    $existing = db_select('field_data_field_print_image')
+                  ->fields("field_data_field_print_image", array())
+                  ->condition("bundle", "product_details")
+                  ->condition("entity_type", "node")
+                  ->condition("delta", 0)
+                  ->condition("entity_id", $id)
+                  ->execute()
+                  ->fetchAll();
+
+    if(count($existing) > 0) {
+      $status = "Warning";
+      $message = "Existing image will be replaced";
+      $options['fid'] = $existing[0]->field_print_image_target_id;
+    }
+
+    $options['nid'] = $id;
+  }
+  else {
+    $status = "Error";
+    $message = "Product not found";
+  }
+
+  return array(
+      "file" => $file,
+      "id" => $id,
+      "status" => $status,
+      "message" => $message
+  );
+}
+
+function buw_product_print_images_apply($file_info, $job_id, $asset_info, $options, $context) {
+  global $user;
+
+  //prevent errors from doing something
+  if($file_info['status'] != 'Error') {
+    $file_info['file_name'] = $file_info['file']['name'];
+
+    $file_info = array_merge($file_info, $options);
+
+    if($file_info['status'] == "Warning") {
+      //delete the existing file so it can be replaced
+      file_delete(file_load($options['fid']), true);
+    }
+
+    //create the file on the server
+    $file_obj = digital_core_assets_create_asset($file_info, $options);
+
+    //relate the file to the product
+    if(array_key_exists("nid", $options)) {
+      module_load_include('inc', 'digital_core_data', 'digital_core_data_assets');
+      digital_core_data_assets_relation_asset_product($file_obj, 'print', $options['nid']);
+    }
+  }
+
+  //have to just pass this thru
+  $context['results']['job_id'] = $job_id;
+
+}
+
+function buw_product_print_images_results_analysis($analysis_results, $asset_info, $options) {
+
+  $structure = array();
+
+  $error_count = 0;
+  $warning_count = 0;
+  $ok_count = 0;
+
+  foreach($analysis_results as $idx => $result) {
+
+    $result = unserialize($result);
+
+    if(is_numeric($idx)) {
+      $structure['table']['analysis_table']['filename'][$result['file']['name']] = array(
+        "#markup" => $result['file']['name']
+      );
+
+      $structure['table']['analysis_table']['status'][$result['file']['name']] = array(
+        "#markup" => $result['status']
+      );
+
+      $structure['table']['analysis_table']['message'][$result['file']['name']] = array(
+        "#markup" => $result['message']
+      );
+
+      if(strtolower($result['status']) == "error") {
+        $error_count++;
+      }
+      else if(strtolower($result['status']) == "warning") {
+        $warning_count++;
+      }
+      else {
+        $ok_count++;
+      }
+    }
+  }
+
+  $structure['summary']['analysis_result_block'] = array (
+    '#type' => 'fieldset',
+  );
+
+  $structure['summary']['analysis_result_block']['type'] = array(
+    "#markup" => "<div><b>Upload Type:</b> {$asset_info['type']}</div>",
+  );
+
+  $structure['summary']['analysis_result_block']['resolution'] = array(
+    "#markup" => "<div><b>Product Resolution Method:</b> File names are {$options['print_file_naming']}</div>",
+  );
+
+  $structure['summary']['analysis_result_block']['number_uploads'] = array(
+    "#markup" => "<div><b>Number of Uploads:</b> " . count($analysis_results) . "</div>",
+  );
+
+  $structure['summary']['analysis_result_block']['validated_uploads'] = array(
+    "#markup" => "<div><b>Validated Uploads:</b> {$ok_count} </div>",
+  );
+
+  $structure['summary']['analysis_result_block']['errors'] = array(
+    "#markup" => "<div><b>Errors:</b> {$error_count} </div>",
+  );
+
+  $structure['summary']['analysis_result_block']['warnings'] = array(
+    "#markup" => "<div><b>Warnings:</b> {$warning_count} </div>",
+  );
+
+  return $structure;
+}
+
+function theme_buw_product_print_images_analysis_table($variables) {
+
+  $form = $variables['form'];
+
+  $header = array(t('Filename'), t('Status'), t('Message'));
+
+  $rows = array();
+
+  foreach (element_children($form['analysis_table']['filename']) as $key) {
+
+    $record = array();
+    $record[] = drupal_render($form['analysis_table']['filename'][$key]);
+    $record[] = drupal_render($form['analysis_table']['status'][$key]);
+    $record[] = drupal_render($form['analysis_table']['message'][$key]);
+
+    $rows[] = $record;
+  }
+
+  $output = theme('table', array(
+      'header' => $header,
+      'rows' => $rows
+  ));
+
+  return $output;
+}
+
+function buw_product_print_images_theme($existing, $type, $theme, $path) {
+
+  $theme_hooks = array(
+    'buw_product_print_images_analysis_table' => array(
+      'render element' => 'form',
+      'file' => 'buw_product_print_images.module'
+     )
+  );
+
+  return $theme_hooks;
+}
+
+function buw_product_print_images_cleanup() {
+
+}
